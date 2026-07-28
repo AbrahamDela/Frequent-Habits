@@ -18,7 +18,7 @@
 
 [![GitHub Release](https://img.shields.io/github/v/release/FrequeNCy144/Frequent-Habits?style=for-the-badge&logo=github&color=7356FF)](https://github.com/FrequeNCy144/Frequent-Habits/releases)
 [![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge)](LICENSE)
-[![Sponsor](https://img.shields.io/badge/Sponsor-Liberapay-f6c915?style=for-the-badge&logo=liberapay&logoColor=black)](https://liberapay.com/FrequeNCy/donate)
+[![Support](https://img.shields.io/badge/Sponsor-Liberapay-f6c915?style=for-the-badge&logo=liberapay&logoColor=black)](https://liberapay.com/FrequeNCy/donate)
 
 <br>
 
