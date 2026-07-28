@@ -1,19 +1,19 @@
 <div align="center">
 
-<img src="fastlane/metadata/android/en-US/images/icon.png" width="90" alt="Frequent Habits Logo">
+<img src="fastlane/metadata/android/en-US/images/icon.png" width="120" alt="Frequent Habits Logo">
 
-# Frequent Habits 🌟
+# Frequent Habits
 
 **Aesthetic design meets deep analytics — 100% local, private, and subscription-free.**
 
 <br>
 
 <a href="https://f-droid.org/packages/com.frequent.habits/">
-  <img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" height="50" alt="Get it on F-Droid">
+  <img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" height="68" alt="Get it on F-Droid">
 </a>
-&nbsp;&nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;
 <a href="obtainium://app/https://github.com/FrequeNCy144/Frequent-Habits">
-  <img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" height="50" alt="Get it on Obtainium">
+  <img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" height="68" alt="Get it on Obtainium">
 </a>
 
 <br><br>
