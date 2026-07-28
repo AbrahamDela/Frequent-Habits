@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="fastlane/metadata/android/en-US/images/icon.png" width="120" alt="Frequent Habits Logo">
+<img src="fastlane/metadata/android/en-US/images/icon.png" width="130" alt="Frequent Habits Logo">
 
 # Frequent Habits
 
@@ -8,13 +8,9 @@
 
 <br>
 
-<a href="https://f-droid.org/packages/com.frequent.habits/">
-  <img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" height="68" alt="Get it on F-Droid">
-</a>
+<a href="https://f-droid.org/packages/com.frequent.habits/"><img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" height="80" alt="Get it on F-Droid"></a>
 &nbsp;&nbsp;&nbsp;&nbsp;
-<a href="obtainium://app/https://github.com/FrequeNCy144/Frequent-Habits">
-  <img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" height="68" alt="Get it on Obtainium">
-</a>
+<a href="obtainium://app/https://github.com/FrequeNCy144/Frequent-Habits"><img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" height="80" alt="Get it on Obtainium"></a>
 
 <br><br>
 
