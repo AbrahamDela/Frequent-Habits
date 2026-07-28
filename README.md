@@ -10,7 +10,7 @@
 
 <a href="https://f-droid.org/packages/com.frequent.habits/"><img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" height="95" alt="Get it on F-Droid"></a>
 &nbsp;&nbsp;&nbsp;&nbsp;
-<a href="https://apps.obtainium.imranr.dev/redirect.html?r=obtainium://app/https://github.com/FrequeNCy144/Frequent-Habits"><img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" height="95" alt="Get it on Obtainium"></a>
+<a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22:%22com.frequent.habits%22,%22url%22:%22https://github.com/FrequeNCy144/Frequent-Habits%22,%22author%22:%22FrequeNCy144%22,%22name%22:%22Frequent%20Habits%22,%22additionalSettings%22:%22%7B%5C%22about%5C%22:%5C%22Aesthetic%20design%20meets%20deep%20analytics%20-%20100%25%20local,%20private,%20and%20subscription-free.%5C%22,%5C%22appAuthor%5C%22:%5C%22FrequeNCy144%5C%22%7D%22%7D"><img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" height="95" alt="Get it on Obtainium"></a>
 
 <br>
 
