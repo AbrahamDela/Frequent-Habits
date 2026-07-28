@@ -54,13 +54,13 @@ We deliver a gorgeous, ultra-modern dark mode interface paired with satisfying a
 
 ## 📸 Screenshots
 
-| Today View | Create Habit | Stats Overview |
+| Today View | Built-in Timer | Analytics |
 | :---: | :---: | :---: |
-| <img width="200" alt="Today" src="https://github.com/user-attachments/assets/c4022b1b-c260-4ffa-81e9-88c9c47ef80e" /> | <img width="200" alt="Create" src="https://github.com/user-attachments/assets/7e5c7144-c71e-45e4-9fe7-bf5a01640ea4" /> | <img width="200" alt="Stats-Detail" src="https://github.com/user-attachments/assets/16658192-f47a-46ca-8fca-d16062885efe" /> |
+| <img width="200" alt="01-Home" src="https://github.com/user-attachments/assets/b052471e-9266-4660-8101-20882821d0f6" /> | <img width="200" alt="02-Timer" src="https://github.com/user-attachments/assets/e35ab3df-cba2-46a7-91d3-798f3edfc50e" /> | <img width="200" alt="03-Analytics" src="https://github.com/user-attachments/assets/96e35cdb-4a02-41df-95a5-926cf6e42b0b" /> |
 
-| Stats Detail | Ranks & Achievements |
-| :---: | :---: |
-| <img width="200" alt="Stats" src="https://github.com/user-attachments/assets/c7f7f4a0-85a8-4d94-9250-79b642eb0dfc" /> | <img width="200" alt="Ranks" src="https://github.com/user-attachments/assets/5bc7a3c3-45be-429f-99cd-7dfce499043e" /> |
+| Profile & Ranks | Create Habit | Settings |
+| :---: | :---: | :---: |
+| <img width="200" alt="04-Profil" src="https://github.com/user-attachments/assets/b006d4e4-e9b9-4128-8e4a-09dbef9188a5" /> | <img width="200" alt="05-Create" src="https://github.com/user-attachments/assets/61684060-1c2e-4d13-bfe8-45e6171251eb" /> | <img width="200" alt="06-Settings" src="https://github.com/user-attachments/assets/5915d4ea-f398-4d8b-a019-1048107568e8" /> |
 
 ---
 
