@@ -1830,19 +1830,23 @@ fun TodayScreen(
                 getEncouragementText(completed, total, language)
             }
 
-            val resumeTrigger = rememberResumeAnimationTrigger()
-            val animFraction = remember { Animatable(0f) }
-            var lastResumeTrigger by remember { mutableIntStateOf(-1) }
+            var hasAnimatedTodayProgress by rememberSaveable { mutableStateOf(false) }
+            val animFraction = remember { Animatable(if (hasAnimatedTodayProgress) fraction else 0f) }
 
-            LaunchedEffect(fraction, resumeTrigger) {
-                if (resumeTrigger != lastResumeTrigger) {
-                    lastResumeTrigger = resumeTrigger
+            LaunchedEffect(fraction) {
+                if (!hasAnimatedTodayProgress) {
                     animFraction.snapTo(0f)
+                    animFraction.animateTo(
+                        targetValue = fraction,
+                        animationSpec = tween(durationMillis = 750, easing = FastOutSlowInEasing)
+                    )
+                    hasAnimatedTodayProgress = true
+                } else {
+                    animFraction.animateTo(
+                        targetValue = fraction,
+                        animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
+                    )
                 }
-                animFraction.animateTo(
-                    targetValue = fraction,
-                    animationSpec = tween(durationMillis = 750, easing = FastOutSlowInEasing)
-                )
             }
             val animatedFraction = animFraction.value
 
@@ -2010,7 +2014,8 @@ fun TodayScreen(
                     onLongClick = onLongClickRemembered,
                     language = language,
                     soundEnabled = soundEnabled,
-                    vibrationEnabled = vibrationEnabled
+                    vibrationEnabled = vibrationEnabled,
+                    selectedDate = selectedDate
                 )
             }
         }
@@ -2406,7 +2411,8 @@ fun HabitItemRow(
     onLongClick: (Habit) -> Unit,
     language: String,
     soundEnabled: Boolean = true,
-    vibrationEnabled: Boolean = true
+    vibrationEnabled: Boolean = true,
+    selectedDate: String = ""
 ) {
     val context = LocalContext.current
     val habitColor = HabitIconMapping.getColor(habit.color)
@@ -2438,19 +2444,25 @@ fun HabitItemRow(
         label = "checkboxScale"
     )
 
-    var wasCompleted by remember { mutableStateOf(isCompleted) }
+    var lastDate by remember(habit.id) { mutableStateOf(selectedDate) }
+    var wasCompleted by remember(habit.id) { mutableStateOf(isCompleted) }
     val completionAnim = remember { Animatable(0f) }
 
-    LaunchedEffect(isCompleted) {
-        if (isCompleted && !wasCompleted) {
-            completionAnim.snapTo(0f)
-            FeedbackHelper.playCompletionFeedback(context, soundEnabled, vibrationEnabled)
-            completionAnim.animateTo(
-                targetValue = 1f,
-                animationSpec = tween(durationMillis = 650, easing = FastOutSlowInEasing)
-            )
+    LaunchedEffect(isCompleted, selectedDate) {
+        if (selectedDate != lastDate) {
+            lastDate = selectedDate
+            wasCompleted = isCompleted
+        } else {
+            if (isCompleted && !wasCompleted) {
+                completionAnim.snapTo(0f)
+                FeedbackHelper.playCompletionFeedback(context, soundEnabled, vibrationEnabled)
+                completionAnim.animateTo(
+                    targetValue = 1f,
+                    animationSpec = tween(durationMillis = 650, easing = FastOutSlowInEasing)
+                )
+            }
+            wasCompleted = isCompleted
         }
-        wasCompleted = isCompleted
     }
 
     val popProgress = completionAnim.value
@@ -2802,19 +2814,23 @@ fun StatsScreen(
 
             // Beautifully designed, compact Overall Strength Card
             item {
-                val resumeTrigger = rememberResumeAnimationTrigger()
-                val animStrength = remember { Animatable(0f) }
-                var lastResumeTrigger by remember { mutableIntStateOf(-1) }
+                var hasAnimatedTodayStrength by rememberSaveable { mutableStateOf(false) }
+                val animStrength = remember { Animatable(if (hasAnimatedTodayStrength) strength.toFloat() else 0f) }
 
-                LaunchedEffect(strength, resumeTrigger) {
-                    if (resumeTrigger != lastResumeTrigger) {
-                        lastResumeTrigger = resumeTrigger
+                LaunchedEffect(strength) {
+                    if (!hasAnimatedTodayStrength) {
                         animStrength.snapTo(0f)
+                        animStrength.animateTo(
+                            targetValue = strength.toFloat(),
+                            animationSpec = tween(durationMillis = 750, easing = FastOutSlowInEasing)
+                        )
+                        hasAnimatedTodayStrength = true
+                    } else {
+                        animStrength.animateTo(
+                            targetValue = strength.toFloat(),
+                            animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
+                        )
                     }
-                    animStrength.animateTo(
-                        targetValue = strength.toFloat(),
-                        animationSpec = tween(durationMillis = 750, easing = FastOutSlowInEasing)
-                    )
                 }
                 val animatedStrength = animStrength.value
                 val sweepAngleVal = (animatedStrength / 100f) * 360f
@@ -3158,19 +3174,23 @@ fun HabitDetailScreen(
         // Strength score card
         item(key = "detail_strength") {
             val habitColor = remember(habit.color) { HabitIconMapping.getColor(habit.color) }
-            val resumeTrigger = rememberResumeAnimationTrigger()
-            val animStrength = remember { Animatable(0f) }
-            var lastResumeTrigger by remember { mutableIntStateOf(-1) }
+            var hasAnimatedDetailStrength by rememberSaveable(habit.id) { mutableStateOf(false) }
+            val animStrength = remember(habit.id) { Animatable(if (hasAnimatedDetailStrength) strength.toFloat() else 0f) }
 
-            LaunchedEffect(strength, resumeTrigger) {
-                if (resumeTrigger != lastResumeTrigger) {
-                    lastResumeTrigger = resumeTrigger
+            LaunchedEffect(strength, habit.id) {
+                if (!hasAnimatedDetailStrength) {
                     animStrength.snapTo(0f)
+                    animStrength.animateTo(
+                        targetValue = strength.toFloat(),
+                        animationSpec = tween(durationMillis = 750, easing = FastOutSlowInEasing)
+                    )
+                    hasAnimatedDetailStrength = true
+                } else {
+                    animStrength.animateTo(
+                        targetValue = strength.toFloat(),
+                        animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
+                    )
                 }
-                animStrength.animateTo(
-                    targetValue = strength.toFloat(),
-                    animationSpec = tween(durationMillis = 750, easing = FastOutSlowInEasing)
-                )
             }
             val animatedStrength = animStrength.value
             val sweepAngleVal = (animatedStrength / 100f) * 360f
@@ -3926,19 +3946,23 @@ fun TargetProgressRow(
         val progressFraction = remember(actual, target) {
             if (target > 0f) (actual / target).coerceIn(0f, 1f) else 0f
         }
-        val resumeTrigger = rememberResumeAnimationTrigger()
-        val animFraction = remember { Animatable(0f) }
-        var lastResumeTrigger by remember { mutableIntStateOf(-1) }
+        var hasAnimatedTargetRow by rememberSaveable(actual, target) { mutableStateOf(false) }
+        val animFraction = remember { Animatable(if (hasAnimatedTargetRow) progressFraction else 0f) }
 
-        LaunchedEffect(progressFraction, resumeTrigger) {
-            if (resumeTrigger != lastResumeTrigger) {
-                lastResumeTrigger = resumeTrigger
+        LaunchedEffect(progressFraction) {
+            if (!hasAnimatedTargetRow) {
                 animFraction.snapTo(0f)
+                animFraction.animateTo(
+                    targetValue = progressFraction,
+                    animationSpec = tween(durationMillis = 700, easing = FastOutSlowInEasing)
+                )
+                hasAnimatedTargetRow = true
+            } else {
+                animFraction.animateTo(
+                    targetValue = progressFraction,
+                    animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
+                )
             }
-            animFraction.animateTo(
-                targetValue = progressFraction,
-                animationSpec = tween(durationMillis = 700, easing = FastOutSlowInEasing)
-            )
         }
         val animatedProgressFraction = animFraction.value
         val hasOverachieved = remember(actual, target) {
@@ -4085,19 +4109,23 @@ fun OverallStatsScreen(
         ) {
                 // Overall Strength / Progress centered view
             item(key = "overall_strength") {
-                val resumeTrigger = rememberResumeAnimationTrigger()
-                val animStrength = remember { Animatable(0f) }
-                var lastResumeTrigger by remember { mutableIntStateOf(-1) }
+                var hasAnimatedStatsStrength by rememberSaveable { mutableStateOf(false) }
+                val animStrength = remember { Animatable(if (hasAnimatedStatsStrength) strength.toFloat() else 0f) }
 
-                LaunchedEffect(strength, resumeTrigger) {
-                    if (resumeTrigger != lastResumeTrigger) {
-                        lastResumeTrigger = resumeTrigger
+                LaunchedEffect(strength) {
+                    if (!hasAnimatedStatsStrength) {
                         animStrength.snapTo(0f)
+                        animStrength.animateTo(
+                            targetValue = strength.toFloat(),
+                            animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing)
+                        )
+                        hasAnimatedStatsStrength = true
+                    } else {
+                        animStrength.animateTo(
+                            targetValue = strength.toFloat(),
+                            animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
+                        )
                     }
-                    animStrength.animateTo(
-                        targetValue = strength.toFloat(),
-                        animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing)
-                    )
                 }
                 val animatedStrength = animStrength.value
                 val sweepAngleVal = (animatedStrength / 100f) * 360f
@@ -7834,19 +7862,23 @@ fun HabitStreakAchievementCard(
                 Triple(label, 1f, 100)
             }
 
-            val resumeTrigger = rememberResumeAnimationTrigger()
-            val animStreakFraction = remember { Animatable(0f) }
-            var lastResumeTrigger by remember { mutableIntStateOf(-1) }
+            var hasAnimatedStreakProgress by rememberSaveable(habitName) { mutableStateOf(false) }
+            val animStreakFraction = remember { Animatable(if (hasAnimatedStreakProgress) progressFraction else 0f) }
 
-            LaunchedEffect(progressFraction, resumeTrigger) {
-                if (resumeTrigger != lastResumeTrigger) {
-                    lastResumeTrigger = resumeTrigger
+            LaunchedEffect(progressFraction) {
+                if (!hasAnimatedStreakProgress) {
                     animStreakFraction.snapTo(0f)
+                    animStreakFraction.animateTo(
+                        targetValue = progressFraction,
+                        animationSpec = tween(durationMillis = 700, easing = FastOutSlowInEasing)
+                    )
+                    hasAnimatedStreakProgress = true
+                } else {
+                    animStreakFraction.animateTo(
+                        targetValue = progressFraction,
+                        animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
+                    )
                 }
-                animStreakFraction.animateTo(
-                    targetValue = progressFraction,
-                    animationSpec = tween(durationMillis = 700, easing = FastOutSlowInEasing)
-                )
             }
             val animatedStreakFraction = animStreakFraction.value
 
@@ -8038,19 +8070,23 @@ fun GlobalAchievementCard(
                         (currentValue.toFloat() / targetValue).coerceIn(0f, 1f)
                     } else 0f
 
-                    val resumeTrigger = rememberResumeAnimationTrigger()
-                    val animAchieveFraction = remember { Animatable(0f) }
-                    var lastResumeTrigger by remember { mutableIntStateOf(-1) }
+                    var hasAnimatedAchieveProgress by rememberSaveable(title) { mutableStateOf(false) }
+                    val animAchieveFraction = remember { Animatable(if (hasAnimatedAchieveProgress) progressFraction else 0f) }
 
-                    LaunchedEffect(progressFraction, resumeTrigger) {
-                        if (resumeTrigger != lastResumeTrigger) {
-                            lastResumeTrigger = resumeTrigger
+                    LaunchedEffect(progressFraction) {
+                        if (!hasAnimatedAchieveProgress) {
                             animAchieveFraction.snapTo(0f)
+                            animAchieveFraction.animateTo(
+                                targetValue = progressFraction,
+                                animationSpec = tween(durationMillis = 700, easing = FastOutSlowInEasing)
+                            )
+                            hasAnimatedAchieveProgress = true
+                        } else {
+                            animAchieveFraction.animateTo(
+                                targetValue = progressFraction,
+                                animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
+                            )
                         }
-                        animAchieveFraction.animateTo(
-                            targetValue = progressFraction,
-                            animationSpec = tween(durationMillis = 700, easing = FastOutSlowInEasing)
-                        )
                     }
                     val animatedAchieveFraction = animAchieveFraction.value
 
