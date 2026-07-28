@@ -39,14 +39,14 @@ We deliver a gorgeous, ultra-modern dark mode interface paired with satisfying a
 
 ## ✨ Key Features
 
-* 🎵 **Instant Audio & Haptic Rewards:** Completing a habit triggers a zero-latency audio chime (loaded via SoundPool), a satisfying haptic vibration pulse, and a glowing emerald-gold card animation.
-* 🏆 **Full-Screen Gamification:** Stay consistent by unlocking exclusive trophies and milestones. Reaching a new rank triggers a full-screen celebratory overlay with confetti and dynamic badge coloring!
-* 🎨 **Premium Responsive UI:** A stunning dark-mode interface featuring vibrant accent colors, directional slide transitions for detail screens, interactive springy arrows, and instant zero-delay switching between main tabs.
-* 📊 **100-Point Score & Deep Analytics:** Go far beyond basic streak counting. Evaluate your progress with an intelligent 100-point scoring system, yearly activity heatmaps (complete with purple dots for notebook entries!), and weekday frequency charts.
-* ⚡ **Instant Homescreen Widget:** Check off your daily habits directly from your homescreen with our lightweight, lightning-fast, zero-delay widget.
-* ⏱️ **Built-in Focus Timer:** Complete time- or session-based habits (such as 30 minutes of reading or meditation) using a dedicated background timer with ambient audio directly inside the app.
-* 📝 **Integrated Mini-Notebook:** Jot down thoughts, milestones, or reasons for a missed day directly within your daily tracker.
-* 🛡️ **100% Private & Offline:** Your life is your business. No ads, no tracking, no mandatory accounts, and no servers. Includes a secure local backup feature (SAF JSON Storage).
+* 🛡️ **Private by Nature:** Designed from the ground up to respect your privacy. No ads, no tracking, no mandatory accounts, and zero cloud dependencies. Your personal routines and life habits never leave your device.
+* 💾 **SAF Export Function:** Your data belongs entirely to you. Take full control of your history with secure local JSON backups and restores using Android's Storage Access Framework (SAF) — ensuring true data ownership with zero vendor lock-in.
+* 📊 **Deep Analytics:** Go far beyond simple streak counting. Understand your behavior through an intelligent 100-point scoring system, yearly activity heatmaps, precise weekday frequency breakdown charts, and dynamic progress rings.
+* 🎨 **Ultra-Clean Design:** A clutter-free, aesthetic dark-mode interface built with Jetpack Compose. Enjoy vibrant accent colors, directional slide transitions, and silky-smooth animations that make tracking daily tasks a premium experience.
+* ⏱️ **Audio Timer Function:** Complete time- or session-based habits (such as 30 minutes of reading or meditation) using a dedicated built-in timer featuring ambient background sounds and instant zero-latency completion chimes loaded via SoundPool.
+* ⚡ **Homescreen Widget:** Check off your daily habits directly from your homescreen with a lightweight, lightning-fast widget engineered for zero-delay instant response.
+* 📝 **Integrated Mini-Notebook:** Jot down thoughts, milestones, or reasons for a missed routine directly within your daily tracker — complete with subtle violet dot indicators directly on your yearly heatmaps.
+* 🏆 **Gamification & Rewards:** Stay motivated without artificial pressure. Unlock exclusive trophies, achieve "Gold Series", and experience full-screen confetti celebrations paired with custom haptic feedback when reaching new milestones.
 
 ---
 
