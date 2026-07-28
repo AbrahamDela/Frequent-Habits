@@ -115,8 +115,14 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
     private val _selectedDate = MutableStateFlow(getTodayDateString())
     val selectedDate: StateFlow<String> = _selectedDate.asStateFlow()
 
-    private val _language = MutableStateFlow(sharedPrefs.getString("language", "de") ?: "de")
+    private val _language = MutableStateFlow(sharedPrefs.getString("language", "en") ?: "en")
     val language: StateFlow<String> = _language.asStateFlow()
+
+    private val _soundEnabled = MutableStateFlow(sharedPrefs.getBoolean("sound_enabled", true))
+    val soundEnabled: StateFlow<Boolean> = _soundEnabled.asStateFlow()
+
+    private val _vibrationEnabled = MutableStateFlow(sharedPrefs.getBoolean("vibration_enabled", true))
+    val vibrationEnabled: StateFlow<Boolean> = _vibrationEnabled.asStateFlow()
 
     // JSON Backup State
     private val _backupFolderUri = MutableStateFlow(sharedPrefs.getString("backup_folder_uri", "") ?: "")
@@ -591,6 +597,7 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
         ProfileStats(
             totalGlobalCompletions = totalGlobalCompletions,
             unlockedCompletions = unlockedCompletions,
+            perfectDaysStreak = perfectDaysStreak,
             unlockedPerfectDays = unlockedPerfectDays,
             habitStreaks = habitStreaks,
             unlockedHabitStreaks = unlockedHabitStreaks,
@@ -1530,6 +1537,16 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
         sharedPrefs.edit().putString("language", lang).apply()
     }
 
+    fun setSoundEnabled(enabled: Boolean) {
+        _soundEnabled.value = enabled
+        sharedPrefs.edit().putBoolean("sound_enabled", enabled).apply()
+    }
+
+    fun setVibrationEnabled(enabled: Boolean) {
+        _vibrationEnabled.value = enabled
+        sharedPrefs.edit().putBoolean("vibration_enabled", enabled).apply()
+    }
+
     // CRUD Habits
     fun addHabit(
         name: String,
@@ -2448,7 +2465,191 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    // Achievement Unlocked Popup State
+    private val achievementQueue = MutableStateFlow<List<com.example.data.UnlockedAchievementInfo>>(emptyList())
+    private val _newlyUnlockedAchievement = MutableStateFlow<com.example.data.UnlockedAchievementInfo?>(null)
+    val newlyUnlockedAchievement: StateFlow<com.example.data.UnlockedAchievementInfo?> = _newlyUnlockedAchievement.asStateFlow()
+
+    private var knownUnlockedAchievementIds: MutableSet<String>? = null
+
+    private fun initAchievementObserver() {
+        viewModelScope.launch {
+            combine(profileStats, language) { stats, lang -> stats to lang }.collect { (stats, lang) ->
+                val currentUnlocked = calculateUnlockedAchievementsList(stats, lang)
+                val currentIds = currentUnlocked.map { it.id }.toSet()
+
+                if (knownUnlockedAchievementIds == null) {
+                    val savedIds = sharedPrefs.getStringSet("known_unlocked_achievement_ids", null)
+                    if (savedIds != null) {
+                        knownUnlockedAchievementIds = savedIds.toMutableSet()
+                    } else {
+                        knownUnlockedAchievementIds = currentIds.toMutableSet()
+                        sharedPrefs.edit().putStringSet("known_unlocked_achievement_ids", currentIds).apply()
+                    }
+                }
+
+                val newlyUnlocked = currentUnlocked.filter { it.id !in knownUnlockedAchievementIds!! }
+                if (newlyUnlocked.isNotEmpty()) {
+                    newlyUnlocked.forEach { ach ->
+                        knownUnlockedAchievementIds!!.add(ach.id)
+                    }
+                    sharedPrefs.edit().putStringSet("known_unlocked_achievement_ids", knownUnlockedAchievementIds).apply()
+
+                    val updatedQueue = achievementQueue.value + newlyUnlocked
+                    achievementQueue.value = updatedQueue
+                    if (_newlyUnlockedAchievement.value == null) {
+                        _newlyUnlockedAchievement.value = updatedQueue.firstOrNull()
+                    }
+                }
+            }
+        }
+    }
+
+    fun dismissUnlockedAchievement() {
+        val currentQueue = achievementQueue.value
+        if (currentQueue.isNotEmpty()) {
+            val nextQueue = currentQueue.drop(1)
+            achievementQueue.value = nextQueue
+            _newlyUnlockedAchievement.value = nextQueue.firstOrNull()
+        } else {
+            _newlyUnlockedAchievement.value = null
+        }
+    }
+
+    private fun calculateUnlockedAchievementsList(
+        stats: com.example.data.ProfileStats,
+        lang: String
+    ): List<com.example.data.UnlockedAchievementInfo> {
+        val list = mutableListOf<com.example.data.UnlockedAchievementInfo>()
+
+        // Global Completions
+        val totalGlobalCompletions = stats.totalGlobalCompletions
+        if (totalGlobalCompletions >= 10) {
+            list.add(com.example.data.UnlockedAchievementInfo(
+                id = "COMP_10",
+                type = "COMPLETIONS",
+                tier = "COMP_10",
+                title = if (lang == "de") "Erster Schritt" else "First Step",
+                description = if (lang == "de") "Trage insgesamt 10 Erledigungen ein." else "Log a total of 10 completions across all habits."
+            ))
+        }
+        if (totalGlobalCompletions >= 50) {
+            list.add(com.example.data.UnlockedAchievementInfo(
+                id = "COMP_50",
+                type = "COMPLETIONS",
+                tier = "COMP_50",
+                title = if (lang == "de") "Gewohnheits-Routine" else "Habit Routine",
+                description = if (lang == "de") "Trage insgesamt 50 Erledigungen ein." else "Log a total of 50 completions across all habits."
+            ))
+        }
+        if (totalGlobalCompletions >= 200) {
+            list.add(com.example.data.UnlockedAchievementInfo(
+                id = "COMP_200",
+                type = "COMPLETIONS",
+                tier = "COMP_200",
+                title = if (lang == "de") "Eiserner Wille" else "Iron Will",
+                description = if (lang == "de") "Trage insgesamt 200 Erledigungen ein." else "Log a total of 200 completions across all habits."
+            ))
+        }
+        if (totalGlobalCompletions >= 500) {
+            list.add(com.example.data.UnlockedAchievementInfo(
+                id = "COMP_500",
+                type = "COMPLETIONS",
+                tier = "COMP_500",
+                title = if (lang == "de") "Lebensstil-Transformation" else "Lifestyle Transformation",
+                description = if (lang == "de") "Trage insgesamt 500 Erledigungen ein." else "Log a total of 500 completions across all habits."
+            ))
+        }
+
+        // Perfect Days
+        val perfectDaysStreak = stats.perfectDaysStreak
+        if (perfectDaysStreak >= 7) {
+            list.add(com.example.data.UnlockedAchievementInfo(
+                id = "PERF_7",
+                type = "PERFECT_DAYS",
+                tier = "PERF_7",
+                title = if (lang == "de") "Perfekte Woche" else "Perfect Week",
+                description = if (lang == "de") "Erreiche eine Serie von 7 perfekten Tagen am Stück." else "Achieve a streak of 7 consecutive perfect days."
+            ))
+        }
+        if (perfectDaysStreak >= 30) {
+            list.add(com.example.data.UnlockedAchievementInfo(
+                id = "PERF_30",
+                type = "PERFECT_DAYS",
+                tier = "PERF_30",
+                title = if (lang == "de") "Perfekter Monat" else "Perfect Month",
+                description = if (lang == "de") "Erreiche eine Serie von 30 perfekten Tagen am Stück." else "Achieve a streak of 30 consecutive perfect days."
+            ))
+        }
+        if (perfectDaysStreak >= 100) {
+            list.add(com.example.data.UnlockedAchievementInfo(
+                id = "PERF_100",
+                type = "PERFECT_DAYS",
+                tier = "PERF_100",
+                title = if (lang == "de") "Perfektion" else "Perfection",
+                description = if (lang == "de") "Erreiche eine Serie von 100 perfekten Tagen am Stück." else "Achieve a streak of 100 consecutive perfect days."
+            ))
+        }
+
+        // Individual Habit Streaks
+        stats.habitStreaks.forEach { streakInfo ->
+            val habit = streakInfo.habit
+            val streak = streakInfo.longestStreak
+            if (streak >= 7) {
+                list.add(com.example.data.UnlockedAchievementInfo(
+                    id = "STREAK_${habit.id}_7",
+                    type = "STREAK",
+                    tier = "WOOD",
+                    title = if (lang == "de") "${habit.name}: Holz-Streak" else "${habit.name}: Wood Streak",
+                    description = if (lang == "de") "7 Tage Serie erreicht!" else "Reached a 7-day streak!",
+                    habitName = habit.name,
+                    habitColor = habit.color,
+                    habitIcon = habit.icon
+                ))
+            }
+            if (streak >= 14) {
+                list.add(com.example.data.UnlockedAchievementInfo(
+                    id = "STREAK_${habit.id}_14",
+                    type = "STREAK",
+                    tier = "BRONZE",
+                    title = if (lang == "de") "${habit.name}: Bronze-Streak" else "${habit.name}: Bronze Streak",
+                    description = if (lang == "de") "14 Tage Serie erreicht!" else "Reached a 14-day streak!",
+                    habitName = habit.name,
+                    habitColor = habit.color,
+                    habitIcon = habit.icon
+                ))
+            }
+            if (streak >= 30) {
+                list.add(com.example.data.UnlockedAchievementInfo(
+                    id = "STREAK_${habit.id}_30",
+                    type = "STREAK",
+                    tier = "SILVER",
+                    title = if (lang == "de") "${habit.name}: Silber-Streak" else "${habit.name}: Silver Streak",
+                    description = if (lang == "de") "30 Tage Serie erreicht!" else "Reached a 30-day streak!",
+                    habitName = habit.name,
+                    habitColor = habit.color,
+                    habitIcon = habit.icon
+                ))
+            }
+            if (streak >= 100) {
+                list.add(com.example.data.UnlockedAchievementInfo(
+                    id = "STREAK_${habit.id}_100",
+                    type = "STREAK",
+                    tier = "GOLD",
+                    title = if (lang == "de") "${habit.name}: Gold-Streak" else "${habit.name}: Gold Streak",
+                    description = if (lang == "de") "100 Tage Serie erreicht!" else "Reached a 100-day streak!",
+                    habitName = habit.name,
+                    habitColor = habit.color,
+                    habitIcon = habit.icon
+                ))
+            }
+        }
+
+        return list
+    }
+
     init {
+        initAchievementObserver()
         viewModelScope.launch {
             selectedDate.collect {
                 _heatmapMonthOffset.value = 0

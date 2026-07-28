@@ -336,11 +336,23 @@ data class ProfileHabitStreak(
 data class ProfileStats(
     val totalGlobalCompletions: Int = 0,
     val unlockedCompletions: Int = 0,
+    val perfectDaysStreak: Int = 0,
     val unlockedPerfectDays: Int = 0,
     val habitStreaks: List<ProfileHabitStreak> = emptyList(),
     val unlockedHabitStreaks: Int = 0,
     val totalUnlockedCount: Int = 0,
     val totalPossibleCount: Int = 0
+)
+
+data class UnlockedAchievementInfo(
+    val id: String,
+    val type: String, // "STREAK", "COMPLETIONS", "PERFECT_DAYS"
+    val tier: String, // "WOOD", "BRONZE", "SILVER", "GOLD", "COMP_10", "PERF_7", etc.
+    val title: String,
+    val description: String,
+    val habitName: String? = null,
+    val habitColor: String? = null,
+    val habitIcon: String? = null
 )
 
 @Immutable

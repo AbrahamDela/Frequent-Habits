@@ -99,9 +99,6 @@ class HabitWidgetProvider : AppWidgetProvider() {
                                 }
                             }
                             
-                            // Let the database transaction write fully finish
-                            kotlinx.coroutines.delay(150L)
-                            
                             // Update widgets immediately and synchronously in the same coroutine!
                             val appWidgetManager = AppWidgetManager.getInstance(context)
                             val componentName = ComponentName(context, HabitWidgetProvider::class.java)
@@ -154,9 +151,6 @@ class HabitWidgetProvider : AppWidgetProvider() {
                                 }
                             }
                             
-                            // Let the database transaction write fully finish
-                            kotlinx.coroutines.delay(150L)
-                            
                             // Update widgets immediately and synchronously in the same coroutine!
                             val appWidgetManager = AppWidgetManager.getInstance(context)
                             val componentName = ComponentName(context, HabitWidgetProvider::class.java)
@@ -178,7 +172,7 @@ class HabitWidgetProvider : AppWidgetProvider() {
 
             if (itemAction == "TOGGLE" || itemAction == "DELTA") {
                 val now = System.currentTimeMillis()
-                if (habitId == lastClickedHabitId && (now - lastClickTime) < 500L) {
+                if (habitId == lastClickedHabitId && (now - lastClickTime) < 150L) {
                     // Debounce rapid double-clicks or bubbling nested view events
                     return
                 }
@@ -242,9 +236,6 @@ class HabitWidgetProvider : AppWidgetProvider() {
                                 }
                             }
                             
-                            // Let the database transaction write fully finish
-                            kotlinx.coroutines.delay(150L)
-                            
                             val appWidgetManager = AppWidgetManager.getInstance(context)
                             val componentName = ComponentName(context, HabitWidgetProvider::class.java)
                             val ids = appWidgetManager.getAppWidgetIds(componentName)
@@ -290,9 +281,6 @@ class HabitWidgetProvider : AppWidgetProvider() {
                                     db.habitDao().insertLog(newLog)
                                 }
                             }
-                            
-                            // Let the database transaction write fully finish
-                            kotlinx.coroutines.delay(150L)
                             
                             val appWidgetManager = AppWidgetManager.getInstance(context)
                             val componentName = ComponentName(context, HabitWidgetProvider::class.java)
@@ -342,8 +330,6 @@ class HabitWidgetProvider : AppWidgetProvider() {
     ) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                // Wait 150ms to ensure DB write transactions from the main app thread are fully committed
-                kotlinx.coroutines.delay(150L)
                 updateAllWidgetsSuspend(context, appWidgetManager, appWidgetIds, isFullUpdate)
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -369,15 +355,6 @@ class HabitWidgetProvider : AppWidgetProvider() {
             val selectedDate = todayStr
             val widgetLogs = db.habitDao().getLogsForDateRaw(selectedDate)
             val logsMap = widgetLogs.associateBy { it.habitId }
-
-            val dateCal = Calendar.getInstance().apply {
-                time = sdf.parse(selectedDate) ?: Date()
-                set(Calendar.HOUR_OF_DAY, 23)
-                set(Calendar.MINUTE, 59)
-                set(Calendar.SECOND, 59)
-                set(Calendar.MILLISECOND, 999)
-            }
-            val dateMs = dateCal.timeInMillis
 
             val activeHabits = allHabits
                 .filter { !it.isArchived && com.example.data.isHabitActiveOnDate(it, todayStr) }

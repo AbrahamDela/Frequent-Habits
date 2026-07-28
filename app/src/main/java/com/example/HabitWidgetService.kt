@@ -43,15 +43,6 @@ class HabitWidgetFactory(private val context: Context, intent: Intent) : RemoteV
                 val widgetLogs = db.habitDao().getLogsForDateRaw(selectedDate)
                 logsMap = widgetLogs.associateBy { it.habitId }
 
-                val dateCal = Calendar.getInstance().apply {
-                    time = sdf.parse(selectedDate) ?: Date()
-                    set(Calendar.HOUR_OF_DAY, 23)
-                    set(Calendar.MINUTE, 59)
-                    set(Calendar.SECOND, 59)
-                    set(Calendar.MILLISECOND, 999)
-                }
-                val dateMs = dateCal.timeInMillis
-
                 val active = allHabits
                     .filter { !it.isArchived && com.example.data.isHabitActiveOnDate(it, selectedDate) }
                     .sortedWith(compareBy<Habit> { it.sortOrder }.thenByDescending { it.id })

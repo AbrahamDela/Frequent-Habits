@@ -15,7 +15,10 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
@@ -36,14 +39,19 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
@@ -65,6 +73,9 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.painterResource
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -129,6 +140,24 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
+fun rememberResumeAnimationTrigger(): Int {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var trigger by remember { mutableIntStateOf(0) }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                trigger++
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+    return trigger
+}
+
+@Composable
 fun MainAppScreen(viewModel: HabitsViewModel) {
     val context = LocalContext.current
     val activity = context as? Activity
@@ -141,6 +170,11 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
     val currentRoute = navBackStackEntry?.destination?.route
 
     val pendingWidgetHabitId by viewModel.pendingWidgetHabitId.collectAsStateWithLifecycle()
+    val newlyUnlockedAchievement by viewModel.newlyUnlockedAchievement.collectAsStateWithLifecycle()
+
+    LaunchedEffect(Unit) {
+        FeedbackHelper.init(context.applicationContext)
+    }
 
     LaunchedEffect(pendingWidgetHabitId) {
         if (pendingWidgetHabitId != null) {
@@ -199,14 +233,64 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
                 .background(DarkBg)
                 .padding(top = innerPadding.calculateTopPadding())
         ) {
+            val mainTabRoutes = remember { listOf("TODAY", "STATS", "PROFILE") }
+            fun isMainTabRoute(route: String?): Boolean {
+                if (route.isNullOrEmpty()) return true
+                return mainTabRoutes.contains(route)
+            }
+
             NavHost(
                 navController = navController,
                 startDestination = "TODAY",
                 modifier = Modifier.fillMaxSize(),
-                enterTransition = { fadeIn(animationSpec = tween(120)) },
-                exitTransition = { fadeOut(animationSpec = tween(100)) },
-                popEnterTransition = { fadeIn(animationSpec = tween(120)) },
-                popExitTransition = { fadeOut(animationSpec = tween(100)) }
+                enterTransition = {
+                    val initialRoute = initialState.destination.route
+                    val targetRoute = targetState.destination.route
+                    if (isMainTabRoute(initialRoute) && isMainTabRoute(targetRoute)) {
+                        EnterTransition.None
+                    } else {
+                        slideInHorizontally(
+                            initialOffsetX = { fullWidth -> fullWidth },
+                            animationSpec = tween(320, easing = FastOutSlowInEasing)
+                        ) + fadeIn(animationSpec = tween(200))
+                    }
+                },
+                exitTransition = {
+                    val initialRoute = initialState.destination.route
+                    val targetRoute = targetState.destination.route
+                    if (isMainTabRoute(initialRoute) && isMainTabRoute(targetRoute)) {
+                        ExitTransition.None
+                    } else {
+                        slideOutHorizontally(
+                            targetOffsetX = { fullWidth -> -fullWidth },
+                            animationSpec = tween(320, easing = FastOutSlowInEasing)
+                        ) + fadeOut(animationSpec = tween(200))
+                    }
+                },
+                popEnterTransition = {
+                    val initialRoute = initialState.destination.route
+                    val targetRoute = targetState.destination.route
+                    if (isMainTabRoute(initialRoute) && isMainTabRoute(targetRoute)) {
+                        EnterTransition.None
+                    } else {
+                        slideInHorizontally(
+                            initialOffsetX = { fullWidth -> -fullWidth },
+                            animationSpec = tween(320, easing = FastOutSlowInEasing)
+                        ) + fadeIn(animationSpec = tween(200))
+                    }
+                },
+                popExitTransition = {
+                    val initialRoute = initialState.destination.route
+                    val targetRoute = targetState.destination.route
+                    if (isMainTabRoute(initialRoute) && isMainTabRoute(targetRoute)) {
+                        ExitTransition.None
+                    } else {
+                        slideOutHorizontally(
+                            targetOffsetX = { fullWidth -> fullWidth },
+                            animationSpec = tween(320, easing = FastOutSlowInEasing)
+                        ) + fadeOut(animationSpec = tween(200))
+                    }
+                }
             ) {
                 composable("PROFILE") {
                     ProfileScreen(
@@ -423,6 +507,14 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
             viewModel = viewModel,
             language = language,
             onDismiss = { viewModel.clearPendingWidgetHabitId() }
+        )
+    }
+
+    if (newlyUnlockedAchievement != null) {
+        AchievementUnlockedOverlay(
+            achievement = newlyUnlockedAchievement!!,
+            language = language,
+            onDismiss = { viewModel.dismissUnlockedAchievement() }
         )
     }
 }
@@ -1428,6 +1520,9 @@ fun TodayScreen(
     val minWeekStartMillis by viewModel.minWeekStartMillis.collectAsStateWithLifecycle()
     val minDateStr by viewModel.minDateStr.collectAsStateWithLifecycle()
 
+    val soundEnabled by viewModel.soundEnabled.collectAsStateWithLifecycle()
+    val vibrationEnabled by viewModel.vibrationEnabled.collectAsStateWithLifecycle()
+
     val todayDateString by viewModel.todayDateString.collectAsStateWithLifecycle()
     val canPrevWeek by viewModel.canPrevWeek.collectAsStateWithLifecycle()
     val canNextWeek by viewModel.canNextWeek.collectAsStateWithLifecycle()
@@ -1539,8 +1634,71 @@ fun TodayScreen(
         }
 
         item(key = "today_calendar_strip") {
-            var offsetX by remember { mutableStateOf(0f) }
-            val swipeThreshold = 120f
+            val coroutineScope = rememberCoroutineScope()
+
+            val todayDate = remember(todayDateString) {
+                try { java.time.LocalDate.parse(todayDateString) } catch (e: Exception) { java.time.LocalDate.now() }
+            }
+            val todayMonday = remember(todayDate) {
+                todayDate.with(java.time.DayOfWeek.MONDAY)
+            }
+            val minMonday = remember(minWeekStartMillis, todayMonday) {
+                if (minWeekStartMillis > 0) {
+                    java.time.Instant.ofEpochMilli(minWeekStartMillis)
+                        .atZone(java.time.ZoneId.systemDefault())
+                        .toLocalDate()
+                        .with(java.time.DayOfWeek.MONDAY)
+                        .coerceAtMost(todayMonday)
+                } else {
+                    todayMonday.minusYears(1).with(java.time.DayOfWeek.MONDAY)
+                }
+            }
+
+            val totalWeeks = remember(minMonday, todayMonday) {
+                (java.time.temporal.ChronoUnit.WEEKS.between(minMonday, todayMonday).toInt() + 1).coerceAtLeast(1)
+            }
+            val maxPageIndex = totalWeeks - 1
+
+            val currentWeekMonday = remember(weekStartCalendar) {
+                java.time.Instant.ofEpochMilli(weekStartCalendar.timeInMillis)
+                    .atZone(java.time.ZoneId.systemDefault())
+                    .toLocalDate()
+                    .with(java.time.DayOfWeek.MONDAY)
+            }
+            val currentWeekPageIndex = remember(minMonday, currentWeekMonday, maxPageIndex) {
+                java.time.temporal.ChronoUnit.WEEKS.between(minMonday, currentWeekMonday).toInt().coerceIn(0, maxPageIndex)
+            }
+
+            val pagerState = rememberPagerState(
+                initialPage = currentWeekPageIndex,
+                pageCount = { totalWeeks }
+            )
+
+            // Sync from viewModel to pagerState when currentWeekStart changes outside (e.g. date picker / Heute)
+            LaunchedEffect(currentWeekMonday, totalWeeks) {
+                val targetPage = java.time.temporal.ChronoUnit.WEEKS.between(minMonday, currentWeekMonday).toInt().coerceIn(0, maxPageIndex)
+                if (pagerState.currentPage != targetPage && !pagerState.isScrollInProgress) {
+                    pagerState.animateScrollToPage(targetPage)
+                }
+            }
+
+            // Sync from pagerState to viewModel when settled page changes via swipe
+            LaunchedEffect(pagerState.settledPage) {
+                val pageMonday = minMonday.plusWeeks(pagerState.settledPage.toLong())
+                if (pageMonday != currentWeekMonday) {
+                    val selLocalDate = try { java.time.LocalDate.parse(selectedDate) } catch (e: Exception) { todayDate }
+                    val dayOffset = (selLocalDate.dayOfWeek.value - 1).coerceIn(0, 6)
+                    var targetDate = pageMonday.plusDays(dayOffset.toLong())
+                    if (targetDate > todayDate) targetDate = todayDate
+                    val minLocalDate = try { java.time.LocalDate.parse(minDateStr) } catch (e: Exception) { todayDate }
+                    if (targetDate < minLocalDate) targetDate = minLocalDate
+
+                    viewModel.selectDateAndSyncWeek(targetDate.toString())
+                }
+            }
+
+            val canSwipePrev = pagerState.currentPage > 0
+            val canSwipeNext = pagerState.currentPage < maxPageIndex
 
             Column(
                 modifier = Modifier.fillMaxWidth()
@@ -1549,84 +1707,110 @@ fun TodayScreen(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    val prevInteractionSource = remember { MutableInteractionSource() }
+                    val prevIsPressed by prevInteractionSource.collectIsPressedAsState()
+                    val prevOffsetX by animateDpAsState(
+                        targetValue = if (prevIsPressed) (-6).dp else 0.dp,
+                        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+                        label = "prev_week_offset"
+                    )
+
                     IconButton(
-                        onClick = { if (canPrevWeek) viewModel.prevWeek() },
-                        enabled = canPrevWeek,
+                        onClick = {
+                            if (canSwipePrev) {
+                                coroutineScope.launch {
+                                    pagerState.animateScrollToPage(pagerState.currentPage - 1)
+                                }
+                            }
+                        },
+                        enabled = canSwipePrev,
+                        interactionSource = prevInteractionSource,
                         modifier = Modifier.size(36.dp).testTag("prev_week_button")
                     ) {
                         Icon(
                             imageVector = Icons.Default.ChevronLeft,
                             contentDescription = "Previous Week",
-                            tint = if (canPrevWeek) TextPrimary else TextPrimary.copy(alpha = 0.3f),
-                            modifier = Modifier.size(24.dp)
+                            tint = if (canSwipePrev) (if (prevIsPressed) PrimaryViolet else TextPrimary) else TextPrimary.copy(alpha = 0.3f),
+                            modifier = Modifier
+                                .offset(x = prevOffsetX)
+                                .size(24.dp)
                         )
                     }
 
-                    Row(
+                    HorizontalPager(
+                        state = pagerState,
                         modifier = Modifier
                             .weight(1f)
-                            .padding(bottom = 8.dp)
-                            .graphicsLayer {
-                                translationX = offsetX
+                            .padding(bottom = 8.dp),
+                        key = { page -> page }
+                    ) { page ->
+                        val pageMonday = remember(page, minMonday) { minMonday.plusWeeks(page.toLong()) }
+                        val pageDays = remember(pageMonday) {
+                            val dbFmt = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd", java.util.Locale.US)
+                            val numFmt = java.time.format.DateTimeFormatter.ofPattern("d", java.util.Locale.GERMANY)
+                            val nameFmt = java.time.format.DateTimeFormatter.ofPattern("E", java.util.Locale.GERMANY)
+                            (0..6).map { i ->
+                                val d = pageMonday.plusDays(i.toLong())
+                                Triple(
+                                    d.format(dbFmt),
+                                    d.format(numFmt),
+                                    d.format(nameFmt).uppercase(java.util.Locale.GERMANY).take(2)
+                                )
                             }
-                            .pointerInput(canPrevWeek, canNextWeek) {
-                                detectHorizontalDragGestures(
-                                    onDragEnd = {
-                                        if (offsetX > swipeThreshold && canPrevWeek) {
-                                            viewModel.prevWeek()
-                                        } else if (offsetX < -swipeThreshold && canNextWeek) {
-                                            viewModel.nextWeek()
-                                        }
-                                        offsetX = 0f
-                                    },
-                                    onDragCancel = {
-                                        offsetX = 0f
-                                    },
-                                    onHorizontalDrag = { change, dragAmount ->
-                                        change.consume()
-                                        val newOffset = offsetX + dragAmount
-                                        if (newOffset > 0 && !canPrevWeek) {
-                                            offsetX = (offsetX + dragAmount * 0.2f).coerceAtMost(20f)
-                                        } else if (newOffset < 0 && !canNextWeek) {
-                                            offsetX = (offsetX + dragAmount * 0.2f).coerceAtLeast(-20f)
-                                        } else {
-                                            offsetX += dragAmount
-                                        }
-                                    }
-                                )
-                            },
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        currentWeekDaysData.forEach { (dayStr, dayNum, dayName) ->
-                            val isSelected = dayStr == selectedDate
-                            val isDayEnabled = dayStr >= minDateStr
-                            key(dayStr) {
-                                CalendarDayItem(
-                                    dayStr = dayStr,
-                                    dayNum = dayNum,
-                                    dayName = dayName,
-                                    isSelected = isSelected,
-                                    onSelect = onSelectDayRemembered,
-                                    isToday = dayStr == todayDateString,
-                                    isFuture = dayStr > todayDateString,
-                                    modifier = Modifier.weight(1f),
-                                    isEnabled = isDayEnabled
-                                )
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            pageDays.forEach { (dayStr, dayNum, dayName) ->
+                                val isSelected = dayStr == selectedDate
+                                val isDayEnabled = dayStr >= minDateStr
+                                key(dayStr) {
+                                    CalendarDayItem(
+                                        dayStr = dayStr,
+                                        dayNum = dayNum,
+                                        dayName = dayName,
+                                        isSelected = isSelected,
+                                        onSelect = onSelectDayRemembered,
+                                        isToday = dayStr == todayDateString,
+                                        isFuture = dayStr > todayDateString,
+                                        modifier = Modifier.weight(1f),
+                                        isEnabled = isDayEnabled
+                                    )
+                                }
                             }
                         }
                     }
 
+                    val nextInteractionSource = remember { MutableInteractionSource() }
+                    val nextIsPressed by nextInteractionSource.collectIsPressedAsState()
+                    val nextOffsetX by animateDpAsState(
+                        targetValue = if (nextIsPressed) 6.dp else 0.dp,
+                        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+                        label = "next_week_offset"
+                    )
+
                     IconButton(
-                        onClick = { if (canNextWeek) viewModel.nextWeek() },
-                        enabled = canNextWeek,
+                        onClick = {
+                            if (canSwipeNext) {
+                                coroutineScope.launch {
+                                    pagerState.animateScrollToPage(pagerState.currentPage + 1)
+                                }
+                            }
+                        },
+                        enabled = canSwipeNext,
+                        interactionSource = nextInteractionSource,
                         modifier = Modifier.size(36.dp).testTag("next_week_button")
                     ) {
                         Icon(
                             imageVector = Icons.Default.ChevronRight,
                             contentDescription = "Next Week",
-                            tint = if (canNextWeek) TextPrimary else TextPrimary.copy(alpha = 0.3f),
-                            modifier = Modifier.size(24.dp)
+                            tint = if (canSwipeNext) (if (nextIsPressed) PrimaryViolet else TextPrimary) else TextPrimary.copy(alpha = 0.3f),
+                            modifier = Modifier
+                                .offset(x = nextOffsetX)
+                                .size(24.dp)
                         )
                     }
                 }
@@ -1645,6 +1829,22 @@ fun TodayScreen(
             val encouragementText = remember(completed, total, language) {
                 getEncouragementText(completed, total, language)
             }
+
+            val resumeTrigger = rememberResumeAnimationTrigger()
+            val animFraction = remember { Animatable(0f) }
+            var lastResumeTrigger by remember { mutableIntStateOf(-1) }
+
+            LaunchedEffect(fraction, resumeTrigger) {
+                if (resumeTrigger != lastResumeTrigger) {
+                    lastResumeTrigger = resumeTrigger
+                    animFraction.snapTo(0f)
+                }
+                animFraction.animateTo(
+                    targetValue = fraction,
+                    animationSpec = tween(durationMillis = 750, easing = FastOutSlowInEasing)
+                )
+            }
+            val animatedFraction = animFraction.value
 
             Card(
                 colors = CardDefaults.cardColors(containerColor = DarkCard),
@@ -1666,12 +1866,12 @@ fun TodayScreen(
                             .clip(RoundedCornerShape(16.dp))
                             .background(ProgressTrack)
                     ) {
-                        if (fraction > 0f) {
+                        if (animatedFraction > 0f) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxHeight()
-                                    .fillMaxWidth(fraction)
-                                    .background(if (fraction >= 1.0f) SuccessGreen else PrimaryViolet)
+                                    .fillMaxWidth(animatedFraction.coerceIn(0f, 1f))
+                                    .background(if (animatedFraction >= 1.0f) SuccessGreen else PrimaryViolet)
                             )
                         }
 
@@ -1689,7 +1889,7 @@ fun TodayScreen(
                                 color = Color.White.copy(alpha = 0.85f)
                             )
                             Text(
-                                text = "${(fraction * 100).toInt()}% ($progressText)",
+                                text = "${(animatedFraction * 100).toInt()}% ($progressText)",
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White
@@ -1808,7 +2008,9 @@ fun TodayScreen(
                     onToggle = onToggleClick,
                     onAddQuantity = onAddQuantityRemembered,
                     onLongClick = onLongClickRemembered,
-                    language = language
+                    language = language,
+                    soundEnabled = soundEnabled,
+                    vibrationEnabled = vibrationEnabled
                 )
             }
         }
@@ -2110,6 +2312,86 @@ fun TodayScreen(
     }
 }
 
+object FeedbackHelper {
+    private var soundPool: android.media.SoundPool? = null
+    private var soundId: Int = 0
+    private var isLoaded: Boolean = false
+
+    fun init(context: android.content.Context) {
+        if (soundPool == null) {
+            try {
+                val audioAttributes = android.media.AudioAttributes.Builder()
+                    .setUsage(android.media.AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
+                    .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build()
+                val sp = android.media.SoundPool.Builder()
+                    .setMaxStreams(4)
+                    .setAudioAttributes(audioAttributes)
+                    .build()
+                sp.setOnLoadCompleteListener { _, _, status ->
+                    if (status == 0) isLoaded = true
+                }
+                val resId = context.resources.getIdentifier("habit_completion", "raw", context.packageName)
+                if (resId != 0) {
+                    soundId = sp.load(context.applicationContext, resId, 1)
+                }
+                soundPool = sp
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun playCompletionFeedback(context: android.content.Context, soundEnabled: Boolean, vibrationEnabled: Boolean) {
+        if (soundEnabled) {
+            try {
+                if (soundPool == null) {
+                    init(context)
+                }
+
+                var played = false
+                if (soundPool != null && soundId != 0) {
+                    val streamId = soundPool?.play(soundId, 1.0f, 1.0f, 1, 0, 1.0f) ?: 0
+                    if (streamId != 0) {
+                        played = true
+                    }
+                }
+
+                if (!played) {
+                    val toneGen = android.media.ToneGenerator(android.media.AudioManager.STREAM_MUSIC, 80)
+                    toneGen.startTone(android.media.ToneGenerator.TONE_PROP_ACK, 120)
+                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                        try { toneGen.release() } catch (e: Exception) {}
+                    }, 180)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+        if (vibrationEnabled) {
+            try {
+                val vibrator = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                    val vm = context.getSystemService(android.content.Context.VIBRATOR_MANAGER_SERVICE) as? android.os.VibratorManager
+                    vm?.defaultVibrator
+                } else {
+                    @Suppress("DEPRECATION")
+                    context.getSystemService(android.content.Context.VIBRATOR_SERVICE) as? android.os.Vibrator
+                }
+                if (vibrator?.hasVibrator() == true) {
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                        vibrator.vibrate(android.os.VibrationEffect.createOneShot(45, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+                    } else {
+                        @Suppress("DEPRECATION")
+                        vibrator.vibrate(45)
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HabitItemRow(
@@ -2122,8 +2404,11 @@ fun HabitItemRow(
     onToggle: (Int, Boolean) -> Unit,
     onAddQuantity: (Int, Float, Float) -> Unit,
     onLongClick: (Habit) -> Unit,
-    language: String
+    language: String,
+    soundEnabled: Boolean = true,
+    vibrationEnabled: Boolean = true
 ) {
+    val context = LocalContext.current
     val habitColor = HabitIconMapping.getColor(habit.color)
 
     val animatedBgColor by animateColorAsState(
@@ -2153,17 +2438,63 @@ fun HabitItemRow(
         label = "checkboxScale"
     )
 
+    var wasCompleted by remember { mutableStateOf(isCompleted) }
+    val completionAnim = remember { Animatable(0f) }
+
+    LaunchedEffect(isCompleted) {
+        if (isCompleted && !wasCompleted) {
+            completionAnim.snapTo(0f)
+            FeedbackHelper.playCompletionFeedback(context, soundEnabled, vibrationEnabled)
+            completionAnim.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(durationMillis = 650, easing = FastOutSlowInEasing)
+            )
+        }
+        wasCompleted = isCompleted
+    }
+
+    val popProgress = completionAnim.value
+    val cardScale = 1f + if (popProgress > 0f && popProgress < 1f) {
+        0.025f * kotlin.math.sin(popProgress * Math.PI.toFloat())
+    } else 0f
+
+    val extraPopScale = if (popProgress > 0f && popProgress < 1f) {
+        0.35f * kotlin.math.sin(popProgress * Math.PI.toFloat())
+    } else 0f
+    val popRotation = if (popProgress > 0f && popProgress < 1f) {
+        (1f - popProgress) * -25f
+    } else 0f
+
     Card(
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         shape = RoundedCornerShape(16.dp),
         modifier = Modifier
             .fillMaxWidth()
+            .graphicsLayer {
+                scaleX = cardScale
+                scaleY = cardScale
+            }
             .drawBehind {
                 // 1. Draw animated background
                 drawRoundRect(
                     color = animatedBgColor,
                     cornerRadius = androidx.compose.ui.geometry.CornerRadius(16.dp.toPx(), 16.dp.toPx())
                 )
+
+                // 1b. Glowing pulse & shine across the whole card on completion
+                if (popProgress > 0f && popProgress < 1f) {
+                    val glowAlpha = 0.38f * kotlin.math.sin(popProgress * Math.PI.toFloat())
+                    drawRoundRect(
+                        brush = Brush.horizontalGradient(
+                            colors = listOf(
+                                SuccessGreen.copy(alpha = glowAlpha),
+                                Color(0xFFFFD54F).copy(alpha = glowAlpha * 0.6f),
+                                SuccessGreen.copy(alpha = glowAlpha)
+                            )
+                        ),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(16.dp.toPx(), 16.dp.toPx())
+                    )
+                }
 
                 // 2. Draw animated or gradient border
                 val brush = when {
@@ -2199,7 +2530,11 @@ fun HabitItemRow(
                     }
                 }
 
-                val strokeWidth = 1.dp.toPx()
+                val strokeWidth = if (popProgress > 0f && popProgress < 1f) {
+                    (1.dp.toPx() + 2.dp.toPx() * kotlin.math.sin(popProgress * Math.PI.toFloat()))
+                } else {
+                    1.dp.toPx()
+                }
                 drawRoundRect(
                     brush = brush,
                     cornerRadius = androidx.compose.ui.geometry.CornerRadius(16.dp.toPx(), 16.dp.toPx()),
@@ -2295,8 +2630,41 @@ fun HabitItemRow(
                     modifier = Modifier
                         .size(32.dp)
                         .graphicsLayer {
-                            scaleX = checkboxScale
-                            scaleY = checkboxScale
+                            scaleX = checkboxScale + extraPopScale
+                            scaleY = checkboxScale + extraPopScale
+                            rotationZ = popRotation
+                        }
+                        .drawBehind {
+                            if (popProgress > 0f && popProgress < 1f) {
+                                // 1. Expanding glowing halo ring
+                                val haloRadius = (size.width / 2f) + (36.dp.toPx() * popProgress)
+                                val haloAlpha = (1f - popProgress) * 0.75f
+                                drawCircle(
+                                    color = SuccessGreen.copy(alpha = haloAlpha),
+                                    radius = haloRadius,
+                                    style = androidx.compose.ui.graphics.drawscope.Stroke(
+                                        width = 2.5.dp.toPx() * (1f - popProgress)
+                                    )
+                                )
+
+                                // 2. Sparkling particle dots burst
+                                val particleCount = 6
+                                for (i in 0 until particleCount) {
+                                    val angle = i * (360f / particleCount) * (Math.PI / 180.0)
+                                    val dist = 32.dp.toPx() * popProgress
+                                    val px = (size.width / 2f) + (kotlin.math.cos(angle) * dist).toFloat()
+                                    val py = (size.height / 2f) + (kotlin.math.sin(angle) * dist).toFloat()
+                                    val pAlpha = (1f - popProgress) * 0.9f
+                                    val pRadius = 3.dp.toPx() * (1f - popProgress)
+                                    val pColor = if (i % 2 == 0) SuccessGreen else Color(0xFFFFD54F)
+
+                                    drawCircle(
+                                        color = pColor.copy(alpha = pAlpha),
+                                        radius = pRadius,
+                                        center = androidx.compose.ui.geometry.Offset(px, py)
+                                    )
+                                }
+                            }
                         }
                         .background(
                             when {
@@ -2425,14 +2793,31 @@ fun StatsScreen(
                         style = MaterialTheme.typography.displayLarge,
                         color = TextPrimary,
                         fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Start,
                         modifier = Modifier.weight(1f)
                     )
+                    Spacer(modifier = Modifier.size(44.dp))
                 }
             }
 
-            // Beautifully designed, premium Overall Strength Card
+            // Beautifully designed, compact Overall Strength Card
             item {
-                val sweepAngleVal = remember(strength) { (strength.toFloat() / 100f) * 360f }
+                val resumeTrigger = rememberResumeAnimationTrigger()
+                val animStrength = remember { Animatable(0f) }
+                var lastResumeTrigger by remember { mutableIntStateOf(-1) }
+
+                LaunchedEffect(strength, resumeTrigger) {
+                    if (resumeTrigger != lastResumeTrigger) {
+                        lastResumeTrigger = resumeTrigger
+                        animStrength.snapTo(0f)
+                    }
+                    animStrength.animateTo(
+                        targetValue = strength.toFloat(),
+                        animationSpec = tween(durationMillis = 750, easing = FastOutSlowInEasing)
+                    )
+                }
+                val animatedStrength = animStrength.value
+                val sweepAngleVal = (animatedStrength / 100f) * 360f
                 val ringColor = remember(strength) {
                     when {
                         strength < 35 -> HabitRed
@@ -2442,100 +2827,108 @@ fun StatsScreen(
                 }
                 val strengthLabel = remember(strength, language) { getStrengthLabel(strength, language) }
 
+                val overallInteractionSource = remember { MutableInteractionSource() }
+                val overallIsPressed by overallInteractionSource.collectIsPressedAsState()
+                val overallArrowOffsetX by animateDpAsState(
+                    targetValue = if (overallIsPressed) 8.dp else 0.dp,
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+                    label = "overall_arrow_offset"
+                )
+                val overallArrowScale by animateFloatAsState(
+                    targetValue = if (overallIsPressed) 1.25f else 1.0f,
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+                    label = "overall_arrow_scale"
+                )
+
                 Card(
                     colors = CardDefaults.cardColors(containerColor = DarkCard),
                     shape = RoundedCornerShape(20.dp),
                     modifier = Modifier
                         .fillMaxWidth()
                         .border(width = 1.dp, color = DarkBorder, shape = RoundedCornerShape(20.dp))
-                        .clickable { onOverallClick() }
+                        .clickable(
+                            interactionSource = overallInteractionSource,
+                            indication = ripple(),
+                            onClick = onOverallClick
+                        )
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // Left: Custom Progress Ring showing Score
-                        Box(
-                            contentAlignment = Alignment.Center,
+                        Row(
                             modifier = Modifier
-                                .size(90.dp)
-                                .drawWithCache {
-                                    val strokeWidth = 8.dp.toPx()
-                                    val stroke = Stroke(width = strokeWidth, cap = StrokeCap.Round)
-                                    onDrawBehind {
-                                        drawArc(
-                                            color = ProgressTrack,
-                                            startAngle = -90f,
-                                            sweepAngle = 360f,
-                                            useCenter = false,
-                                            style = stroke
-                                        )
-                                        drawArc(
-                                            color = ringColor,
-                                            startAngle = -90f,
-                                            sweepAngle = sweepAngleVal,
-                                            useCenter = false,
-                                            style = stroke
-                                        )
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Left: Custom Progress Ring showing Score out of 100 with animated fill
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .size(64.dp)
+                                    .drawWithCache {
+                                        val strokeWidth = 6.dp.toPx()
+                                        val stroke = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                                        onDrawBehind {
+                                            drawArc(
+                                                color = ProgressTrack,
+                                                startAngle = -90f,
+                                                sweepAngle = 360f,
+                                                useCenter = false,
+                                                style = stroke
+                                            )
+                                            drawArc(
+                                                color = ringColor,
+                                                startAngle = -90f,
+                                                sweepAngle = sweepAngleVal,
+                                                useCenter = false,
+                                                style = stroke
+                                            )
+                                        }
                                     }
-                                }
-                        ) {
-                            Text(
-                                text = "$strength/100",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = TextPrimary,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.width(16.dp))
-
-                        // Center: Meta Data / Levels Block
-                        Column(
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(
-                                    text = if (language == "de") "GESAMT-STÄRKE" else "OVERALL STRENGTH",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = TextSecondary,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                InfoIconButton(
-                                    title = if (language == "de") "Gesamt-Stärke Score" else "Overall Strength Score",
-                                    explanation = if (language == "de") {
-                                        "Die durchschnittliche gewichtete Stärke aller deiner Gewohnheiten zusammen."
-                                    } else {
-                                        "The average weighted strength score of all of your active habits combined."
-                                    },
-                                    onClick = { t, e -> activeExplanation = t to e }
-                                )
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = "${animatedStrength.toInt()}",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = TextPrimary,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = "/100",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = TextSecondary,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
                             }
-                            Spacer(modifier = Modifier.height(4.dp))
+
+                            Spacer(modifier = Modifier.width(16.dp))
+
+                            // Middle: Motivation Quote centered vertically alongside arrow and ring
                             Text(
                                 text = strengthLabel,
-                                style = MaterialTheme.typography.bodyLarge,
+                                style = MaterialTheme.typography.titleMedium,
                                 color = ringColor,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f)
+                            )
+
+                            Spacer(modifier = Modifier.width(8.dp))
+
+                            // Right: Interactive Chevron pointing right
+                            Icon(
+                                imageVector = Icons.Default.KeyboardArrowRight,
+                                contentDescription = "Details",
+                                tint = if (overallIsPressed) PrimaryViolet else TextSecondary,
+                                modifier = Modifier
+                                    .offset(x = overallArrowOffsetX)
+                                    .scale(overallArrowScale)
+                                    .size(24.dp)
                             )
                         }
-
-                        Spacer(modifier = Modifier.width(8.dp))
-
-                        // Right: Interactive Chevron pointing right
-                        Icon(
-                            imageVector = Icons.Default.KeyboardArrowRight,
-                            contentDescription = "Details",
-                            tint = TextSecondary,
-                            modifier = Modifier.size(24.dp)
-                        )
                     }
-                }
             }
 
             // Individual Habits Header
@@ -2608,13 +3001,31 @@ fun HabitStatItem(
     val strength = model.strength
     val habitColor = HabitIconMapping.getColor(habit.color)
 
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
+    val arrowOffsetX by animateDpAsState(
+        targetValue = if (isPressed) 8.dp else 0.dp,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        label = "habit_stat_arrow_offset"
+    )
+    val arrowScale by animateFloatAsState(
+        targetValue = if (isPressed) 1.25f else 1.0f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        label = "habit_stat_arrow_scale"
+    )
+
     Card(
         colors = CardDefaults.cardColors(containerColor = DarkCard),
         shape = RoundedCornerShape(16.dp),
         modifier = Modifier
             .fillMaxWidth()
             .border(1.dp, DarkBorder, RoundedCornerShape(16.dp))
-            .clickable { onClick(habit.id) }
+            .clickable(
+                interactionSource = interactionSource,
+                indication = ripple(),
+                onClick = { onClick(habit.id) }
+            )
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -2653,7 +3064,15 @@ fun HabitStatItem(
                     }
                 }
 
-                Icon(Icons.Default.KeyboardArrowRight, contentDescription = "View Details", tint = TextSecondary)
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowRight,
+                    contentDescription = "View Details",
+                    tint = if (isPressed) PrimaryViolet else TextSecondary,
+                    modifier = Modifier
+                        .offset(x = arrowOffsetX)
+                        .scale(arrowScale)
+                        .size(24.dp)
+                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -2723,6 +3142,7 @@ fun HabitDetailScreen(
     val thisYearCount = state?.thisYearCount ?: 0
     val totalCount = state?.totalCount ?: 0
 
+    val allDailyNotes by viewModel.allDailyNotes.collectAsStateWithLifecycle()
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var activeExplanation by remember { mutableStateOf<Pair<String, String>?>(null) }
 
@@ -2738,8 +3158,23 @@ fun HabitDetailScreen(
         // Strength score card
         item(key = "detail_strength") {
             val habitColor = remember(habit.color) { HabitIconMapping.getColor(habit.color) }
-            val sweepAngleVal = remember(strength) { (strength.toFloat() / 100f) * 360f }
-            val strengthText = remember(strength) { "$strength/100" }
+            val resumeTrigger = rememberResumeAnimationTrigger()
+            val animStrength = remember { Animatable(0f) }
+            var lastResumeTrigger by remember { mutableIntStateOf(-1) }
+
+            LaunchedEffect(strength, resumeTrigger) {
+                if (resumeTrigger != lastResumeTrigger) {
+                    lastResumeTrigger = resumeTrigger
+                    animStrength.snapTo(0f)
+                }
+                animStrength.animateTo(
+                    targetValue = strength.toFloat(),
+                    animationSpec = tween(durationMillis = 750, easing = FastOutSlowInEasing)
+                )
+            }
+            val animatedStrength = animStrength.value
+            val sweepAngleVal = (animatedStrength / 100f) * 360f
+            val strengthText = "${animatedStrength.toInt()}/100"
             val strengthLabel = remember(strength, language) { getStrengthLabel(strength, language) }
 
             Card(
@@ -3087,7 +3522,8 @@ fun HabitDetailScreen(
                 gridData = state?.weekdayGridData ?: emptyList(),
                 weeksWithMonthLabels = state?.weeksWithMonthLabels ?: emptyList(),
                 language = language,
-                onInfoClick = { t, e -> activeExplanation = t to e }
+                onInfoClick = { t, e -> activeExplanation = t to e },
+                allDailyNotes = allDailyNotes
             )
         }
     }
@@ -3176,7 +3612,8 @@ fun WeekdayFrequencySection(
     gridData: List<List<Pair<java.time.LocalDate, String>>>,
     weeksWithMonthLabels: List<String>,
     language: String,
-    onInfoClick: (String, String) -> Unit
+    onInfoClick: (String, String) -> Unit,
+    allDailyNotes: List<com.example.data.DailyNote> = emptyList()
 ) {
     val daysAbbr = if (language == "de") {
         listOf("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So")
@@ -3313,7 +3750,11 @@ fun WeekdayFrequencySection(
                             ) {
                                 gridData.forEach { weekDays ->
                                     val cell = weekDays[dayIndex]
+                                    val dateStr = cell.first.toString()
                                     val status = cell.second
+                                    val hasNote = remember(allDailyNotes, dateStr) {
+                                        allDailyNotes.any { it.date == dateStr && it.content.isNotBlank() }
+                                    }
                                     
                                     val isSuccess = status == "SUCCESS"
                                     val size = if (isSuccess) 14.dp else 4.dp
@@ -3332,6 +3773,14 @@ fun WeekdayFrequencySection(
                                                 .size(size)
                                                 .background(color, CircleShape)
                                         )
+                                        if (hasNote) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .align(Alignment.TopEnd)
+                                                    .size(4.dp)
+                                                    .background(PrimaryViolet, CircleShape)
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -3477,6 +3926,21 @@ fun TargetProgressRow(
         val progressFraction = remember(actual, target) {
             if (target > 0f) (actual / target).coerceIn(0f, 1f) else 0f
         }
+        val resumeTrigger = rememberResumeAnimationTrigger()
+        val animFraction = remember { Animatable(0f) }
+        var lastResumeTrigger by remember { mutableIntStateOf(-1) }
+
+        LaunchedEffect(progressFraction, resumeTrigger) {
+            if (resumeTrigger != lastResumeTrigger) {
+                lastResumeTrigger = resumeTrigger
+                animFraction.snapTo(0f)
+            }
+            animFraction.animateTo(
+                targetValue = progressFraction,
+                animationSpec = tween(durationMillis = 700, easing = FastOutSlowInEasing)
+            )
+        }
+        val animatedProgressFraction = animFraction.value
         val hasOverachieved = remember(actual, target) {
             target > 0f && actual > target
         }
@@ -3563,7 +4027,7 @@ fun TargetProgressRow(
             Box(
                 modifier = Modifier
                     .fillMaxHeight()
-                    .fillMaxWidth(if (progressFraction > 0f) progressFraction else 0.001f)
+                    .fillMaxWidth(if (animatedProgressFraction > 0f) animatedProgressFraction else 0.001f)
                     .clip(RoundedCornerShape(5.dp))
                     .background(
                         if (hasOverachieved) {
@@ -3621,7 +4085,22 @@ fun OverallStatsScreen(
         ) {
                 // Overall Strength / Progress centered view
             item(key = "overall_strength") {
-                val sweepAngleVal = remember(strength) { (strength.toFloat() / 100f) * 360f }
+                val resumeTrigger = rememberResumeAnimationTrigger()
+                val animStrength = remember { Animatable(0f) }
+                var lastResumeTrigger by remember { mutableIntStateOf(-1) }
+
+                LaunchedEffect(strength, resumeTrigger) {
+                    if (resumeTrigger != lastResumeTrigger) {
+                        lastResumeTrigger = resumeTrigger
+                        animStrength.snapTo(0f)
+                    }
+                    animStrength.animateTo(
+                        targetValue = strength.toFloat(),
+                        animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing)
+                    )
+                }
+                val animatedStrength = animStrength.value
+                val sweepAngleVal = (animatedStrength / 100f) * 360f
                 val ringColor = remember(strength) {
                     when {
                         strength < 35 -> HabitRed
@@ -3641,18 +4120,18 @@ fun OverallStatsScreen(
                         horizontalArrangement = Arrangement.Center
                     ) {
                         Text(
-                            text = if (language == "de") "GESAMT-FORTSCHRITT" else "OVERALL PROGRESS",
+                            text = if (language == "de") "GESAMT-STÄRKE" else "OVERALL STRENGTH",
                             style = MaterialTheme.typography.titleMedium,
                             color = TextPrimary,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         InfoIconButton(
-                            title = if (language == "de") "Gesamtfortschritt" else "Overall Progress",
+                            title = if (language == "de") "Gesamt-Stärke Score" else "Overall Strength Score",
                             explanation = if (language == "de") {
-                                "Gesamtfortschritt aller aktiven Gewohnheiten. Die durchschnittliche gewichtete Stärke aller deiner Gewohnheiten zusammen."
+                                "Gesamt-Stärke aller aktiven Gewohnheiten. Die durchschnittliche gewichtete Stärke aller deiner Gewohnheiten zusammen."
                             } else {
-                                "Your overall progress across all active habits. The average weighted strength score of all of your active habits combined."
+                                "Your overall strength score across all active habits. The average weighted strength score of all of your active habits combined."
                             },
                             onClick = { t, e -> activeExplanation = t to e }
                         )
@@ -3685,12 +4164,22 @@ fun OverallStatsScreen(
                                 }
                             }
                     ) {
-                        Text(
-                            text = "$strength%",
-                            style = MaterialTheme.typography.headlineLarge,
-                            color = TextPrimary,
-                            fontWeight = FontWeight.ExtraBold
-                        )
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "${animatedStrength.toInt()}",
+                                style = MaterialTheme.typography.headlineLarge,
+                                color = TextPrimary,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                            Text(
+                                text = "Score / 100",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = TextSecondary,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
             }
@@ -3843,6 +4332,9 @@ fun OverallStatsScreen(
                                                 
                                                 val isSelectedSquare = activeCell?.dateStr == cell.dateStr
                                                 val isTodayBorder = cell.isToday
+                                                val hasNote = remember(allDailyNotes, cell.dateStr) {
+                                                    allDailyNotes.any { it.date == cell.dateStr && it.content.isNotBlank() }
+                                                }
                                                 
                                                 Box(
                                                     modifier = Modifier
@@ -3857,8 +4349,19 @@ fun OverallStatsScreen(
                                                         )
                                                         .clickable(enabled = !cell.isOutOfRange) {
                                                             viewModel.selectHeatmapCell(cell)
-                                                        }
-                                                )
+                                                        },
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    if (hasNote && !cell.isOutOfRange) {
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .align(Alignment.TopEnd)
+                                                                .padding(top = 2.dp, end = 2.dp)
+                                                                .size(4.dp)
+                                                                .background(PrimaryViolet, CircleShape)
+                                                        )
+                                                    }
+                                                }
                                             }
                                         }
                                     }
@@ -3950,11 +4453,20 @@ fun OverallStatsScreen(
                                 }
                                 
                                 if (!cell.isFuture) {
+                                    val cellInteractionSource = remember { MutableInteractionSource() }
+                                    val cellIsPressed by cellInteractionSource.collectIsPressedAsState()
+                                    val cellArrowOffsetX by animateDpAsState(
+                                        targetValue = if (cellIsPressed) 6.dp else 0.dp,
+                                        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+                                        label = "cell_arrow_offset"
+                                    )
+
                                     TextButton(
                                         onClick = {
                                             viewModel.selectDateAndSyncWeek(cell.dateStr)
                                             onNavigateToToday()
                                         },
+                                        interactionSource = cellInteractionSource,
                                         colors = ButtonDefaults.textButtonColors(contentColor = PrimaryViolet)
                                     ) {
                                         Text(
@@ -3966,7 +4478,9 @@ fun OverallStatsScreen(
                                         Icon(
                                             imageVector = Icons.Default.ChevronRight,
                                             contentDescription = "Go to date",
-                                            modifier = Modifier.size(16.dp)
+                                            modifier = Modifier
+                                                .offset(x = cellArrowOffsetX)
+                                                .size(16.dp)
                                         )
                                     }
                                 }
@@ -4886,6 +5400,8 @@ fun SettingsScreen(
     val context = LocalContext.current
     val backupFolderUri by viewModel.backupFolderUri.collectAsStateWithLifecycle()
     val syncStatus by viewModel.syncStatus.collectAsStateWithLifecycle()
+    val soundEnabled by viewModel.soundEnabled.collectAsStateWithLifecycle()
+    val vibrationEnabled by viewModel.vibrationEnabled.collectAsStateWithLifecycle()
 
     var showWipeConfirm by remember { mutableStateOf(false) }
     var showArchivedList by remember { mutableStateOf(false) }
@@ -5147,6 +5663,115 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
             contentPadding = PaddingValues(bottom = 32.dp, top = 84.dp)
         ) {
+            // Feedback & Effekte (Ton & Vibration) Card
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = DarkCard),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, DarkBorder, RoundedCornerShape(16.dp))
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = if (language == "de") "Erfolgs-Feedback" else "Completion Feedback",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = TextPrimary,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Ton
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.VolumeUp,
+                                    contentDescription = "Sound",
+                                    tint = PrimaryViolet,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = if (language == "de") "Erfolgston abspielen" else "Play completion sound",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = TextPrimary,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Text(
+                                        text = if (language == "de") "Subtiler Ton beim Erreichen des Ziels" else "Subtle chime when reaching target",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = TextSecondary
+                                    )
+                                }
+                            }
+                            Switch(
+                                checked = soundEnabled,
+                                onCheckedChange = { viewModel.setSoundEnabled(it) },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = Color.White,
+                                    checkedTrackColor = PrimaryViolet,
+                                    uncheckedThumbColor = TextSecondary,
+                                    uncheckedTrackColor = ProgressTrack
+                                )
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Vibration
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Vibration,
+                                    contentDescription = "Vibration",
+                                    tint = SuccessGreen,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = if (language == "de") "Vibration beim Abhaken" else "Haptic feedback",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = TextPrimary,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Text(
+                                        text = if (language == "de") "Haptischer Impuls beim Erledigen" else "Short vibration pulse on completion",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = TextSecondary
+                                    )
+                                }
+                            }
+                            Switch(
+                                checked = vibrationEnabled,
+                                onCheckedChange = { viewModel.setVibrationEnabled(it) },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = Color.White,
+                                    checkedTrackColor = SuccessGreen,
+                                    uncheckedThumbColor = TextSecondary,
+                                    uncheckedTrackColor = ProgressTrack
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+
             // Language setup card
             item {
             Card(
@@ -5192,13 +5817,30 @@ fun SettingsScreen(
 
         // Archivierte Gewohnheiten card
         item {
+            val archiveInteractionSource = remember { MutableInteractionSource() }
+            val archiveIsPressed by archiveInteractionSource.collectIsPressedAsState()
+            val archiveArrowOffsetX by animateDpAsState(
+                targetValue = if (archiveIsPressed) 8.dp else 0.dp,
+                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+                label = "archive_arrow_offset"
+            )
+            val archiveArrowScale by animateFloatAsState(
+                targetValue = if (archiveIsPressed) 1.25f else 1.0f,
+                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+                label = "archive_arrow_scale"
+            )
+
             Card(
                 colors = CardDefaults.cardColors(containerColor = DarkCard),
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .border(1.dp, DarkBorder, RoundedCornerShape(16.dp))
-                    .clickable { showArchivedList = true }
+                    .clickable(
+                        interactionSource = archiveInteractionSource,
+                        indication = ripple(),
+                        onClick = { showArchivedList = true }
+                    )
             ) {
                 Row(
                     modifier = Modifier.padding(16.dp),
@@ -5230,8 +5872,11 @@ fun SettingsScreen(
                     Icon(
                         imageVector = Icons.Default.ChevronRight,
                         contentDescription = "Go",
-                        tint = TextSecondary,
-                        modifier = Modifier.size(20.dp)
+                        tint = if (archiveIsPressed) PrimaryViolet else TextSecondary,
+                        modifier = Modifier
+                            .offset(x = archiveArrowOffsetX)
+                            .scale(archiveArrowScale)
+                            .size(20.dp)
                     )
                 }
             }
@@ -7030,10 +7675,11 @@ fun getEncouragementText(completed: Int, total: Int, language: String): String {
 
 fun getStrengthLabel(strength: Int, language: String): String {
     return when {
-        strength < 30 -> if (language == "de") "Ausstehend - Auf geht's!" else "Pending - Let's go!"
-        strength < 60 -> if (language == "de") "Mittelmäßig - Dranbleiben!" else "Fair - Keep it up!"
-        strength < 85 -> if (language == "de") "Solide - Starker Einsatz! \uD83D\uDCAA" else "Solid - Going strong! \uD83D\uDCAA"
-        else -> if (language == "de") "Exzellent - Unaufhaltsam! \uD83D\uDD25" else "Excellent - Unstoppable! \uD83D\uDD25"
+        strength == 0 -> if (language == "de") "Ausstehend - Auf geht's!" else "Pending - Let's go!"
+        strength < 30 -> if (language == "de") "Anfang gemacht - Weiter so! 🌱" else "Started - Keep going! 🌱"
+        strength < 60 -> if (language == "de") "Mittelmäßig - Dranbleiben! ✨" else "Fair - Keep it up! ✨"
+        strength < 85 -> if (language == "de") "Solide - Starker Einsatz! 💪" else "Solid - Going strong! 💪"
+        else -> if (language == "de") "Exzellent - Unaufhaltsam! 🔥" else "Excellent - Unstoppable! 🔥"
     }
 }
 
@@ -7188,6 +7834,22 @@ fun HabitStreakAchievementCard(
                 Triple(label, 1f, 100)
             }
 
+            val resumeTrigger = rememberResumeAnimationTrigger()
+            val animStreakFraction = remember { Animatable(0f) }
+            var lastResumeTrigger by remember { mutableIntStateOf(-1) }
+
+            LaunchedEffect(progressFraction, resumeTrigger) {
+                if (resumeTrigger != lastResumeTrigger) {
+                    lastResumeTrigger = resumeTrigger
+                    animStreakFraction.snapTo(0f)
+                }
+                animStreakFraction.animateTo(
+                    targetValue = progressFraction,
+                    animationSpec = tween(durationMillis = 700, easing = FastOutSlowInEasing)
+                )
+            }
+            val animatedStreakFraction = animStreakFraction.value
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -7199,7 +7861,7 @@ fun HabitStreakAchievementCard(
                     color = TextSecondary
                 )
                 Text(
-                    text = "$percent%",
+                    text = "${(animatedStreakFraction * 100).toInt()}%",
                     style = MaterialTheme.typography.bodySmall,
                     color = TextSecondary,
                     fontWeight = FontWeight.Bold
@@ -7207,7 +7869,7 @@ fun HabitStreakAchievementCard(
             }
             Spacer(modifier = Modifier.height(4.dp))
             LinearProgressIndicator(
-                progress = { progressFraction },
+                progress = { animatedStreakFraction },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(6.dp)
@@ -7375,7 +8037,23 @@ fun GlobalAchievementCard(
                     val progressFraction = if (targetValue > 0) {
                         (currentValue.toFloat() / targetValue).coerceIn(0f, 1f)
                     } else 0f
-                    val percent = (progressFraction * 100).toInt()
+
+                    val resumeTrigger = rememberResumeAnimationTrigger()
+                    val animAchieveFraction = remember { Animatable(0f) }
+                    var lastResumeTrigger by remember { mutableIntStateOf(-1) }
+
+                    LaunchedEffect(progressFraction, resumeTrigger) {
+                        if (resumeTrigger != lastResumeTrigger) {
+                            lastResumeTrigger = resumeTrigger
+                            animAchieveFraction.snapTo(0f)
+                        }
+                        animAchieveFraction.animateTo(
+                            targetValue = progressFraction,
+                            animationSpec = tween(durationMillis = 700, easing = FastOutSlowInEasing)
+                        )
+                    }
+                    val animatedAchieveFraction = animAchieveFraction.value
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -7391,7 +8069,7 @@ fun GlobalAchievementCard(
                             color = TextSecondary.copy(alpha = 0.7f)
                         )
                         Text(
-                            text = "$percent%",
+                            text = "${(animatedAchieveFraction * 100).toInt()}%",
                             style = MaterialTheme.typography.bodySmall,
                             color = TextSecondary.copy(alpha = 0.7f),
                             fontWeight = FontWeight.Bold
@@ -7399,7 +8077,7 @@ fun GlobalAchievementCard(
                     }
                     Spacer(modifier = Modifier.height(6.dp))
                     LinearProgressIndicator(
-                        progress = { progressFraction },
+                        progress = { animatedAchieveFraction },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(6.dp)
@@ -7426,7 +8104,7 @@ fun ProfileScreen(
     val perfectDaysStreak = perfectDaysState.perfectDaysStreak
 
     var activeExplanation by remember { mutableStateOf<Pair<String, String>?>(null) }
-    var selectedTab by remember { mutableStateOf(0) } // 0 = Freigeschaltet, 1 = Alle Erfolge
+    var selectedTab by rememberSaveable { mutableIntStateOf(0) } // 0 = Freigeschaltet, 1 = Alle Erfolge
 
     val totalGlobalCompletions = profileStats.totalGlobalCompletions
     val unlockedCompletions = profileStats.unlockedCompletions
@@ -7548,7 +8226,7 @@ fun ProfileScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 12.dp),
+                .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -7582,7 +8260,7 @@ fun ProfileScreen(
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 20.dp),
+                    .padding(horizontal = 16.dp),
                 contentPadding = PaddingValues(top = 8.dp, bottom = 180.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
@@ -7686,22 +8364,27 @@ fun ProfileScreen(
                     val tabs = if (language == "de") listOf("Freigeschaltet", "Alle Erfolge") else listOf("Unlocked", "All Achievements")
                     tabs.forEachIndexed { index, label ->
                         val isSelected = selectedTab == index
-                        Box(
+                        Surface(
+                            onClick = { selectedTab = index },
+                            shape = RoundedCornerShape(20.dp),
+                            color = if (isSelected) PrimaryViolet else DarkCard,
+                            border = BorderStroke(1.dp, if (isSelected) PrimaryViolet else DarkBorder),
                             modifier = Modifier
                                 .weight(1f)
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(if (isSelected) PrimaryViolet else DarkCard)
-                                .border(1.dp, if (isSelected) PrimaryViolet else DarkBorder, RoundedCornerShape(20.dp))
-                                .clickable { selectedTab = index }
-                                .padding(vertical = 8.dp),
-                            contentAlignment = Alignment.Center
+                                .height(42.dp)
+                                .testTag(if (index == 0) "tab_unlocked" else "tab_all_achievements")
                         ) {
-                            Text(
-                                text = label,
-                                style = MaterialTheme.typography.labelMedium,
-                                color = if (isSelected) Color.White else TextSecondary,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                            )
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                Text(
+                                    text = label,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = if (isSelected) Color.White else TextSecondary,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                )
+                            }
                         }
                     }
                 }
@@ -8288,6 +8971,331 @@ fun DailyNoteDialog(
         shape = RoundedCornerShape(20.dp),
         modifier = Modifier.border(1.dp, DarkBorder, RoundedCornerShape(20.dp))
     )
+}
+
+fun Modifier.saturationFilter(saturation: Float): Modifier = this.drawWithContent {
+    if (saturation >= 0.99f) {
+        drawContent()
+    } else {
+        val matrix = ColorMatrix().apply {
+            setToSaturation(saturation)
+        }
+        val filter = ColorFilter.colorMatrix(matrix)
+        val paint = androidx.compose.ui.graphics.Paint().apply {
+            colorFilter = filter
+        }
+        drawIntoCanvas { canvas ->
+            canvas.saveLayer(androidx.compose.ui.geometry.Rect(0f, 0f, size.width, size.height), paint)
+            drawContent()
+            canvas.restore()
+        }
+    }
+}
+
+private data class AchievementConfettiParticle(
+    val vx: Float,
+    val vy: Float,
+    val pSize: Float,
+    val color: Color,
+    val rotation: Float,
+    val rotationSpeed: Float,
+    val shapeType: Int
+)
+
+@Composable
+fun ConfettiCanvas(
+    modifier: Modifier = Modifier
+) {
+    val particles = remember {
+        val colors = listOf(
+            Color(0xFFFFD54F), // Gold
+            Color(0xFFAB47BC), // Violet
+            Color(0xFF66BB6A), // Green
+            Color(0xFF29B6F6), // Cyan
+            Color(0xFFFF7043), // Coral
+            Color(0xFFEC407A), // Pink
+            Color(0xFFFFFFFF)  // White
+        )
+        val list = mutableListOf<AchievementConfettiParticle>()
+        val random = java.util.Random(1337)
+        for (i in 0 until 65) {
+            val angle = random.nextFloat() * 2f * Math.PI.toFloat()
+            val speed = 250f + random.nextFloat() * 650f
+            list.add(
+                AchievementConfettiParticle(
+                    vx = (kotlin.math.cos(angle) * speed).toFloat(),
+                    vy = (kotlin.math.sin(angle) * speed - 350f).toFloat(),
+                    pSize = (10f + random.nextFloat() * 16f),
+                    color = colors[random.nextInt(colors.size)],
+                    rotation = random.nextFloat() * 360f,
+                    rotationSpeed = (random.nextFloat() - 0.5f) * 720f,
+                    shapeType = random.nextInt(3)
+                )
+            )
+        }
+        list
+    }
+
+    val timeAnim = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        timeAnim.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(durationMillis = 3000, easing = LinearEasing)
+        )
+    }
+
+    val progress = timeAnim.value
+    val alpha = (1f - (progress * 0.85f)).coerceIn(0f, 1f)
+
+    Canvas(modifier = modifier) {
+        val canvasWidth = size.width
+        val canvasHeight = size.height
+        val centerX = canvasWidth / 2f
+        val centerY = canvasHeight / 2.3f
+
+        val t = progress * 3.0f
+        val gravity = 800f
+
+        particles.forEach { p ->
+            val curX = centerX + p.vx * t
+            val curY = centerY + p.vy * t + 0.5f * gravity * t * t
+            val curRot = p.rotation + p.rotationSpeed * t
+
+            if (curX in -50f..(canvasWidth + 50f) && curY in -50f..(canvasHeight + 50f)) {
+                withTransform({
+                    translate(left = curX, top = curY)
+                    rotate(degrees = curRot)
+                }) {
+                    val pColor = p.color.copy(alpha = alpha)
+                    when (p.shapeType) {
+                        0 -> drawCircle(color = pColor, radius = p.pSize / 2f)
+                        1 -> drawRect(
+                            color = pColor,
+                            topLeft = androidx.compose.ui.geometry.Offset(-p.pSize / 2f, -p.pSize / 2f),
+                            size = androidx.compose.ui.geometry.Size(p.pSize, p.pSize * 0.6f)
+                        )
+                        else -> drawOval(
+                            color = pColor,
+                            topLeft = androidx.compose.ui.geometry.Offset(-p.pSize / 2f, -p.pSize / 2f),
+                            size = androidx.compose.ui.geometry.Size(p.pSize * 1.3f, p.pSize * 0.5f)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun AchievementUnlockedOverlay(
+    achievement: com.example.data.UnlockedAchievementInfo,
+    language: String,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+
+    LaunchedEffect(achievement.id) {
+        FeedbackHelper.playCompletionFeedback(
+            context = context,
+            soundEnabled = true,
+            vibrationEnabled = true
+        )
+    }
+
+    val scaleAnim = remember(achievement.id) { Animatable(0.3f) }
+    val saturationAnim = remember(achievement.id) { Animatable(0f) }
+
+    LaunchedEffect(achievement.id) {
+        scaleAnim.animateTo(
+            targetValue = 1f,
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessLow
+            )
+        )
+    }
+
+    LaunchedEffect(achievement.id) {
+        kotlinx.coroutines.delay(350)
+        saturationAnim.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(durationMillis = 900, easing = FastOutSlowInEasing)
+        )
+    }
+
+    val saturation = saturationAnim.value
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.88f))
+            .clickable(enabled = false) {},
+        contentAlignment = Alignment.Center
+    ) {
+        ConfettiCanvas(modifier = Modifier.fillMaxSize())
+
+        Card(
+            shape = RoundedCornerShape(28.dp),
+            colors = CardDefaults.cardColors(containerColor = DarkCard),
+            modifier = Modifier
+                .padding(horizontal = 24.dp)
+                .fillMaxWidth()
+                .border(
+                    width = 2.dp,
+                    brush = Brush.linearGradient(
+                        colors = listOf(
+                            PrimaryViolet,
+                            Color(0xFFFFD54F),
+                            PrimaryViolet
+                        )
+                    ),
+                    shape = RoundedCornerShape(28.dp)
+                )
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .padding(28.dp)
+                    .fillMaxWidth()
+            ) {
+                Surface(
+                    color = Color(0xFFFFD54F).copy(alpha = 0.15f),
+                    shape = RoundedCornerShape(50),
+                    border = BorderStroke(1.dp, Color(0xFFFFD54F).copy(alpha = 0.6f))
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            text = "🏆 ",
+                            fontSize = 14.sp
+                        )
+                        Text(
+                            text = if (language == "de") "ERFOLG FREIGESCHALTET!" else "ACHIEVEMENT UNLOCKED!",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = Color(0xFFFFD54F),
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = 1.sp
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.size(170.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(150.dp)
+                            .graphicsLayer {
+                                alpha = saturation * 0.5f
+                                scaleX = 1f + saturation * 0.15f
+                                scaleY = 1f + saturation * 0.15f
+                            }
+                            .background(
+                                brush = Brush.radialGradient(
+                                    colors = listOf(
+                                        Color(0xFFFFD54F).copy(alpha = 0.4f),
+                                        PrimaryViolet.copy(alpha = 0.2f),
+                                        Color.Transparent
+                                    )
+                                ),
+                                shape = CircleShape
+                            )
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .graphicsLayer {
+                                scaleX = scaleAnim.value
+                                scaleY = scaleAnim.value
+                            }
+                            .saturationFilter(saturation)
+                    ) {
+                        AchievementBadge(
+                            type = achievement.type,
+                            tier = achievement.tier,
+                            isUnlocked = true,
+                            modifier = Modifier.size(150.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Text(
+                    text = achievement.title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = TextPrimary,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = achievement.description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextSecondary,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 20.sp
+                )
+
+                if (!achievement.habitName.isNullOrEmpty() && achievement.habitColor != null) {
+                    Spacer(modifier = Modifier.height(14.dp))
+                    val hColor = HabitIconMapping.getColor(achievement.habitColor)
+                    Surface(
+                        color = hColor.copy(alpha = 0.2f),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, hColor.copy(alpha = 0.5f))
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            if (!achievement.habitIcon.isNullOrEmpty()) {
+                                Icon(
+                                    imageVector = HabitIconMapping.getIcon(achievement.habitIcon),
+                                    contentDescription = null,
+                                    tint = hColor,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                            }
+                            Text(
+                                text = achievement.habitName,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = TextPrimary,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(28.dp))
+
+                Button(
+                    onClick = onDismiss,
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryViolet),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp)
+                        .testTag("dismiss_achievement_button")
+                ) {
+                    Text(
+                        text = if (language == "de") "Klasse! 🎉" else "Awesome! 🎉",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -8935,21 +9943,42 @@ fun ModernBackButton(
     modifier: Modifier = Modifier,
     testTag: String = ""
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
+    val offsetX by animateDpAsState(
+        targetValue = if (isPressed) (-6).dp else 0.dp,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        label = "back_arrow_offset"
+    )
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 1.2f else 1.0f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        label = "back_arrow_scale"
+    )
+
     Box(
         modifier = modifier
             .size(40.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(DarkCard)
             .border(1.dp, DarkBorder, RoundedCornerShape(12.dp))
-            .clickable { onClick() }
+            .clickable(
+                interactionSource = interactionSource,
+                indication = ripple(),
+                onClick = onClick
+            )
             .testTag(testTag),
         contentAlignment = Alignment.Center
     ) {
         Icon(
             imageVector = Icons.Default.ChevronLeft,
             contentDescription = "Back",
-            tint = TextPrimary,
-            modifier = Modifier.size(24.dp)
+            tint = if (isPressed) PrimaryViolet else TextPrimary,
+            modifier = Modifier
+                .offset(x = offsetX)
+                .scale(scale)
+                .size(24.dp)
         )
     }
 }
