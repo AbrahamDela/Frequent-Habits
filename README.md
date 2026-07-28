@@ -1,36 +1,50 @@
+<div align="center">
+
 # Frequent Habits 🌟
 
-**Frequent Habits: Aesthetics meet deep analytics—100% local.**
+**Aesthetic design meets deep analytics — 100% local, private, and subscription-free.**
 
-🌐 [**Visit our website**](https://frequency-apps.com) | ☕ [**Support via Liberapay**](https://liberapay.com/FrequeNCy/donate)
+<br>
 
-[![Donate using Liberapay](https://liberapay.com/assets/widgets/donate.svg)](https://liberapay.com/FrequeNCy/donate)
+[![Get it on F-Droid](https://fdroid.gitlab.io/artwork/badge/get-it-on.png)](https://f-droid.org/packages/com.frequent.habits/)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+[![Get it on Obtainium](https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png)](obtainium://app/https://github.com/FrequeNCy144/Frequent-Habits)
+
+<br>
+
+[![GitHub Release](https://img.shields.io/github/v/release/FrequeNCy144/Frequent-Habits?style=for-the-badge&logo=github&color=7356FF)](https://github.com/FrequeNCy144/Frequent-Habits/releases)
+[![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge)](LICENSE)
+[![Sponsor](https://img.shields.io/badge/Sponsor-Liberapay-f6c915?style=for-the-badge&logo=liberapay&logoColor=black)](https://liberapay.com/FrequeNCy/donate)
+
+<br>
+
+**Official Repository:** This is the only official Frequent Habits source. Only download from [F-Droid](https://f-droid.org/packages/com.frequent.habits/), via [Obtainium](https://github.com/ImranR98/Obtainium), or directly from our [GitHub Releases](https://github.com/FrequeNCy144/Frequent-Habits/releases). Beware of copies distributing APKs from other sources.
+
+**APK Signing Certificate (SHA-256):**
+`D6:F4:53:7C:BF:D2:82:D1:98:57:D0:AA:45:A9:5E:B1:9E:B5:07:89:2D:B4:B9:2A:F7:69:48:68:60:EA:1F:3D`
+<br>
+*Verify GitHub Release APKs with AppVerifier or Obtainium. F-Droid builds use F-Droid's own reproducible signing key.*
+
+</div>
 
 ---
 
-Often, you have to make a choice when it comes to habit trackers: either a gorgeous design hidden behind expensive subscriptions and data harvesting, or privacy-friendly open-source apps that feel visually and functionally very basic. **Frequent Habits** bridges exactly this gap.
+Often, you have to make a hard choice when looking for a habit tracker: either choose a visually stunning app trapped behind expensive paywalls and aggressive data harvesting, or settle for privacy-friendly open-source apps that feel visually and functionally basic. **Frequent Habits** bridges exactly this gap.
 
-This app offers an incredibly beautiful, ultra-modern dark mode design and a depth of comprehensive statistics that you will hardly find anywhere else on the market—and it does all of this completely offline on your device.
-
-![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)
-![Platform: Android](https://img.shields.io/badge/Platform-Android-green.svg)
-![Status: Active](https://img.shields.io/badge/Status-Active-success.svg)
+We deliver a gorgeous, ultra-modern dark mode interface paired with satisfying audio-visual feedback and a depth of comprehensive statistics rarely found anywhere else on the market—all running completely offline on your device with zero cloud dependencies.
 
 ---
 
 ## ✨ Key Features
 
-*   🎨 **Unique, Aesthetic Design:** A stunning interface with vibrant accent colors, fluid animations, and a clean UI that makes checking off your daily tasks a true premium experience.
-  
-*   📊 **Unrivaled Statistics & Analytics:** Go far beyond simple streak counting. Understand your behavior through detailed yearly heatmaps, precise weekday frequencies, top & bottom habit insights, and visually striking progress bars.
-  
-*   🛡️ **100% Private & Offline:** Your life is your business. No tracking, no ads, no mandatory cloud. Includes a secure, local backup feature (SAF).
-  
-*   🎮 **Motivation through Gamification:** Achieve "Gold Series", keep your streaks alive, and unlock exclusive trophies and milestones that keep you motivated every single day.
-  
-*   ⏱️ **Built-in Timer:** Complete number- and time-based habits (like 30 minutes of meditation or reading) with a dedicated timer—including background audio—directly within the app.
-  
-*   📝 **Integrated Mini-Notebook:** Jot down your thoughts, successes, or reasons for a slip-up directly on specific days to understand your patterns even better.
+* 🎵 **Instant Audio & Haptic Rewards:** Completing a habit triggers a zero-latency audio chime (loaded via SoundPool), a satisfying haptic vibration pulse, and a glowing emerald-gold card animation.
+* 🏆 **Full-Screen Gamification:** Stay consistent by unlocking exclusive trophies and milestones. Reaching a new rank triggers a full-screen celebratory overlay with confetti and dynamic badge coloring!
+* 🎨 **Premium Responsive UI:** A stunning dark-mode interface featuring vibrant accent colors, directional slide transitions for detail screens, interactive springy arrows, and instant zero-delay switching between main tabs.
+* 📊 **100-Point Score & Deep Analytics:** Go far beyond basic streak counting. Evaluate your progress with an intelligent 100-point scoring system, yearly activity heatmaps (complete with purple dots for notebook entries!), and weekday frequency charts.
+* ⚡ **Instant Homescreen Widget:** Check off your daily habits directly from your homescreen with our lightweight, lightning-fast, zero-delay widget.
+* ⏱️ **Built-in Focus Timer:** Complete time- or session-based habits (such as 30 minutes of reading or meditation) using a dedicated background timer with ambient audio directly inside the app.
+* 📝 **Integrated Mini-Notebook:** Jot down thoughts, milestones, or reasons for a missed day directly within your daily tracker.
+* 🛡️ **100% Private & Offline:** Your life is your business. No ads, no tracking, no mandatory accounts, and no servers. Includes a secure local backup feature (SAF JSON Storage).
 
 ---
 
@@ -48,29 +62,31 @@ This app offers an incredibly beautiful, ultra-modern dark mode design and a dep
 
 ## 🛠 Tech Stack
 
-This app is developed using modern Android standards:
-*   **UI:** Kotlin & Jetpack Compose
-*   **Architecture:** MVVM (Model-View-ViewModel), State Hoisting
-*   **Database:** Room (SQLite)
-*   **Asynchrony:** Coroutines & StateFlows
+Built with modern, lightweight Android development standards:
+* **UI:** Kotlin & Jetpack Compose (Material Design 3 elements, directional slide transitions)
+* **Audio:** Android SoundPool for zero-latency UI audio playback
+* **Architecture:** MVVM (Model-View-ViewModel), State Hoisting
+* **Database:** Room (SQLite) for 100% local persistence
+* **Asynchrony:** Coroutines & StateFlows
 
 ---
 
 ## 🚀 Installation
 
-Currently, you can install the app in two ways:
+You can install and update **Frequent Habits** in three convenient ways:
 
-1. **F-Droid (In preparation):** Coming soon to the F-Droid store!
-2. **Manually (APK):** Download the latest `app-release.apk` from our [Releases](../../releases) page and install it directly on your Android device.
+1. **F-Droid Store (Recommended):** Download it directly via the official [F-Droid Store](https://f-droid.org/packages/com.frequent.habits/) to receive automatic background updates.
+2. **Obtainium:** Click the Obtainium badge at the top of this README or paste our GitHub repository URL into [Obtainium](https://github.com/ImranR98/Obtainium) to receive direct release notifications and OTA updates from GitHub.
+3. **Manual APK:** Download the latest `FrequentHabits.apk` directly from our [Releases](https://github.com/FrequeNCy144/Frequent-Habits/releases) page and install it manually on your Android device.
 
 ---
 
 ## 🤝 Contributing
 
-Feedback, bug reports, and pull requests are always welcome! If you would like to suggest a feature or report a bug, simply open a new [Issue](../../issues).
+Feedback, bug reports, and pull requests are always welcome! If you would like to suggest a new feature or report a bug, simply open a new [Issue](https://github.com/FrequeNCy144/Frequent-Habits/issues).
 
 ---
 
 ## 📄 License
 
-This project is licensed under the **GNU General Public License v3.0 (GPLv3)**. For more details, please see the [LICENSE](LICENSE) file.
+This project is open-source and licensed under the **GNU General Public License v3.0 (GPLv3)**. For more details, please see the [LICENSE](LICENSE) file.
