@@ -10,7 +10,7 @@
 
 <a href="https://f-droid.org/packages/com.frequent.habits/"><img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" height="95" alt="Get it on F-Droid"></a>
 &nbsp;&nbsp;&nbsp;&nbsp;
-<a href="https://apps.obtainium.imranr.dev/redirect.html?r=https://github.com/FrequeNCy144/Frequent-Habits"><img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" height="95" alt="Get it on Obtainium"></a>
+<a href="https://apps.obtainium.imranr.dev/redirect.html?r=obtainium://app/https://github.com/FrequeNCy144/Frequent-Habits"><img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" height="95" alt="Get it on Obtainium"></a>
 
 <br>
 
