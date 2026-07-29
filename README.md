@@ -1,6 +1,7 @@
 <div align="center">
 
-<img width="2000" height="2000" alt="Schwarz Weiß Minimalistisch Fotografie Logo" src="https://github.com/user-attachments/assets/2e107df1-6c30-495b-8184-69d1939a359c" />
+<img width="2048" height="1000" alt="Design ohne Titel" src="https://github.com/user-attachments/assets/1fce2705-f78a-4a5d-83e1-1abdf49d7b31" />
+
 
 
 # Frequent Habits
