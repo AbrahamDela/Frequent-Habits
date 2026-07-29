@@ -6,14 +6,16 @@
 **Aesthetic design meets deep analytics — 100% local, private, and subscription-free.**
 
 
+
+
+<img width="2048" height="1000" alt="featureGraphic" src="https://github.com/user-attachments/assets/1cfba531-14b8-4345-b0b2-f68bcee0c9af" />
+
 <br>
 
 <a href="https://f-droid.org/packages/com.frequent.habits/"><img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" height="95" alt="Get it on F-Droid"></a>
 &nbsp;&nbsp;&nbsp;&nbsp;
 <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/FrequeNCy144/Frequent-Habits"><img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" height="95" alt="Get it on Obtainium"></a>
 
-
-<img width="2048" height="1000" alt="featureGraphic" src="https://github.com/user-attachments/assets/1cfba531-14b8-4345-b0b2-f68bcee0c9af" />
 
 
 <br>
