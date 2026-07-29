@@ -1,6 +1,7 @@
 <div align="center">
 
-<img src="https://github.com/user-attachments/assets/361fadaa-9e43-48cc-8a08-0c58bd8f4ae0" width="100%" alt="Frequent Habits Banner">
+<img width="2000" height="2000" alt="Schwarz Weiß Minimalistisch Fotografie Logo" src="https://github.com/user-attachments/assets/2e107df1-6c30-495b-8184-69d1939a359c" />
+
 
 # Frequent Habits
 
