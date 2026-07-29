@@ -1,7 +1,6 @@
 <div align="center">
 
-<img width="2048" height="1000" alt="Design ohne Titel" src="https://github.com/user-attachments/assets/1fce2705-f78a-4a5d-83e1-1abdf49d7b31" />
-
+<img width="2048" height="1000" alt="featureGraphic" src="https://github.com/user-attachments/assets/1cfba531-14b8-4345-b0b2-f68bcee0c9af" />
 
 
 # Frequent Habits
