@@ -3,9 +3,6 @@
 
 # Frequent Habits
 
-**Aesthetic design meets deep analytics — 100% local, private, and subscription-free.**
-
-
 
 
 <img width="2048" height="1000" alt="featureGraphic" src="https://github.com/user-attachments/assets/1cfba531-14b8-4345-b0b2-f68bcee0c9af" />
