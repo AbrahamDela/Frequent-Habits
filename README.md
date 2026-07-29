@@ -29,8 +29,6 @@
 
 ---
 
-> ### **FREQUENT HABITS. PERMANENT RESULTS.**
-
 Often, you have to make a hard choice when looking for a habit tracker: either choose a visually stunning app trapped behind expensive paywalls and aggressive data harvesting, or settle for privacy-friendly open-source apps that feel visually and functionally basic. **Frequent Habits** bridges exactly this gap.
 
 We deliver a gorgeous, ultra-modern dark mode interface paired with satisfying audio-visual feedback and a depth of comprehensive statistics rarely found anywhere else on the market—all running completely offline on your device with zero cloud dependencies.
