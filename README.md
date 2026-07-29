@@ -1,10 +1,8 @@
 <div align="center">
 
-<img src="fastlane/metadata/android/en-US/images/icon.png" width="130" alt="Frequent Habits Logo">
+<img src="https://github.com/user-attachments/assets/361fadaa-9e43-48cc-8a08-0c58bd8f4ae0" width="100%" alt="Frequent Habits Banner">
 
 # Frequent Habits
-
-### **FREQUENT HABITS. PERMANENT RESULTS.**
 
 **Aesthetic design meets deep analytics — 100% local, private, and subscription-free.**
 
@@ -18,7 +16,7 @@
 
 [![GitHub Release](https://img.shields.io/github/v/release/FrequeNCy144/Frequent-Habits?style=for-the-badge&logo=github&color=7356FF)](https://github.com/FrequeNCy144/Frequent-Habits/releases)
 [![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge)](LICENSE)
-[![Support](https://img.shields.io/badge/Sponsor-Liberapay-f6c915?style=for-the-badge&logo=liberapay&logoColor=black)](https://liberapay.com/FrequeNCy/donate)
+[![Donate: Liberapay](https://img.shields.io/badge/Donate-Liberapay-f6c915?style=for-the-badge&logo=liberapay&logoColor=black)](https://liberapay.com/FrequeNCy/donate)
 
 <br>
 
@@ -32,6 +30,8 @@
 </div>
 
 ---
+
+> ### **FREQUENT HABITS. PERMANENT RESULTS.**
 
 Often, you have to make a hard choice when looking for a habit tracker: either choose a visually stunning app trapped behind expensive paywalls and aggressive data harvesting, or settle for privacy-friendly open-source apps that feel visually and functionally basic. **Frequent Habits** bridges exactly this gap.
 
@@ -54,13 +54,19 @@ We deliver a gorgeous, ultra-modern dark mode interface paired with satisfying a
 
 ## 📸 Screenshots
 
-| Today View | Built-in Timer | Analytics |
-| :---: | :---: | :---: |
-| <img width="200" alt="01-Home" src="https://github.com/user-attachments/assets/b052471e-9266-4660-8101-20882821d0f6" /> | <img width="200" alt="02-Timer" src="https://github.com/user-attachments/assets/e35ab3df-cba2-46a7-91d3-798f3edfc50e" /> | <img width="200" alt="03-Analytics" src="https://github.com/user-attachments/assets/96e35cdb-4a02-41df-95a5-926cf6e42b0b" /> |
-
-| Profile & Ranks | Create Habit | Settings |
-| :---: | :---: | :---: |
-| <img width="200" alt="04-Profil" src="https://github.com/user-attachments/assets/b006d4e4-e9b9-4128-8e4a-09dbef9188a5" /> | <img width="200" alt="05-Create" src="https://github.com/user-attachments/assets/61684060-1c2e-4d13-bfe8-45e6171251eb" /> | <img width="200" alt="06-Settings" src="https://github.com/user-attachments/assets/5915d4ea-f398-4d8b-a019-1048107568e8" /> |
+<div align="center">
+  <img width="31%" alt="01-Home" src="https://github.com/user-attachments/assets/b052471e-9266-4660-8101-20882821d0f6" />
+  &nbsp;
+  <img width="31%" alt="02-Timer" src="https://github.com/user-attachments/assets/e35ab3df-cba2-46a7-91d3-798f3edfc50e" />
+  &nbsp;
+  <img width="31%" alt="03-Analytics" src="https://github.com/user-attachments/assets/96e35cdb-4a02-41df-95a5-926cf6e42b0b" />
+  <br><br>
+  <img width="31%" alt="04-Profil" src="https://github.com/user-attachments/assets/b006d4e4-e9b9-4128-8e4a-09dbef9188a5" />
+  &nbsp;
+  <img width="31%" alt="05-Create" src="https://github.com/user-attachments/assets/61684060-1c2e-4d13-bfe8-45e6171251eb" />
+  &nbsp;
+  <img width="31%" alt="06-Settings" src="https://github.com/user-attachments/assets/5915d4ea-f398-4d8b-a019-1048107568e8" />
+</div>
 
 ---
 
