@@ -118,11 +118,11 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
     private val _language = MutableStateFlow(sharedPrefs.getString("language", "en") ?: "en")
     val language: StateFlow<String> = _language.asStateFlow()
 
-    private val _soundEnabled = MutableStateFlow(sharedPrefs.getBoolean("sound_enabled", true))
-    val soundEnabled: StateFlow<Boolean> = _soundEnabled.asStateFlow()
-
     private val _vibrationEnabled = MutableStateFlow(sharedPrefs.getBoolean("vibration_enabled", true))
     val vibrationEnabled: StateFlow<Boolean> = _vibrationEnabled.asStateFlow()
+
+    private val _hasOnboarded = MutableStateFlow(sharedPrefs.getBoolean("has_onboarded", false))
+    val hasOnboarded: StateFlow<Boolean> = _hasOnboarded.asStateFlow()
 
     // JSON Backup State
     private val _backupFolderUri = MutableStateFlow(sharedPrefs.getString("backup_folder_uri", "") ?: "")
@@ -733,7 +733,22 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
         dayNums.reverse()
         Pair(shortNames, dayNums)
     }.flowOn(kotlinx.coroutines.Dispatchers.Default)
-     .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), Pair(emptyList(), emptyList()))
+     .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), run {
+         val lang = _language.value
+         val loc = if (lang == "de") Locale.GERMANY else Locale.US
+         val sdfDayInitial = DateTimeFormatter.ofPattern("E", loc)
+         val shortNames = mutableListOf<String>()
+         val dayNums = mutableListOf<String>()
+         val today = LocalDate.now()
+         for (i in 0 until 7) {
+             val d = today.minusDays(i.toLong())
+             shortNames.add(d.format(sdfDayInitial).take(2).uppercase(loc))
+             dayNums.add(d.dayOfMonth.toString())
+         }
+         shortNames.reverse()
+         dayNums.reverse()
+         Pair(shortNames, dayNums)
+     })
 
     private val _heatmapMonthOffset = MutableStateFlow(0)
     val heatmapMonthOffset: StateFlow<Int> = _heatmapMonthOffset.asStateFlow()
@@ -1537,14 +1552,18 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
         sharedPrefs.edit().putString("language", lang).apply()
     }
 
-    fun setSoundEnabled(enabled: Boolean) {
-        _soundEnabled.value = enabled
-        sharedPrefs.edit().putBoolean("sound_enabled", enabled).apply()
-    }
-
     fun setVibrationEnabled(enabled: Boolean) {
         _vibrationEnabled.value = enabled
         sharedPrefs.edit().putBoolean("vibration_enabled", enabled).apply()
+    }
+
+    fun setOnboarded(completed: Boolean) {
+        _hasOnboarded.value = completed
+        sharedPrefs.edit().putBoolean("has_onboarded", completed).apply()
+    }
+
+    fun resetOnboarding() {
+        setOnboarded(false)
     }
 
     // CRUD Habits

@@ -2,24 +2,24 @@ package com.example.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Premium Dark Theme Palette
-val DarkBg = Color(0xFF090710)       // Deepest dark violet
-val DarkCard = Color(0xFF141125)     // Dark violet-indigo card
-val DarkBorder = Color(0xFF262143)   // Indigo border
-val PrimaryViolet = Color(0xFF7356FF)// Vibrant violet
+// Premium Dark Theme Palette (Lighter, elegant dark violet card tone)
+val DarkBg = Color(0xFF0D0A18)       // Deep violet background
+val DarkCard = Color(0xFF1D192F)     // Elegant, slightly lighter dark-violet card tone
+val DarkBorder = Color(0xFF322C4D)   // Subtle violet-tinted border
+val PrimaryViolet = Color(0xFF7356FF)// Vibrant violet accent
 val SecondaryViolet = Color(0xFF9481FF) // Softer violet text/icons
 val TextPrimary = Color(0xFFFFFFFF)  // Pure white text
-val TextSecondary = Color(0xFF8B87A5) // Slate violet text
-val ProgressTrack = Color(0xFF201D35) // Deep track for progress
+val TextSecondary = Color(0xFF9893B8) // Slate-violet text
+val ProgressTrack = Color(0xFF28233F) // Dark track for progress inside cards
 val ProgressEndText = Color(0xFFD6C8FF)
 
 // Feedback colors
 val SuccessGreen = Color(0xFF10B981)
-val SuccessBg = Color(0xFF0F2B22)
+val SuccessBg = Color(0xFF133227)
 val ErrorRed = Color(0xFFEF4444)
 val FailedRed = Color(0xFFEF4444)
-val FailedBg = Color(0xFF2C1118)
-val PausedBg = Color(0xFF2E1A10)
+val FailedBg = Color(0xFF311721)
+val PausedBg = Color(0xFF321E18)
 
 // Habit customized dot colors
 val HabitBlue = Color(0xFF3B82F6)

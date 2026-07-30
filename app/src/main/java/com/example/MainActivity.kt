@@ -1,5 +1,6 @@
 package com.example
 
+import com.frequent.habits.R
 import android.app.Activity
 import android.annotation.SuppressLint
 import android.content.Intent
@@ -171,6 +172,8 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
 
     val pendingWidgetHabitId by viewModel.pendingWidgetHabitId.collectAsStateWithLifecycle()
     val newlyUnlockedAchievement by viewModel.newlyUnlockedAchievement.collectAsStateWithLifecycle()
+    val hasOnboarded by viewModel.hasOnboarded.collectAsStateWithLifecycle()
+    var showCreateFirstHabitHint by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         FeedbackHelper.init(context.applicationContext)
@@ -320,7 +323,9 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
                             navController.navigate("CREATE") {
                                 launchSingleTop = true
                             }
-                        }
+                        },
+                        showCreateFirstHabitHint = showCreateFirstHabitHint,
+                        onDismissFirstHabitHint = { showCreateFirstHabitHint = false }
                     )
                 }
                 composable("CREATE") {
@@ -515,6 +520,26 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
             achievement = newlyUnlockedAchievement!!,
             language = language,
             onDismiss = { viewModel.dismissUnlockedAchievement() }
+        )
+    }
+
+    var showOnboardingCelebration by remember { mutableStateOf(false) }
+
+    if (showOnboardingCelebration) {
+        FullScreensCelebrationConfetti(
+            onFinished = { showOnboardingCelebration = false }
+        )
+    }
+
+    if (!hasOnboarded) {
+        OnboardingScreen(
+            viewModel = viewModel,
+            language = language,
+            onComplete = {
+                viewModel.setOnboarded(true)
+                showOnboardingCelebration = true
+                showCreateFirstHabitHint = true
+            }
         )
     }
 }
@@ -1305,7 +1330,7 @@ fun HabitBottomNavigation(
 ) {
     NavigationBar(
         containerColor = DarkCard,
-        tonalElevation = 8.dp,
+        tonalElevation = 0.dp,
         windowInsets = WindowInsets(0, 0, 0, 0),
         modifier = Modifier
             .padding(start = 24.dp, end = 24.dp, bottom = 28.dp, top = 12.dp)
@@ -1431,7 +1456,7 @@ fun CalendarDayItem(
     ) {
         // Weekday Name (e.g. MO)
         Text(
-            text = dayName.uppercase(Locale.getDefault()),
+            text = dayName.uppercase(),
             style = MaterialTheme.typography.labelSmall,
             color = weekdayColor,
             fontWeight = FontWeight.Bold,
@@ -1510,7 +1535,9 @@ fun TodayScreen(
     viewModel: HabitsViewModel,
     language: String,
     onAddClick: () -> Unit,
-    onEditHabit: (Habit) -> Unit
+    onEditHabit: (Habit) -> Unit,
+    showCreateFirstHabitHint: Boolean = false,
+    onDismissFirstHabitHint: () -> Unit = {}
 ) {
     val selectedDate by viewModel.selectedDate.collectAsStateWithLifecycle()
     val weekStartCalendar by viewModel.currentWeekStart.collectAsStateWithLifecycle()
@@ -1520,8 +1547,8 @@ fun TodayScreen(
     val minWeekStartMillis by viewModel.minWeekStartMillis.collectAsStateWithLifecycle()
     val minDateStr by viewModel.minDateStr.collectAsStateWithLifecycle()
 
-    val soundEnabled by viewModel.soundEnabled.collectAsStateWithLifecycle()
     val vibrationEnabled by viewModel.vibrationEnabled.collectAsStateWithLifecycle()
+    val hasOnboarded by viewModel.hasOnboarded.collectAsStateWithLifecycle()
 
     val todayDateString by viewModel.todayDateString.collectAsStateWithLifecycle()
     val canPrevWeek by viewModel.canPrevWeek.collectAsStateWithLifecycle()
@@ -1618,7 +1645,10 @@ fun TodayScreen(
                             .size(44.dp)
                             .border(1.dp, DarkBorder, RoundedCornerShape(12.dp))
                             .background(DarkCard, RoundedCornerShape(12.dp))
-                            .clickable { onAddClick() }
+                            .clickable {
+                                onDismissFirstHabitHint()
+                                onAddClick()
+                            }
                             .testTag("btn_add_habit"),
                         contentAlignment = Alignment.Center
                     ) {
@@ -1947,36 +1977,14 @@ fun TodayScreen(
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = if (language == "de") {
-                                "Erstelle jetzt deine erste Gewohnheit, um dein Tracking zu starten!"
+                                "Tippe oben oder unten auf '+', um jederzeit eine Gewohnheit hinzuzufügen."
                             } else {
-                                "Create your first habit now to start tracking!"
+                                "Tap '+' above or below to add a habit anytime."
                             },
                             style = MaterialTheme.typography.bodyMedium,
                             color = TextSecondary,
                             textAlign = TextAlign.Center
                         )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(
-                            onClick = { onAddClick() },
-                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryViolet),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.testTag("btn_empty_state_create"),
-                            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp),
-                                tint = Color.White
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = if (language == "de") "Erste Gewohnheit erstellen" else "Create First Habit",
-                                style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp),
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                        }
                     }
                 }
             }
@@ -2013,7 +2021,6 @@ fun TodayScreen(
                     onAddQuantity = onAddQuantityRemembered,
                     onLongClick = onLongClickRemembered,
                     language = language,
-                    soundEnabled = soundEnabled,
                     vibrationEnabled = vibrationEnabled,
                     selectedDate = selectedDate
                 )
@@ -2315,64 +2322,90 @@ fun TodayScreen(
             onDismiss = { manualAddValueHabitId = null }
         )
     }
+
+    if (showCreateFirstHabitHint && activeHabitUiItemsForSelectedDate.isEmpty()) {
+        CreateFirstHabitArrowHint(
+            language = language
+        )
+    }
 }
 
-object FeedbackHelper {
-    private var soundPool: android.media.SoundPool? = null
-    private var soundId: Int = 0
-    private var isLoaded: Boolean = false
+@Composable
+fun CreateFirstHabitArrowHint(
+    language: String
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse_arrow")
+    val animOffsetY by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = -8f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(550, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "arrow_offset"
+    )
 
-    fun init(context: android.content.Context) {
-        if (soundPool == null) {
-            try {
-                val audioAttributes = android.media.AudioAttributes.Builder()
-                    .setUsage(android.media.AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
-                    .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .build()
-                val sp = android.media.SoundPool.Builder()
-                    .setMaxStreams(4)
-                    .setAudioAttributes(audioAttributes)
-                    .build()
-                sp.setOnLoadCompleteListener { _, _, status ->
-                    if (status == 0) isLoaded = true
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 70.dp, end = 20.dp),
+        contentAlignment = Alignment.TopEnd
+    ) {
+        Column(
+            horizontalAlignment = Alignment.End
+        ) {
+            // Arrow pointing straight UP directly at the '+' button above
+            Box(
+                modifier = Modifier
+                    .width(44.dp)
+                    .offset(y = animOffsetY.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ArrowUpward,
+                    contentDescription = null,
+                    tint = PrimaryViolet,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(2.dp))
+
+            Surface(
+                color = PrimaryViolet,
+                shape = RoundedCornerShape(16.dp),
+                shadowElevation = 10.dp,
+                border = BorderStroke(1.5.dp, SecondaryViolet),
+                modifier = Modifier.widthIn(max = 280.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    horizontalAlignment = Alignment.Start
+                ) {
+                    Text(
+                        text = if (language == "de") "Erstelle deine erste Gewohnheit!" else "Create your first habit!",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Text(
+                        text = if (language == "de") "Tippe oben rechts auf das '+'-Symbol" else "Tap the '+' icon at the top right",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.9f)
+                    )
                 }
-                val resId = context.resources.getIdentifier("habit_completion", "raw", context.packageName)
-                if (resId != 0) {
-                    soundId = sp.load(context.applicationContext, resId, 1)
-                }
-                soundPool = sp
-            } catch (e: Exception) {
-                e.printStackTrace()
             }
         }
     }
+}
 
-    fun playCompletionFeedback(context: android.content.Context, soundEnabled: Boolean, vibrationEnabled: Boolean) {
-        if (soundEnabled) {
-            try {
-                if (soundPool == null) {
-                    init(context)
-                }
+object FeedbackHelper {
+    fun init(context: android.content.Context) {}
 
-                var played = false
-                if (soundPool != null && soundId != 0) {
-                    val streamId = soundPool?.play(soundId, 1.0f, 1.0f, 1, 0, 1.0f) ?: 0
-                    if (streamId != 0) {
-                        played = true
-                    }
-                }
-
-                if (!played) {
-                    val toneGen = android.media.ToneGenerator(android.media.AudioManager.STREAM_MUSIC, 80)
-                    toneGen.startTone(android.media.ToneGenerator.TONE_PROP_ACK, 120)
-                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                        try { toneGen.release() } catch (e: Exception) {}
-                    }, 180)
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
+    fun playCompletionFeedback(context: android.content.Context, vibrationEnabled: Boolean = true) {
         if (vibrationEnabled) {
             try {
                 val vibrator = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
@@ -2410,7 +2443,6 @@ fun HabitItemRow(
     onAddQuantity: (Int, Float, Float) -> Unit,
     onLongClick: (Habit) -> Unit,
     language: String,
-    soundEnabled: Boolean = true,
     vibrationEnabled: Boolean = true,
     selectedDate: String = ""
 ) {
@@ -2455,7 +2487,7 @@ fun HabitItemRow(
         } else {
             if (isCompleted && !wasCompleted) {
                 completionAnim.snapTo(0f)
-                FeedbackHelper.playCompletionFeedback(context, soundEnabled, vibrationEnabled)
+                FeedbackHelper.playCompletionFeedback(context, vibrationEnabled)
                 completionAnim.animateTo(
                     targetValue = 1f,
                     animationSpec = tween(durationMillis = 650, easing = FastOutSlowInEasing)
@@ -3098,9 +3130,9 @@ fun HabitStatItem(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 for (i in 0 until 7) {
-                    val dayName = shortDayNames[i]
-                    val dayNum = dayNumbers[i]
-                    val status = model.past7DaysStatuses[i]
+                    val dayName = shortDayNames.getOrElse(i) { "" }
+                    val dayNum = dayNumbers.getOrElse(i) { "" }
+                    val status = model.past7DaysStatuses.getOrElse(i) { "INACTIVE" }
                     val cellColor = when (status) {
                         "SUCCESS" -> SuccessGreen
                         "FAILED" -> ErrorRed
@@ -4349,7 +4381,7 @@ fun OverallStatsScreen(
                                                 val ratio = if (cell.total > 0) cell.completed.toFloat() / cell.total.toFloat() else -1f
                                                 val bgColor = when {
                                                     cell.isOutOfRange -> Color.Transparent
-                                                    cell.isFuture -> Color(0xFF13131F)
+                                                    cell.isFuture -> DarkCard
                                                     ratio < 0f -> ProgressTrack
                                                     ratio == 0f -> ProgressTrack
                                                     ratio <= 0.25f -> SuccessGreen.copy(alpha = 0.25f)
@@ -4442,7 +4474,7 @@ fun OverallStatsScreen(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .background(Color(0xFF13131F), RoundedCornerShape(12.dp))
+                                    .background(DarkCard, RoundedCornerShape(12.dp))
                                     .border(1.dp, DarkBorder, RoundedCornerShape(12.dp))
                                     .padding(12.dp),
                                 verticalAlignment = Alignment.CenterVertically,
@@ -5428,7 +5460,6 @@ fun SettingsScreen(
     val context = LocalContext.current
     val backupFolderUri by viewModel.backupFolderUri.collectAsStateWithLifecycle()
     val syncStatus by viewModel.syncStatus.collectAsStateWithLifecycle()
-    val soundEnabled by viewModel.soundEnabled.collectAsStateWithLifecycle()
     val vibrationEnabled by viewModel.vibrationEnabled.collectAsStateWithLifecycle()
 
     var showWipeConfirm by remember { mutableStateOf(false) }
@@ -5709,51 +5740,6 @@ fun SettingsScreen(
                         )
                         Spacer(modifier = Modifier.height(12.dp))
 
-                        // Ton
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.VolumeUp,
-                                    contentDescription = "Sound",
-                                    tint = PrimaryViolet,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column {
-                                    Text(
-                                        text = if (language == "de") "Erfolgston abspielen" else "Play completion sound",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = TextPrimary,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                    Text(
-                                        text = if (language == "de") "Subtiler Ton beim Erreichen des Ziels" else "Subtle chime when reaching target",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = TextSecondary
-                                    )
-                                }
-                            }
-                            Switch(
-                                checked = soundEnabled,
-                                onCheckedChange = { viewModel.setSoundEnabled(it) },
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = Color.White,
-                                    checkedTrackColor = PrimaryViolet,
-                                    uncheckedThumbColor = TextSecondary,
-                                    uncheckedTrackColor = ProgressTrack
-                                )
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
                         // Vibration
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -5794,6 +5780,52 @@ fun SettingsScreen(
                                     uncheckedThumbColor = TextSecondary,
                                     uncheckedTrackColor = ProgressTrack
                                 )
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Onboarding & Test Card
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = DarkCard),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, DarkBorder, RoundedCornerShape(16.dp))
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = if (language == "de") "Onboarding & Einführung" else "Onboarding & Introduction",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = TextPrimary,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = if (language == "de") "Starte die Einführung erneut, um alle App-Funktionen und Tipps zu sehen." else "Restart the introduction to review all app features and tips.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Button(
+                            onClick = { viewModel.resetOnboarding() },
+                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryViolet),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.testTag("btn_restart_onboarding")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.RestartAlt,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (language == "de") "Onboarding neu starten" else "Restart Onboarding",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
@@ -6568,7 +6600,7 @@ fun CreateHabitScreen(
                                         onDismissRequest = { showTooltip = false }
                                     ) {
                                         Card(
-                                            colors = CardDefaults.cardColors(containerColor = Color(0xFF13131F)),
+                                            colors = CardDefaults.cardColors(containerColor = DarkCard),
                                             shape = RoundedCornerShape(8.dp),
                                             modifier = Modifier
                                                 .border(1.dp, DarkBorder, RoundedCornerShape(8.dp))
@@ -9028,7 +9060,123 @@ fun Modifier.saturationFilter(saturation: Float): Modifier = this.drawWithConten
     }
 }
 
+private data class ScreenConfettiParticle(
+    val startXRatio: Float,
+    val startYRatio: Float,
+    val vx: Float,
+    val vy: Float,
+    val pSize: Float,
+    val color: Color,
+    val rotation: Float,
+    val rotationSpeed: Float,
+    val shapeType: Int
+)
+
+@Composable
+fun FullScreensCelebrationConfetti(
+    onFinished: () -> Unit
+) {
+    val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        FeedbackHelper.playCompletionFeedback(
+            context = context,
+            vibrationEnabled = true
+        )
+    }
+
+    val particles = remember {
+        val colors = listOf(
+            Color(0xFFFFD54F), // Gold
+            Color(0xFFAB47BC), // Violet
+            Color(0xFF66BB6A), // Green
+            Color(0xFF29B6F6), // Cyan
+            Color(0xFFFF7043), // Coral
+            Color(0xFFEC407A), // Pink
+            Color(0xFF7E57C2), // Deep Purple
+            Color(0xFF26A69A), // Teal
+            Color(0xFFFFFFFF)  // White
+        )
+        val list = mutableListOf<ScreenConfettiParticle>()
+        val random = java.util.Random(42)
+        for (i in 0 until 180) {
+            val angle = random.nextFloat() * 2f * Math.PI.toFloat()
+            val speed = 200f + random.nextFloat() * 750f
+            list.add(
+                ScreenConfettiParticle(
+                    startXRatio = random.nextFloat(),
+                    startYRatio = -0.2f + random.nextFloat() * 0.5f,
+                    vx = (kotlin.math.cos(angle) * speed).toFloat(),
+                    vy = (kotlin.math.sin(angle) * speed - 200f).toFloat(),
+                    pSize = (12f + random.nextFloat() * 22f),
+                    color = colors[random.nextInt(colors.size)],
+                    rotation = random.nextFloat() * 360f,
+                    rotationSpeed = (random.nextFloat() - 0.5f) * 720f,
+                    shapeType = random.nextInt(3)
+                )
+            )
+        }
+        list
+    }
+
+    val timeAnim = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        timeAnim.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(durationMillis = 2000, easing = LinearEasing)
+        )
+        onFinished()
+    }
+
+    val progress = timeAnim.value
+    val alpha = (1f - progress).coerceIn(0f, 1f)
+
+    Canvas(
+        modifier = Modifier
+            .fillMaxSize()
+            .clickable(enabled = false) {}
+    ) {
+        val canvasWidth = size.width
+        val canvasHeight = size.height
+
+        val t = progress * 2.0f
+        val gravity = 500f
+
+        particles.forEach { p ->
+            val startX = p.startXRatio * canvasWidth
+            val startY = p.startYRatio * canvasHeight
+            val curX = startX + p.vx * t
+            val curY = startY + p.vy * t + 0.5f * gravity * t * t
+            val curRot = p.rotation + p.rotationSpeed * t
+
+            if (curX in -100f..(canvasWidth + 100f) && curY in -100f..(canvasHeight + 100f)) {
+                withTransform({
+                    translate(left = curX, top = curY)
+                    rotate(degrees = curRot)
+                }) {
+                    val pColor = p.color.copy(alpha = alpha)
+                    when (p.shapeType) {
+                        0 -> drawCircle(color = pColor, radius = p.pSize / 2f)
+                        1 -> drawRect(
+                            color = pColor,
+                            topLeft = androidx.compose.ui.geometry.Offset(-p.pSize / 2f, -p.pSize / 2f),
+                            size = androidx.compose.ui.geometry.Size(p.pSize, p.pSize * 0.7f)
+                        )
+                        else -> drawOval(
+                            color = pColor,
+                            topLeft = androidx.compose.ui.geometry.Offset(-p.pSize / 2f, -p.pSize / 2f),
+                            size = androidx.compose.ui.geometry.Size(p.pSize * 1.4f, p.pSize * 0.6f)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
 private data class AchievementConfettiParticle(
+    val startXRatio: Float,
+    val startYRatio: Float,
     val vx: Float,
     val vy: Float,
     val pSize: Float,
@@ -9050,18 +9198,22 @@ fun ConfettiCanvas(
             Color(0xFF29B6F6), // Cyan
             Color(0xFFFF7043), // Coral
             Color(0xFFEC407A), // Pink
+            Color(0xFF7E57C2), // Deep Purple
+            Color(0xFF26A69A), // Teal
             Color(0xFFFFFFFF)  // White
         )
         val list = mutableListOf<AchievementConfettiParticle>()
         val random = java.util.Random(1337)
-        for (i in 0 until 65) {
+        for (i in 0 until 180) {
             val angle = random.nextFloat() * 2f * Math.PI.toFloat()
-            val speed = 250f + random.nextFloat() * 650f
+            val speed = 200f + random.nextFloat() * 750f
             list.add(
                 AchievementConfettiParticle(
+                    startXRatio = random.nextFloat(),
+                    startYRatio = -0.2f + random.nextFloat() * 0.5f,
                     vx = (kotlin.math.cos(angle) * speed).toFloat(),
-                    vy = (kotlin.math.sin(angle) * speed - 350f).toFloat(),
-                    pSize = (10f + random.nextFloat() * 16f),
+                    vy = (kotlin.math.sin(angle) * speed - 200f).toFloat(),
+                    pSize = (12f + random.nextFloat() * 22f),
                     color = colors[random.nextInt(colors.size)],
                     rotation = random.nextFloat() * 360f,
                     rotationSpeed = (random.nextFloat() - 0.5f) * 720f,
@@ -9076,28 +9228,28 @@ fun ConfettiCanvas(
     LaunchedEffect(Unit) {
         timeAnim.animateTo(
             targetValue = 1f,
-            animationSpec = tween(durationMillis = 3000, easing = LinearEasing)
+            animationSpec = tween(durationMillis = 3500, easing = LinearEasing)
         )
     }
 
     val progress = timeAnim.value
-    val alpha = (1f - (progress * 0.85f)).coerceIn(0f, 1f)
+    val alpha = (1f - (progress * 0.75f)).coerceIn(0f, 1f)
 
     Canvas(modifier = modifier) {
         val canvasWidth = size.width
         val canvasHeight = size.height
-        val centerX = canvasWidth / 2f
-        val centerY = canvasHeight / 2.3f
 
-        val t = progress * 3.0f
-        val gravity = 800f
+        val t = progress * 3.5f
+        val gravity = 500f
 
         particles.forEach { p ->
-            val curX = centerX + p.vx * t
-            val curY = centerY + p.vy * t + 0.5f * gravity * t * t
+            val startX = p.startXRatio * canvasWidth
+            val startY = p.startYRatio * canvasHeight
+            val curX = startX + p.vx * t
+            val curY = startY + p.vy * t + 0.5f * gravity * t * t
             val curRot = p.rotation + p.rotationSpeed * t
 
-            if (curX in -50f..(canvasWidth + 50f) && curY in -50f..(canvasHeight + 50f)) {
+            if (curX in -100f..(canvasWidth + 100f) && curY in -100f..(canvasHeight + 100f)) {
                 withTransform({
                     translate(left = curX, top = curY)
                     rotate(degrees = curRot)
@@ -9108,12 +9260,12 @@ fun ConfettiCanvas(
                         1 -> drawRect(
                             color = pColor,
                             topLeft = androidx.compose.ui.geometry.Offset(-p.pSize / 2f, -p.pSize / 2f),
-                            size = androidx.compose.ui.geometry.Size(p.pSize, p.pSize * 0.6f)
+                            size = androidx.compose.ui.geometry.Size(p.pSize, p.pSize * 0.7f)
                         )
                         else -> drawOval(
                             color = pColor,
                             topLeft = androidx.compose.ui.geometry.Offset(-p.pSize / 2f, -p.pSize / 2f),
-                            size = androidx.compose.ui.geometry.Size(p.pSize * 1.3f, p.pSize * 0.5f)
+                            size = androidx.compose.ui.geometry.Size(p.pSize * 1.4f, p.pSize * 0.6f)
                         )
                     }
                 }
@@ -9133,7 +9285,6 @@ fun AchievementUnlockedOverlay(
     LaunchedEffect(achievement.id) {
         FeedbackHelper.playCompletionFeedback(
             context = context,
-            soundEnabled = true,
             vibrationEnabled = true
         )
     }
@@ -9453,7 +9604,7 @@ fun AchievementBadge(
                     onDrawBehind {
                         // Draw background base circle
                         drawCircle(
-                            color = if (isUnlocked) Color(0xFF1E1E2E) else Color(0xFF111116),
+                            color = if (isUnlocked) DarkCard else DarkCard.copy(alpha = 0.5f),
                             radius = outerRadius,
                             center = center
                         )
@@ -9791,7 +9942,7 @@ fun CalendarWithRingsIcon(
                 
                 // Calendar Background Card
                 drawRoundRect(
-                    color = Color(0xFF1E1E2E),
+                    color = DarkCard,
                     size = calSizeObj,
                     topLeft = calTopLeft,
                     cornerRadius = calCornerRadius
@@ -10015,6 +10166,1083 @@ fun ModernBackButton(
                 .offset(x = offsetX)
                 .scale(scale)
                 .size(24.dp)
+        )
+    }
+}
+
+// ONBOARDING SCREEN
+@Composable
+fun OnboardingScreen(
+    viewModel: HabitsViewModel,
+    language: String,
+    onComplete: () -> Unit
+) {
+    var currentStep by remember { mutableIntStateOf(0) }
+    val totalSteps = 6
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(DarkBg)
+            .statusBarsPadding()
+            .navigationBarsPadding()
+            .testTag("onboarding_screen")
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Top Bar: Back Button, Step Indicator & Skip Button
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Back button if step > 0
+                if (currentStep > 0) {
+                    IconButton(
+                        onClick = { currentStep-- },
+                        modifier = Modifier.testTag("btn_onboarding_back_top")
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = if (language == "de") "Zurück" else "Back",
+                            tint = TextPrimary
+                        )
+                    }
+                } else {
+                    Spacer(modifier = Modifier.width(48.dp))
+                }
+
+                // Step Badge
+                Surface(
+                    color = DarkCard,
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, DarkBorder)
+                ) {
+                    Text(
+                        text = "${currentStep + 1} / $totalSteps",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = SecondaryViolet,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+                    )
+                }
+
+                // Skip button
+                if (currentStep < totalSteps - 1) {
+                    TextButton(
+                        onClick = onComplete,
+                        modifier = Modifier.testTag("btn_onboarding_skip")
+                    ) {
+                        Text(
+                            text = if (language == "de") "Überspringen" else "Skip",
+                            color = TextSecondary,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                } else {
+                    Spacer(modifier = Modifier.width(48.dp))
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Main Content Body with Animated Content
+            AnimatedContent(
+                targetState = currentStep,
+                transitionSpec = {
+                    if (targetState > initialState) {
+                        (slideInHorizontally { width -> width } + fadeIn()).togetherWith(
+                            slideOutHorizontally { width -> -width } + fadeOut())
+                    } else {
+                        (slideInHorizontally { width -> -width } + fadeIn()).togetherWith(
+                            slideOutHorizontally { width -> width } + fadeOut())
+                    }
+                },
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                label = "onboarding_step_anim"
+            ) { step ->
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    when (step) {
+                        0 -> OnboardingStep0(language)
+                        1 -> OnboardingStep1(language)
+                        2 -> OnboardingStep2(language)
+                        3 -> OnboardingStep3(language)
+                        4 -> OnboardingStep4(language)
+                        5 -> OnboardingStep5(language, viewModel)
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Page Indicator Dots
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(bottom = 16.dp)
+            ) {
+                repeat(totalSteps) { index ->
+                    val isSelected = currentStep == index
+                    val dotWidth by animateDpAsState(
+                        targetValue = if (isSelected) 28.dp else 8.dp,
+                        animationSpec = tween(250),
+                        label = "dotWidth"
+                    )
+                    val dotColor by animateColorAsState(
+                        targetValue = if (isSelected) PrimaryViolet else DarkBorder,
+                        animationSpec = tween(250),
+                        label = "dotColor"
+                    )
+                    Box(
+                        modifier = Modifier
+                            .height(8.dp)
+                            .width(dotWidth)
+                            .clip(CircleShape)
+                            .background(dotColor)
+                    )
+                }
+            }
+
+            // Bottom Buttons Row: Optional Back Button + Next/Finish Button
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (currentStep > 0) {
+                    OutlinedButton(
+                        onClick = { currentStep-- },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(52.dp)
+                            .testTag("btn_onboarding_back_bottom"),
+                        border = BorderStroke(1.dp, DarkBorder),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (language == "de") "Zurück" else "Back",
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 15.sp
+                        )
+                    }
+                }
+
+                Button(
+                    onClick = {
+                        if (currentStep < totalSteps - 1) {
+                            currentStep++
+                        } else {
+                            onComplete()
+                        }
+                    },
+                    modifier = Modifier
+                        .weight(if (currentStep > 0) 1.5f else 1f)
+                        .height(52.dp)
+                        .testTag("btn_onboarding_next"),
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryViolet),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = if (currentStep == totalSteps - 1) {
+                                if (language == "de") "Los geht's!" else "Get Started!"
+                            } else {
+                                if (language == "de") "Weiter" else "Next"
+                            },
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Icon(
+                            imageVector = if (currentStep == totalSteps - 1) Icons.Default.Check else Icons.Default.ArrowForward,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+// STEP 0: App Logo & Willkommen
+@Composable
+private fun OnboardingStep0(language: String) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Card(
+            colors = CardDefaults.cardColors(containerColor = DarkCard),
+            shape = RoundedCornerShape(28.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.5.dp, PrimaryViolet.copy(alpha = 0.5f), RoundedCornerShape(28.dp))
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Large App Logo without surrounding circle
+                Image(
+                    painter = painterResource(id = R.drawable.ic_launcher_foreground),
+                    contentDescription = "Frequent Habits Logo",
+                    modifier = Modifier.size(110.dp)
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    text = "Frequent Habits",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = TextPrimary,
+                    fontWeight = FontWeight.Black,
+                    textAlign = TextAlign.Center
+                )
+
+                Text(
+                    text = "Frequent Habits. Permanent Results.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = SecondaryViolet,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(18.dp))
+
+        // Privacy Badge
+        Surface(
+            color = SuccessBg,
+            shape = RoundedCornerShape(100.dp),
+            border = BorderStroke(1.dp, SuccessGreen.copy(alpha = 0.4f))
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Lock,
+                    contentDescription = null,
+                    tint = SuccessGreen,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = if (language == "de") "100% PRIVAT & OFFLINE" else "100% PRIVATE & OFFLINE",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = SuccessGreen,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        Text(
+            text = if (language == "de") "Deine tägliche Routine im Fokus" else "Focus on your daily routines",
+            style = MaterialTheme.typography.titleLarge,
+            color = TextPrimary,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = if (language == "de") {
+                "Baue nachhaltige Gewohnheiten auf, behalte deine Erfolge im Blick und erstelle deine idealen Tagesabläufe — komplett lokal und werbefrei."
+            } else {
+                "Build sustainable habits, track your progress, and structure your ideal day — offline and ad-free."
+            },
+            style = MaterialTheme.typography.bodyMedium,
+            color = TextSecondary,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 8.dp)
+        )
+    }
+}
+
+// STEP 1: Gewohnheiten bedienen & bearbeiten (Direct 1-to-1 HabitItemRow Usage)
+@Composable
+private fun OnboardingStep1(language: String) {
+    val sampleHabit1 = remember(language) {
+        Habit(
+            id = 991,
+            name = if (language == "de") "Wasser trinken" else "Drink Water",
+            category = "Gesundheit",
+            icon = "water",
+            color = "teal",
+            type = "NUMBER",
+            unit = "ml",
+            targetValue = 3000f,
+            reminderEnabled = true,
+            reminderHour = 9,
+            reminderMinute = 0
+        )
+    }
+    val sampleHabit2 = remember(language) {
+        Habit(
+            id = 992,
+            name = if (language == "de") "Morgenmeditation" else "Morning Meditation",
+            category = "Achtsamkeit",
+            icon = "meditation",
+            color = "purple",
+            type = "BINARY"
+        )
+    }
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        // Real 1-to-1 Habit Item Rows from the App
+        Column(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            HabitItemRow(
+                habit = sampleHabit1,
+                currentValue = 2250f,
+                isCompleted = false,
+                isFailed = false,
+                isPaused = false,
+                hasLog = true,
+                onToggle = { _, _ -> },
+                onAddQuantity = { _, _, _ -> },
+                onLongClick = {},
+                language = language
+            )
+
+            HabitItemRow(
+                habit = sampleHabit2,
+                currentValue = 1f,
+                isCompleted = true,
+                isFailed = false,
+                isPaused = false,
+                hasLog = true,
+                onToggle = { _, _ -> },
+                onAddQuantity = { _, _, _ -> },
+                onLongClick = {},
+                language = language
+            )
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        Text(
+            text = if (language == "de") "Gewohnheiten steuern & anpassen" else "Control & Customize Habits",
+            style = MaterialTheme.typography.titleMedium,
+            color = TextPrimary,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Accurately detailed Interaction Instructions
+        Column(
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(verticalAlignment = Alignment.Top) {
+                Text("👆 ", fontSize = 14.sp)
+                Text(
+                    text = if (language == "de") {
+                        "Tippen auf Karte: Abhaken (Ja/Nein) oder Wert-Eingabedialog öffnen (Zahlen)."
+                    } else {
+                        "Tap card: Toggle completion (binary) or open exact value dialog (numeric)."
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextPrimary
+                )
+            }
+            Row(verticalAlignment = Alignment.Top) {
+                Text("➕ ", fontSize = 14.sp)
+                Text(
+                    text = if (language == "de") {
+                        "Kreis-Symbol rechts: Erhöht bei Zahlen-Gewohnheiten sofort den Wert um +1."
+                    } else {
+                        "Right circle icon: Quickly increments numeric value by +1 with one tap."
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextPrimary
+                )
+            }
+            Row(verticalAlignment = Alignment.Top) {
+                Text("⏱️ ", fontSize = 14.sp)
+                Text(
+                    text = if (language == "de") {
+                        "Gedrückt halten: Kontextmenü zum Pausieren, Fehlgeschlagen, Bearbeiten & Löschen."
+                    } else {
+                        "Long Press: Context menu for Pause, Failed status, Edit & Delete."
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextPrimary
+                )
+            }
+        }
+    }
+}
+
+// STEP 2: Audio Soundscapes & Fokus-Timer
+@Composable
+private fun OnboardingStep2(language: String) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        // Complete Audio Timer Menu as called in the app (WidgetAddValueDialog / Value Dialog)
+        Card(
+            colors = CardDefaults.cardColors(containerColor = DarkCard),
+            shape = RoundedCornerShape(20.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.dp, DarkBorder, RoundedCornerShape(20.dp))
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Timer Header Title
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (language == "de") "FOKUS TIMER" else "FOCUS TIMER",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextSecondary,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Surface(
+                        color = SuccessBg,
+                        shape = RoundedCornerShape(8.dp),
+                        border = BorderStroke(1.dp, SuccessGreen)
+                    ) {
+                        Text(
+                            text = if (language == "de") "AKTIV" else "ACTIVE",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = SuccessGreen,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Circular / Large Timer Display
+                Box(
+                    modifier = Modifier
+                        .size(110.dp)
+                        .background(ProgressTrack, CircleShape)
+                        .border(2.dp, PrimaryViolet, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "24:35",
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = TextPrimary,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = if (language == "de") "Minuten" else "Minutes",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = TextSecondary
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Play/Pause, Reset, and Finish Buttons
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Reset Button
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(ProgressTrack, CircleShape)
+                            .border(1.dp, DarkBorder, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Reset",
+                            tint = TextPrimary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+
+                    // Play/Pause Main Button
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(PrimaryViolet),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Pause,
+                            contentDescription = "Pause",
+                            tint = Color.White,
+                            modifier = Modifier.size(26.dp)
+                        )
+                    }
+
+                    // Finish Button
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(SuccessGreen.copy(alpha = 0.2f), CircleShape)
+                            .border(1.dp, SuccessGreen, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = "Finish",
+                            tint = SuccessGreen,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Background Audio Selection Dropdown Box
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = if (language == "de") "Hintergrund-Audio" else "Background Audio",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary,
+                        fontWeight = FontWeight.SemiBold
+                    )
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(DarkBg, RoundedCornerShape(12.dp))
+                            .border(1.dp, DarkBorder, RoundedCornerShape(12.dp))
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.MusicNote,
+                                contentDescription = null,
+                                tint = PrimaryViolet,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (language == "de") "Sanfter Landregen.mp3" else "Gentle Rain.mp3",
+                                color = TextPrimary,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.AddCircle,
+                                contentDescription = "Import",
+                                tint = SuccessGreen,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Icon(
+                                imageVector = Icons.Default.ArrowDropDown,
+                                contentDescription = null,
+                                tint = TextSecondary,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        Text(
+            text = if (language == "de") "Fokus mit Naturklängen" else "Focus with Nature Soundscapes",
+            style = MaterialTheme.typography.titleMedium,
+            color = TextPrimary,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        Text(
+            text = if (language == "de") {
+                "Integrierter Timer mit sanften Hintergrundgeräuschen für ungestörte Konzentration."
+            } else {
+                "Built-in focus timer with soothing background sounds for uninterrupted concentration."
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = TextSecondary,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 8.dp)
+        )
+    }
+}
+
+// STEP 3: Erfolge & Trophäen (Direct 1-to-1 Streak & Global Achievement Cards)
+@Composable
+private fun OnboardingStep3(language: String) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        // 1. Real HabitStreakAchievementCard for an individual habit (up to Gold streak)
+        HabitStreakAchievementCard(
+            habitName = if (language == "de") "Morgenmeditation" else "Morning Meditation",
+            habitColor = PrimaryViolet,
+            habitIcon = "meditation",
+            longestStreak = 14,
+            language = language
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // 2. Real GlobalAchievementCard for Gesamt-Erledigungen (10 Completions - Erster Schritt)
+        GlobalAchievementCard(
+            type = "COMPLETIONS",
+            tier = "COMP_10",
+            title = if (language == "de") "Erster Schritt" else "First Step",
+            description = if (language == "de") "10 Erledigungen insgesamt erreicht" else "10 total completions reached",
+            targetValue = 10,
+            currentValue = 10,
+            isUnlocked = true,
+            language = language
+        )
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        Text(
+            text = if (language == "de") "Gewohnheit-Serien & Trophäen" else "Habit Streaks & Trophies",
+            style = MaterialTheme.typography.titleMedium,
+            color = TextPrimary,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        Text(
+            text = if (language == "de") {
+                "Jede Gewohnheit besitzt eigene Serien-Meilensteine (Holz bis Gold). Zusätzlich schaltest du globale Trophäen frei!"
+            } else {
+                "Each habit has its own streak milestones (Wood to Gold). Plus, unlock global trophies as you progress!"
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = TextSecondary,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 8.dp)
+        )
+    }
+}
+
+// STEP 4: Home-Widgets & SAF Backup (1-to-1 matching habit_widget.xml & widget_habit_item.xml)
+@Composable
+private fun OnboardingStep4(language: String) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        // Exact Home Screen Widget Preview Container (habit_widget.xml layout)
+        Card(
+            colors = CardDefaults.cardColors(containerColor = DarkCard),
+            shape = RoundedCornerShape(20.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.dp, DarkBorder, RoundedCornerShape(20.dp))
+        ) {
+            Column(
+                modifier = Modifier.padding(14.dp)
+            ) {
+                // Top Widget Header with Progress Bar (habit_widget.xml FrameLayout / ProgressBar)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Widgets,
+                            contentDescription = null,
+                            tint = PrimaryViolet,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (language == "de") "HOMESCREEN WIDGET" else "HOMESCREEN WIDGET",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = TextSecondary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Text(
+                        text = "2/3 Erledigt",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = SuccessGreen,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Progress Bar Container (widget_progress_bar)
+                LinearProgressIndicator(
+                    progress = { 0.66f },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(6.dp)
+                        .clip(CircleShape),
+                    color = SuccessGreen,
+                    trackColor = ProgressTrack
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Scrollable Habits List Preview (widget_habit_item.xml)
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // Item 1: Numerical Habit (Wasser trinken)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(DarkBg, RoundedCornerShape(12.dp))
+                            .border(1.dp, DarkBorder, RoundedCornerShape(12.dp))
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .background(HabitTeal.copy(alpha = 0.2f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = HabitIconMapping.getIconDrawableId("water")),
+                                    contentDescription = null,
+                                    tint = HabitTeal,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (language == "de") "Wasser trinken (2250/3000)" else "Drink Water (2250/3000)",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextPrimary,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        // Circular check icon (ic_widget_circle_unchecked)
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .border(1.5.dp, TextSecondary, CircleShape)
+                        )
+                    }
+
+                    // Item 2: Completed Binary Habit (Morgenmeditation)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(SuccessBg, RoundedCornerShape(12.dp))
+                            .border(1.dp, SuccessGreen.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .background(PrimaryViolet.copy(alpha = 0.2f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = HabitIconMapping.getIconDrawableId("meditation")),
+                                    contentDescription = null,
+                                    tint = PrimaryViolet,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (language == "de") "Morgenmeditation" else "Morning Meditation",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextPrimary,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        // Circular check icon completed (ic_widget_circle_checked)
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .background(SuccessGreen, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        Text(
+            text = if (language == "de") "Homescreen Widget & Schneller Zugriff" else "Homescreen Widget & Quick Access",
+            style = MaterialTheme.typography.titleMedium,
+            color = TextPrimary,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        Text(
+            text = if (language == "de") {
+                "Setze dein interaktives Widget direkt auf den Startbildschirm zum Abhaken ohne die App öffnen zu müssen."
+            } else {
+                "Place your interactive widget on your launcher screen to check off habits without opening the app."
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = TextSecondary,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 8.dp)
+        )
+    }
+}
+
+// STEP 5: SAF Local Backup Folder Setup
+@Composable
+private fun OnboardingStep5(language: String, viewModel: HabitsViewModel) {
+    val context = LocalContext.current
+    val backupFolderUri by viewModel.backupFolderUri.collectAsStateWithLifecycle()
+
+    val folderLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        if (uri != null) {
+            try {
+                val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                context.contentResolver.takePersistableUriPermission(uri, takeFlags)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            viewModel.saveBackupFolderUri(uri.toString())
+        }
+    }
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Card(
+            colors = CardDefaults.cardColors(containerColor = DarkCard),
+            shape = RoundedCornerShape(20.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.dp, DarkBorder, RoundedCornerShape(20.dp))
+        ) {
+            Column(
+                modifier = Modifier.padding(18.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(60.dp)
+                        .background(PrimaryViolet.copy(alpha = 0.15f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Folder,
+                        contentDescription = "Backup Folder",
+                        tint = PrimaryViolet,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                Text(
+                    text = if (language == "de") "Lokaler SAF-Sicherungsordner" else "Local SAF Backup Folder",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = TextPrimary,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
+                    text = if (language == "de") {
+                        "Wähle jetzt deinen Ordner für automatische lokale Sicherungen. Die App ist 100% offline & datenschutzfreundlich."
+                    } else {
+                        "Select a local folder for automatic backups now. The app is 100% offline & privacy-first."
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Folder Status Card
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (backupFolderUri.isNotEmpty()) SuccessGreen.copy(alpha = 0.12f) else DarkBg
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(
+                        1.dp,
+                        if (backupFolderUri.isNotEmpty()) SuccessGreen.copy(alpha = 0.5f) else DarkBorder
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = if (backupFolderUri.isNotEmpty()) Icons.Default.CheckCircle else Icons.Default.FolderOpen,
+                            contentDescription = null,
+                            tint = if (backupFolderUri.isNotEmpty()) SuccessGreen else TextSecondary,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = if (backupFolderUri.isNotEmpty()) {
+                                    if (language == "de") "Ordner erfolgreich festgelegt!" else "Folder configured!"
+                                } else {
+                                    if (language == "de") "Kein Ordner festgelegt" else "No folder selected"
+                                },
+                                style = MaterialTheme.typography.labelLarge,
+                                color = if (backupFolderUri.isNotEmpty()) SuccessGreen else TextPrimary,
+                                fontWeight = FontWeight.Bold
+                            )
+                            if (backupFolderUri.isNotEmpty()) {
+                                Text(
+                                    text = backupFolderUri,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = TextSecondary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Button(
+                    onClick = { folderLauncher.launch(null) },
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryViolet),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.FolderOpen,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = if (backupFolderUri.isNotEmpty()) {
+                            if (language == "de") "Ordner ändern" else "Change Folder"
+                        } else {
+                            if (language == "de") "Backup-Ordner auswählen" else "Select Backup Folder"
+                        },
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        Text(
+            text = if (language == "de") "Volle Kontrolle über deine Daten" else "Full Control Over Your Data",
+            style = MaterialTheme.typography.titleMedium,
+            color = TextPrimary,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        Text(
+            text = if (language == "de") {
+                "Du kannst den Ordner oder manuelle Sicherungen auch später jederzeit in den Einstellungen anpassen."
+            } else {
+                "You can also manage your folder or manual backups anytime in Settings."
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = TextSecondary,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 8.dp)
         )
     }
 }
