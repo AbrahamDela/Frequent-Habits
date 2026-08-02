@@ -250,7 +250,7 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
                     val initialRoute = initialState.destination.route
                     val targetRoute = targetState.destination.route
                     if (isMainTabRoute(initialRoute) && isMainTabRoute(targetRoute)) {
-                        EnterTransition.None
+                        fadeIn(animationSpec = tween(0))
                     } else {
                         slideInHorizontally(
                             initialOffsetX = { fullWidth -> fullWidth },
@@ -262,7 +262,7 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
                     val initialRoute = initialState.destination.route
                     val targetRoute = targetState.destination.route
                     if (isMainTabRoute(initialRoute) && isMainTabRoute(targetRoute)) {
-                        ExitTransition.None
+                        fadeOut(animationSpec = tween(0))
                     } else {
                         slideOutHorizontally(
                             targetOffsetX = { fullWidth -> -fullWidth },
@@ -274,7 +274,7 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
                     val initialRoute = initialState.destination.route
                     val targetRoute = targetState.destination.route
                     if (isMainTabRoute(initialRoute) && isMainTabRoute(targetRoute)) {
-                        EnterTransition.None
+                        fadeIn(animationSpec = tween(0))
                     } else {
                         slideInHorizontally(
                             initialOffsetX = { fullWidth -> -fullWidth },
@@ -286,7 +286,7 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
                     val initialRoute = initialState.destination.route
                     val targetRoute = targetState.destination.route
                     if (isMainTabRoute(initialRoute) && isMainTabRoute(targetRoute)) {
-                        ExitTransition.None
+                        fadeOut(animationSpec = tween(0))
                     } else {
                         slideOutHorizontally(
                             targetOffsetX = { fullWidth -> fullWidth },
@@ -1699,31 +1699,44 @@ fun TodayScreen(
                 java.time.temporal.ChronoUnit.WEEKS.between(minMonday, currentWeekMonday).toInt().coerceIn(0, maxPageIndex)
             }
 
-            val pagerState = rememberPagerState(
-                initialPage = currentWeekPageIndex,
-                pageCount = { totalWeeks }
-            )
+            val pagerState = key(minMonday, totalWeeks) {
+                rememberPagerState(
+                    initialPage = currentWeekPageIndex,
+                    pageCount = { totalWeeks }
+                )
+            }
+
+            var isUserSwiping by remember { mutableStateOf(false) }
+
+            LaunchedEffect(pagerState.isScrollInProgress) {
+                if (pagerState.isScrollInProgress) {
+                    isUserSwiping = true
+                }
+            }
 
             // Sync from viewModel to pagerState when currentWeekStart changes outside (e.g. date picker / Heute)
             LaunchedEffect(currentWeekMonday, totalWeeks) {
                 val targetPage = java.time.temporal.ChronoUnit.WEEKS.between(minMonday, currentWeekMonday).toInt().coerceIn(0, maxPageIndex)
-                if (pagerState.currentPage != targetPage && !pagerState.isScrollInProgress) {
+                if (pagerState.currentPage != targetPage && !pagerState.isScrollInProgress && !isUserSwiping) {
                     pagerState.animateScrollToPage(targetPage)
                 }
             }
 
             // Sync from pagerState to viewModel when settled page changes via swipe
             LaunchedEffect(pagerState.settledPage) {
-                val pageMonday = minMonday.plusWeeks(pagerState.settledPage.toLong())
-                if (pageMonday != currentWeekMonday) {
-                    val selLocalDate = try { java.time.LocalDate.parse(selectedDate) } catch (e: Exception) { todayDate }
-                    val dayOffset = (selLocalDate.dayOfWeek.value - 1).coerceIn(0, 6)
-                    var targetDate = pageMonday.plusDays(dayOffset.toLong())
-                    if (targetDate > todayDate) targetDate = todayDate
-                    val minLocalDate = try { java.time.LocalDate.parse(minDateStr) } catch (e: Exception) { todayDate }
-                    if (targetDate < minLocalDate) targetDate = minLocalDate
+                if (isUserSwiping) {
+                    val pageMonday = minMonday.plusWeeks(pagerState.settledPage.toLong())
+                    if (pageMonday != currentWeekMonday) {
+                        val selLocalDate = try { java.time.LocalDate.parse(selectedDate) } catch (e: Exception) { todayDate }
+                        val dayOffset = (selLocalDate.dayOfWeek.value - 1).coerceIn(0, 6)
+                        var targetDate = pageMonday.plusDays(dayOffset.toLong())
+                        if (targetDate > todayDate) targetDate = todayDate
+                        val minLocalDate = try { java.time.LocalDate.parse(minDateStr) } catch (e: Exception) { todayDate }
+                        if (targetDate < minLocalDate) targetDate = minLocalDate
 
-                    viewModel.selectDateAndSyncWeek(targetDate.toString())
+                        viewModel.selectDateAndSyncWeek(targetDate.toString())
+                    }
+                    isUserSwiping = false
                 }
             }
 
@@ -1747,7 +1760,7 @@ fun TodayScreen(
 
                     IconButton(
                         onClick = {
-                            if (canSwipePrev) {
+                            if (canSwipePrev && pagerState.currentPage - 1 >= 0) {
                                 coroutineScope.launch {
                                     pagerState.animateScrollToPage(pagerState.currentPage - 1)
                                 }
@@ -1824,7 +1837,7 @@ fun TodayScreen(
 
                     IconButton(
                         onClick = {
-                            if (canSwipeNext) {
+                            if (canSwipeNext && pagerState.currentPage + 1 < pagerState.pageCount) {
                                 coroutineScope.launch {
                                     pagerState.animateScrollToPage(pagerState.currentPage + 1)
                                 }
@@ -1977,9 +1990,9 @@ fun TodayScreen(
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = if (language == "de") {
-                                "Tippe oben oder unten auf '+', um jederzeit eine Gewohnheit hinzuzufügen."
+                                "Tippe oben auf '+', um jederzeit eine Gewohnheit hinzuzufügen."
                             } else {
-                                "Tap '+' above or below to add a habit anytime."
+                                "Tap '+' above to add a habit anytime."
                             },
                             style = MaterialTheme.typography.bodyMedium,
                             color = TextSecondary,
@@ -6338,7 +6351,9 @@ fun CreateHabitScreen(
         }
         mutableStateOf(initialChip)
     }
-    var targetValueStr by remember(editingHabit?.id) { mutableStateOf(editingHabit?.targetValue?.toInt()?.toString() ?: "1") }
+    var targetValueStr by remember(editingHabit?.id) { 
+        mutableStateOf(editingHabit?.let { if (it.targetValue % 1f == 0f) it.targetValue.toInt().toString() else it.targetValue.toString() } ?: "1") 
+    }
     var frequency by remember(editingHabit?.id) { mutableStateOf(editingHabit?.frequency ?: "DAILY") }
     var timesWeekly by remember(editingHabit?.id) {
         val initialTimes = if (editingHabit?.frequency == "TIMES_WEEKLY") {
@@ -8294,7 +8309,7 @@ fun ProfileScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 12.dp),
+                .padding(start = 16.dp, end = 16.dp, top = 28.dp, bottom = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -11100,30 +11115,38 @@ private fun OnboardingStep5(language: String, viewModel: HabitsViewModel) {
             shape = RoundedCornerShape(20.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .border(1.dp, DarkBorder, RoundedCornerShape(20.dp))
+                .border(
+                    1.5.dp,
+                    if (backupFolderUri.isNotEmpty()) SuccessGreen.copy(alpha = 0.6f) else PrimaryViolet.copy(alpha = 0.4f),
+                    RoundedCornerShape(20.dp)
+                )
         ) {
             Column(
                 modifier = Modifier.padding(18.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                // Icon Badge
                 Box(
                     modifier = Modifier
                         .size(60.dp)
-                        .background(PrimaryViolet.copy(alpha = 0.15f), CircleShape),
+                        .background(
+                            if (backupFolderUri.isNotEmpty()) SuccessGreen.copy(alpha = 0.15f) else PrimaryViolet.copy(alpha = 0.15f),
+                            CircleShape
+                        ),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Folder,
+                        imageVector = if (backupFolderUri.isNotEmpty()) Icons.Default.CheckCircle else Icons.Default.Folder,
                         contentDescription = "Backup Folder",
-                        tint = PrimaryViolet,
-                        modifier = Modifier.size(32.dp)
+                        tint = if (backupFolderUri.isNotEmpty()) SuccessGreen else PrimaryViolet,
+                        modifier = Modifier.size(34.dp)
                     )
                 }
 
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
-                    text = if (language == "de") "Lokaler SAF-Sicherungsordner" else "Local SAF Backup Folder",
+                    text = if (language == "de") "Sicherungsordner jetzt einrichten" else "Set Up Backup Folder Now",
                     style = MaterialTheme.typography.titleMedium,
                     color = TextPrimary,
                     fontWeight = FontWeight.Bold,
@@ -11134,18 +11157,64 @@ private fun OnboardingStep5(language: String, viewModel: HabitsViewModel) {
 
                 Text(
                     text = if (language == "de") {
-                        "Wähle jetzt deinen Ordner für automatische lokale Sicherungen. Die App ist 100% offline & datenschutzfreundlich."
+                        "Wähle direkt hier deinen Ordner für automatische lokale Sicherungen auf deinem Gerät aus."
                     } else {
-                        "Select a local folder for automatic backups now. The app is 100% offline & privacy-first."
+                        "Directly select your folder for automatic local backups on your device right here."
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = TextSecondary,
                     textAlign = TextAlign.Center
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
-                // Folder Status Card
+                // Steps explanation box
+                Surface(
+                    color = DarkBg,
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, DarkBorder),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .background(PrimaryViolet, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("1", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = if (language == "de") "Tippe unten auf den 'Backup-Ordner'-Button" else "Tap the 'Select Backup Folder' button below",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = TextPrimary
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .background(SecondaryViolet, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("2", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = if (language == "de") "Wähle z.B. deinen 'Dokumente'-Ordner" else "Choose e.g. your 'Documents' folder",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = TextPrimary
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Current Status Card
                 Card(
                     colors = CardDefaults.cardColors(
                         containerColor = if (backupFolderUri.isNotEmpty()) SuccessGreen.copy(alpha = 0.12f) else DarkBg
@@ -11173,11 +11242,11 @@ private fun OnboardingStep5(language: String, viewModel: HabitsViewModel) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = if (backupFolderUri.isNotEmpty()) {
-                                    if (language == "de") "Ordner erfolgreich festgelegt!" else "Folder configured!"
+                                    if (language == "de") "✓ Ordner eingerichtet!" else "✓ Folder configured!"
                                 } else {
-                                    if (language == "de") "Kein Ordner festgelegt" else "No folder selected"
+                                    if (language == "de") "Noch kein Ordner ausgewählt" else "No folder selected yet"
                                 },
-                                style = MaterialTheme.typography.labelLarge,
+                                style = MaterialTheme.typography.labelMedium,
                                 color = if (backupFolderUri.isNotEmpty()) SuccessGreen else TextPrimary,
                                 fontWeight = FontWeight.Bold
                             )
@@ -11194,50 +11263,48 @@ private fun OnboardingStep5(language: String, viewModel: HabitsViewModel) {
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
+                // Primary Action Button to trigger SAF Folder Picker
                 Button(
                     onClick = { folderLauncher.launch(null) },
-                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryViolet),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (backupFolderUri.isNotEmpty()) SecondaryViolet else PrimaryViolet
+                    ),
                     shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .testTag("btn_onboarding_select_backup_folder")
                 ) {
                     Icon(
                         imageVector = Icons.Default.FolderOpen,
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(18.dp),
+                        tint = Color.White
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = if (backupFolderUri.isNotEmpty()) {
                             if (language == "de") "Ordner ändern" else "Change Folder"
                         } else {
-                            if (language == "de") "Backup-Ordner auswählen" else "Select Backup Folder"
+                            if (language == "de") "📂 Jetzt Backup-Ordner auswählen" else "📂 Select Backup Folder Now"
                         },
                         fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
                         color = Color.White
                     )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(14.dp))
-
-        Text(
-            text = if (language == "de") "Volle Kontrolle über deine Daten" else "Full Control Over Your Data",
-            style = MaterialTheme.typography.titleMedium,
-            color = TextPrimary,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center
-        )
-
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         Text(
             text = if (language == "de") {
-                "Du kannst den Ordner oder manuelle Sicherungen auch später jederzeit in den Einstellungen anpassen."
+                "Kann auch später jederzeit in den Einstellungen angepasst werden."
             } else {
-                "You can also manage your folder or manual backups anytime in Settings."
+                "Can also be configured anytime later in Settings."
             },
             style = MaterialTheme.typography.bodySmall,
             color = TextSecondary,

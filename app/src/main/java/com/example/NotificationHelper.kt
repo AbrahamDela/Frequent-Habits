@@ -132,22 +132,26 @@ object NotificationHelper {
     }
 
     fun scheduleAllHabitReminders(context: Context, habit: Habit) {
-        // 1. Schedule main/default reminder if enabled
-        if (habit.reminderEnabled) {
-            scheduleSingleReminder(context, habit.id, habit.id, habit.name, habit.reminderHour, habit.reminderMinute)
-        }
+        try {
+            // 1. Schedule main/default reminder if enabled
+            if (habit.reminderEnabled) {
+                scheduleSingleReminder(context, habit.id, habit.id, habit.name, habit.reminderHour, habit.reminderMinute)
+            }
 
-        // 2. Schedule custom reminders
-        if (habit.customReminders.isNotEmpty()) {
-            habit.customReminders.split(",").forEach { timeStr ->
-                val parts = timeStr.split(":")
-                if (parts.size == 2) {
-                    val hour = parts[0].toIntOrNull() ?: return@forEach
-                    val minute = parts[1].toIntOrNull() ?: return@forEach
-                    val reqCode = (habit.id * 10000) + (hour * 100 + minute)
-                    scheduleSingleReminder(context, habit.id, reqCode, habit.name, hour, minute)
+            // 2. Schedule custom reminders
+            if (habit.customReminders.isNotEmpty()) {
+                habit.customReminders.split(",").forEach { timeStr ->
+                    val parts = timeStr.split(":")
+                    if (parts.size == 2) {
+                        val hour = parts[0].toIntOrNull() ?: return@forEach
+                        val minute = parts[1].toIntOrNull() ?: return@forEach
+                        val reqCode = (habit.id * 10000) + (hour * 100 + minute)
+                        scheduleSingleReminder(context, habit.id, reqCode, habit.name, hour, minute)
+                    }
                 }
             }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 

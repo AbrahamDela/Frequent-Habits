@@ -1585,31 +1585,42 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
         customReminders: String = ""
     ) {
         viewModelScope.launch {
-            val habit = Habit(
-                name = name,
-                category = category,
-                icon = icon,
-                color = color,
-                isNegative = isNegative,
-                type = type,
-                unit = unit,
-                targetValue = targetValue,
-                frequency = frequency,
-                startDate = startDate,
-                specificDays = specificDays,
-                reminderEnabled = reminderEnabled,
-                reminderHour = reminderHour,
-                reminderMinute = reminderMinute,
-                customReminders = customReminders
-            )
-            val insertedId = repository.insertHabit(habit).toInt()
-            val finalHabit = habit.copy(id = insertedId)
-            com.example.NotificationHelper.scheduleAllHabitReminders(
-                getApplication(),
-                finalHabit
-            )
-            // Trigger widget update
-            HabitWidgetProvider.triggerUpdate(getApplication())
+            try {
+                val habit = Habit(
+                    name = name,
+                    category = category,
+                    icon = icon,
+                    color = color,
+                    isNegative = isNegative,
+                    type = type,
+                    unit = unit,
+                    targetValue = targetValue,
+                    frequency = frequency,
+                    startDate = startDate,
+                    specificDays = specificDays,
+                    reminderEnabled = reminderEnabled,
+                    reminderHour = reminderHour,
+                    reminderMinute = reminderMinute,
+                    customReminders = customReminders
+                )
+                val insertedId = repository.insertHabit(habit).toInt()
+                val finalHabit = habit.copy(id = insertedId)
+                try {
+                    com.example.NotificationHelper.scheduleAllHabitReminders(
+                        getApplication(),
+                        finalHabit
+                    )
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+                try {
+                    HabitWidgetProvider.triggerUpdate(getApplication())
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 
@@ -1623,13 +1634,24 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
             } catch (e: Exception) {
                 e.printStackTrace()
             }
-            repository.updateHabit(habit)
-            com.example.NotificationHelper.scheduleAllHabitReminders(
-                getApplication(),
-                habit
-            )
-            // Trigger widget update
-            HabitWidgetProvider.triggerUpdate(getApplication())
+            try {
+                repository.updateHabit(habit)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            try {
+                com.example.NotificationHelper.scheduleAllHabitReminders(
+                    getApplication(),
+                    habit
+                )
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            try {
+                HabitWidgetProvider.triggerUpdate(getApplication())
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 
@@ -1877,7 +1899,7 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
         return try {
             val instant = java.time.Instant.ofEpochMilli(millis)
             val zoneId = java.time.ZoneId.systemDefault()
-            java.time.LocalDate.ofInstant(instant, zoneId).toEpochDay().toInt()
+            instant.atZone(zoneId).toLocalDate().toEpochDay().toInt()
         } catch (e: Exception) {
             (millis / 86400000L).toInt()
         }
@@ -1952,12 +1974,14 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
                 timeInMillis = startWeekMonday
             }
 
-            while (loopCal.timeInMillis <= endWeekSunday) {
+            var safetyCount = 0
+            while (loopCal.timeInMillis <= endWeekSunday && safetyCount < 2000) {
+                safetyCount++
                 val mon = loopCal.timeInMillis
-                loopCal.add(Calendar.DAY_OF_WEEK, 6)
+                loopCal.add(Calendar.DAY_OF_YEAR, 6)
                 val sun = loopCal.timeInMillis
                 weekRanges.add(mon to sun)
-                loopCal.add(Calendar.DAY_OF_WEEK, 1)
+                loopCal.add(Calendar.DAY_OF_YEAR, 1)
             }
 
             val weekSuccessList = mutableListOf<Boolean>()
@@ -2230,7 +2254,9 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
                 firstDayOfWeek = Calendar.MONDAY
                 timeInMillis = startWeekMonday
             }
-            while (loopCal.timeInMillis <= endWeekSunday) {
+            var safetyCount = 0
+            while (loopCal.timeInMillis <= endWeekSunday && safetyCount < 2000) {
+                safetyCount++
                 totalExpectedCompletions += targetTimes
                 loopCal.add(Calendar.WEEK_OF_YEAR, 1)
             }
@@ -2367,6 +2393,10 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
             if (startEpoch < oldestStartEpoch) {
                 oldestStartEpoch = startEpoch
             }
+        }
+
+        if (todayEpoch - oldestStartEpoch > 365) {
+            oldestStartEpoch = todayEpoch - 365
         }
 
         if (oldestStartEpoch > todayEpoch) return PerfectDaysStats(0, 0, 0, 0)
