@@ -391,26 +391,6 @@ class HabitWidgetProvider : AppWidgetProvider() {
                 val displayDate = getDisplayDate(selectedDate)
                 views.setTextViewText(R.id.widget_date_title, displayDate)
 
-                // Set up RemoteViewsService for the ListView
-                val serviceIntent = Intent(context, HabitWidgetService::class.java).apply {
-                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
-                    data = android.net.Uri.parse(toUri(Intent.URI_INTENT_SCHEME))
-                }
-                views.setRemoteAdapter(R.id.widget_habits_list, serviceIntent)
-
-                // Set up PendingIntent Template for ListView item clicks
-                val clickIntent = Intent(context, HabitWidgetProvider::class.java).apply {
-                    action = ACTION_WIDGET_ITEM_CLICK
-                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
-                }
-                val clickPIntent = PendingIntent.getBroadcast(
-                    context,
-                    widgetId * 1000 + 5,
-                    clickIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
-                )
-                views.setPendingIntentTemplate(R.id.widget_habits_list, clickPIntent)
-
                 val openAppInt = Intent(context, MainActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                 }
@@ -422,8 +402,31 @@ class HabitWidgetProvider : AppWidgetProvider() {
                 )
                 views.setOnClickPendingIntent(R.id.widget_date_title, pendingInt)
                 views.setOnClickPendingIntent(R.id.widget_progress_bar, pendingInt)
-                
-                appWidgetManager.updateAppWidget(widgetId, views)
+
+                if (isFullUpdate) {
+                    val serviceIntent = Intent(context, HabitWidgetService::class.java).apply {
+                        putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+                        data = android.net.Uri.parse(toUri(Intent.URI_INTENT_SCHEME))
+                    }
+                    views.setRemoteAdapter(R.id.widget_habits_list, serviceIntent)
+
+                    val clickIntent = Intent(context, HabitWidgetProvider::class.java).apply {
+                        action = ACTION_WIDGET_ITEM_CLICK
+                        putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+                    }
+                    val clickPIntent = PendingIntent.getBroadcast(
+                        context,
+                        widgetId * 1000 + 5,
+                        clickIntent,
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
+                    )
+                    views.setPendingIntentTemplate(R.id.widget_habits_list, clickPIntent)
+
+                    appWidgetManager.updateAppWidget(widgetId, views)
+                } else {
+                    appWidgetManager.partiallyUpdateAppWidget(widgetId, views)
+                }
+
                 appWidgetManager.notifyAppWidgetViewDataChanged(widgetId, R.id.widget_habits_list)
             }
         }

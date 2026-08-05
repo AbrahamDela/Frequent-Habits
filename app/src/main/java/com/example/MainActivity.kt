@@ -1514,36 +1514,13 @@ fun WidgetAddValueDialog(
                                                     color = TextPrimary,
                                                     fontWeight = FontWeight.ExtraBold,
                                                     fontSize = 32.sp,
-                                                    letterSpacing = 1.sp
+                                                    letterSpacing = 1.sp,
+                                                    modifier = Modifier.clickable(enabled = !isTimerRunning) {
+                                                        tempTimerInput = ""
+                                                        isEditingTimerDuration = true
+                                                    }
                                                 )
                                             }
-                                        }
-                                    }
-
-                                    if (!isTimerRunning) {
-                                        IconButton(
-                                            onClick = {
-                                                if (isEditingTimerDuration) {
-                                                    val parsed = tempTimerInput.toIntOrNull() ?: timerDurationMinutes.toIntOrNull() ?: 25
-                                                    timerDurationMinutes = parsed.toString()
-                                                    isEditingTimerDuration = false
-                                                } else {
-                                                    tempTimerInput = ""
-                                                    isEditingTimerDuration = true
-                                                }
-                                            },
-                                            modifier = Modifier
-                                                .align(Alignment.TopEnd)
-                                                .size(34.dp)
-                                                .background(DarkCard, CircleShape)
-                                                .border(1.dp, PrimaryViolet.copy(alpha = 0.5f), CircleShape)
-                                        ) {
-                                            Icon(
-                                                imageVector = if (isEditingTimerDuration) Icons.Default.Check else Icons.Default.Edit,
-                                                contentDescription = "Edit timer length",
-                                                tint = PrimaryViolet,
-                                                modifier = Modifier.size(16.dp)
-                                            )
                                         }
                                     }
                                 }
@@ -1656,264 +1633,272 @@ fun WidgetAddValueDialog(
                                 }
                             }
 
-                            // Background Audio Selection (Inline Dropdown, No Popup)
+                            // Background Audio Selection (3 Recent Buttons + Expandable Search Function)
                             Column(
                                 modifier = Modifier.fillMaxWidth(),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                Text(
-                                    text = if (language == "de") "Hintergrund-Audio" else "Background Audio",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = TextSecondary,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-
                                 Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .background(ProgressTrack, RoundedCornerShape(12.dp))
-                                        .border(1.dp, if (isAudioPickerExpanded) PrimaryViolet else DarkBorder, RoundedCornerShape(12.dp))
-                                        .clickable { isAudioPickerExpanded = !isAudioPickerExpanded }
-                                        .padding(horizontal = 14.dp, vertical = 10.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier.weight(1f)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.MusicNote,
-                                            contentDescription = null,
-                                            tint = PrimaryViolet,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = if (language == "de") "Hintergrund-Audio" else "Background Audio",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = TextSecondary,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+
+                                    if (selectedAudioFile != null) {
                                         Text(
-                                            text = selectedAudioFile?.nameWithoutExtension ?: (if (language == "de") "Kein Sound (Stumm)" else "No Sound (Mute)"),
-                                            color = if (selectedAudioFile != null) TextPrimary else TextSecondary,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.Medium,
+                                            text = selectedAudioFile?.nameWithoutExtension ?: "",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = PrimaryViolet,
+                                            fontWeight = FontWeight.Bold,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
                                         )
                                     }
+                                }
 
+                                // 1. TOP ROW: 3 RECENT SOUNDS BUTTONS
+                                val recentFileNames = remember(importedAudios, selectedAudioFile) {
+                                    AudioSoundscapeManager.getRecentAudios(context)
+                                }
+                                val recentFiles = remember(recentFileNames, importedAudios) {
+                                    val found = recentFileNames.mapNotNull { name -> importedAudios.find { it.name == name } }
+                                    if (found.isNotEmpty()) found.take(3)
+                                    else importedAudios.take(3)
+                                }
+
+                                if (recentFiles.isNotEmpty()) {
                                     Row(
-                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                                     ) {
-                                        if (selectedAudioFile != null) {
-                                            IconButton(
+                                        recentFiles.forEach { file ->
+                                            val isSel = selectedAudioFile?.absolutePath == file.absolutePath
+                                            Surface(
                                                 onClick = {
-                                                    selectedAudioFile = null
-                                                    AudioSoundscapeManager.setLastSelectedAudio(context, "")
+                                                    selectedAudioFile = file
+                                                    AudioSoundscapeManager.setLastSelectedAudio(context, file.name)
                                                     if (isTimerRunning) {
                                                         try {
                                                             mediaPlayer?.stop()
                                                             mediaPlayer?.release()
-                                                            mediaPlayer = null
+                                                            mediaPlayer = MediaPlayer().apply {
+                                                                setDataSource(file.absolutePath)
+                                                                isLooping = true
+                                                                prepare()
+                                                                start()
+                                                            }
                                                         } catch (e: Exception) { e.printStackTrace() }
                                                     }
                                                 },
-                                                modifier = Modifier.size(24.dp)
+                                                shape = RoundedCornerShape(8.dp),
+                                                color = if (isSel) PrimaryViolet.copy(alpha = 0.25f) else DarkCard,
+                                                border = BorderStroke(1.dp, if (isSel) PrimaryViolet else DarkBorder),
+                                                modifier = Modifier.weight(1f).height(38.dp)
                                             ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Close,
-                                                    contentDescription = if (language == "de") "Sound entfernen" else "Remove sound",
-                                                    tint = Color(0xFFEF4444),
-                                                    modifier = Modifier.size(18.dp)
-                                                )
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.Center,
+                                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.MusicNote,
+                                                        contentDescription = null,
+                                                        tint = if (isSel) PrimaryViolet else TextSecondary,
+                                                        modifier = Modifier.size(13.dp)
+                                                    )
+                                                    Spacer(modifier = Modifier.width(4.dp))
+                                                    Text(
+                                                        text = file.nameWithoutExtension,
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = if (isSel) TextPrimary else TextSecondary,
+                                                        fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium,
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis,
+                                                        fontSize = 11.sp
+                                                    )
+                                                }
                                             }
                                         }
-
-                                        Icon(
-                                            imageVector = if (isAudioPickerExpanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
-                                            contentDescription = null,
-                                            tint = TextSecondary,
-                                            modifier = Modifier.size(24.dp)
-                                        )
                                     }
                                 }
 
-                                AnimatedVisibility(visible = isAudioPickerExpanded) {
+                                // 2. SEARCH BAR & CLEAR BUTTON
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    OutlinedTextField(
+                                        value = audioSearchQuery,
+                                        onValueChange = { 
+                                            audioSearchQuery = it
+                                            if (it.isNotEmpty()) isAudioPickerExpanded = true
+                                        },
+                                        placeholder = { Text(if (language == "de") "Sound suchen..." else "Search sound...", color = TextSecondary, fontSize = 12.sp) },
+                                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(16.dp)) },
+                                        trailingIcon = {
+                                            if (audioSearchQuery.isNotEmpty()) {
+                                                IconButton(onClick = { audioSearchQuery = "" }, modifier = Modifier.size(20.dp)) {
+                                                    Icon(Icons.Default.Close, contentDescription = "Clear", tint = TextSecondary, modifier = Modifier.size(14.dp))
+                                                }
+                                            } else {
+                                                IconButton(onClick = { isAudioPickerExpanded = !isAudioPickerExpanded }, modifier = Modifier.size(24.dp)) {
+                                                    Icon(
+                                                        imageVector = if (isAudioPickerExpanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
+                                                        contentDescription = null,
+                                                        tint = TextSecondary,
+                                                        modifier = Modifier.size(20.dp)
+                                                    )
+                                                }
+                                            }
+                                        },
+                                        modifier = Modifier.weight(1f).height(42.dp),
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedBorderColor = PrimaryViolet,
+                                            unfocusedBorderColor = DarkBorder,
+                                            focusedContainerColor = DarkCard,
+                                            unfocusedContainerColor = DarkCard,
+                                            focusedTextColor = TextPrimary,
+                                            unfocusedTextColor = TextPrimary
+                                        ),
+                                        shape = RoundedCornerShape(10.dp),
+                                        singleLine = true
+                                    )
+
+                                    if (selectedAudioFile != null) {
+                                        IconButton(
+                                            onClick = {
+                                                selectedAudioFile = null
+                                                AudioSoundscapeManager.setLastSelectedAudio(context, "")
+                                                if (isTimerRunning) {
+                                                    try {
+                                                        mediaPlayer?.stop()
+                                                        mediaPlayer?.release()
+                                                        mediaPlayer = null
+                                                    } catch (e: Exception) { e.printStackTrace() }
+                                                }
+                                            },
+                                            modifier = Modifier
+                                                .size(42.dp)
+                                                .background(DarkCard, RoundedCornerShape(10.dp))
+                                                .border(1.dp, Color(0xFFEF4444).copy(alpha = 0.5f), RoundedCornerShape(10.dp))
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Close,
+                                                contentDescription = if (language == "de") "Sound stummschalten" else "Mute sound",
+                                                tint = Color(0xFFEF4444),
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                    }
+                                }
+
+                                // 3. EXPANDABLE SEARCH RESULTS LIST
+                                val showList = isAudioPickerExpanded || audioSearchQuery.isNotBlank()
+                                AnimatedVisibility(visible = showList) {
+                                    val filteredList = remember(importedAudios, audioSearchQuery) {
+                                        importedAudios.filter { audioSearchQuery.isBlank() || it.name.contains(audioSearchQuery, ignoreCase = true) }
+                                    }
+
                                     Column(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .background(DarkBg, RoundedCornerShape(12.dp))
                                             .border(1.dp, DarkBorder, RoundedCornerShape(12.dp))
-                                            .padding(8.dp),
-                                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                                            .padding(6.dp),
+                                        verticalArrangement = Arrangement.spacedBy(4.dp)
                                     ) {
-                                        // Only show search if there are more than 5 sounds
-                                        if (importedAudios.size > 5) {
-                                            OutlinedTextField(
-                                                value = audioSearchQuery,
-                                                onValueChange = { audioSearchQuery = it },
-                                                placeholder = { Text(if (language == "de") "Sound suchen..." else "Search sound...", color = TextSecondary, fontSize = 12.sp) },
-                                                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(16.dp)) },
-                                                trailingIcon = {
-                                                    if (audioSearchQuery.isNotEmpty()) {
-                                                        IconButton(onClick = { audioSearchQuery = "" }, modifier = Modifier.size(20.dp)) {
-                                                            Icon(Icons.Default.Close, contentDescription = "Clear", tint = TextSecondary, modifier = Modifier.size(14.dp))
-                                                        }
-                                                    }
-                                                },
-                                                modifier = Modifier.fillMaxWidth().height(42.dp),
-                                                colors = OutlinedTextFieldDefaults.colors(
-                                                    focusedBorderColor = PrimaryViolet,
-                                                    unfocusedBorderColor = DarkBorder,
-                                                    focusedContainerColor = DarkCard,
-                                                    unfocusedContainerColor = DarkCard,
-                                                    focusedTextColor = TextPrimary,
-                                                    unfocusedTextColor = TextPrimary
-                                                ),
-                                                shape = RoundedCornerShape(8.dp),
-                                                singleLine = true
+                                        if (filteredList.isEmpty()) {
+                                            Text(
+                                                text = if (language == "de") "Kein passender Sound gefunden" else "No matching sounds found",
+                                                color = TextSecondary,
+                                                fontSize = 12.sp,
+                                                modifier = Modifier.padding(8.dp)
                                             )
-                                        }
-
-                                        // Only show recent if more than 5 sounds exist
-                                        val recentFileNames = remember(importedAudios, isAudioPickerExpanded) {
-                                            AudioSoundscapeManager.getRecentAudios(context)
-                                        }
-                                        val recentFiles = remember(recentFileNames, importedAudios) {
-                                            recentFileNames.mapNotNull { name -> importedAudios.find { it.name == name } }
-                                        }
-
-                                        if (importedAudios.size > 5 && recentFiles.isNotEmpty() && audioSearchQuery.isBlank()) {
-                                            Row(
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        } else {
+                                            LazyColumn(
+                                                verticalArrangement = Arrangement.spacedBy(4.dp),
+                                                modifier = Modifier.heightIn(max = 140.dp)
                                             ) {
-                                                Text(
-                                                    text = if (language == "de") "Zuletzt:" else "Recent:",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = TextSecondary,
-                                                    fontSize = 10.sp,
-                                                    fontWeight = FontWeight.SemiBold
-                                                )
-                                                LazyRow(
-                                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                                    modifier = Modifier.fillMaxWidth()
-                                                ) {
-                                                    items(recentFiles) { file ->
-                                                        val isSel = selectedAudioFile?.absolutePath == file.absolutePath
-                                                        Surface(
-                                                            onClick = {
-                                                                selectedAudioFile = file
-                                                                AudioSoundscapeManager.setLastSelectedAudio(context, file.name)
-                                                                if (isTimerRunning) {
-                                                                    try {
-                                                                        mediaPlayer?.stop()
-                                                                        mediaPlayer?.release()
-                                                                        mediaPlayer = MediaPlayer().apply {
-                                                                            setDataSource(file.absolutePath)
-                                                                            isLooping = true
-                                                                            prepare()
-                                                                            start()
-                                                                        }
-                                                                    } catch (e: Exception) { e.printStackTrace() }
-                                                                }
-                                                                isAudioPickerExpanded = false
-                                                            },
-                                                            shape = RoundedCornerShape(8.dp),
-                                                            color = if (isSel) PrimaryViolet.copy(alpha = 0.2f) else DarkCard,
-                                                            border = BorderStroke(1.dp, if (isSel) PrimaryViolet else DarkBorder)
-                                                        ) {
-                                                            Text(
-                                                                text = file.nameWithoutExtension,
-                                                                style = MaterialTheme.typography.labelSmall,
-                                                                color = TextPrimary,
-                                                                maxLines = 1,
-                                                                fontSize = 10.sp,
-                                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                                            )
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-
-                                        val filteredList = remember(importedAudios, audioSearchQuery) {
-                                            importedAudios.filter { audioSearchQuery.isBlank() || it.name.contains(audioSearchQuery, ignoreCase = true) }
-                                        }
-
-                                        LazyColumn(
-                                            verticalArrangement = Arrangement.spacedBy(4.dp),
-                                            modifier = Modifier.heightIn(max = 140.dp)
-                                        ) {
-                                            items(filteredList) { file ->
-                                                val isSel = selectedAudioFile?.absolutePath == file.absolutePath
-                                                Surface(
-                                                    onClick = {
-                                                        selectedAudioFile = file
-                                                        AudioSoundscapeManager.setLastSelectedAudio(context, file.name)
-                                                        if (isTimerRunning) {
-                                                            try {
-                                                                mediaPlayer?.stop()
-                                                                mediaPlayer?.release()
-                                                                mediaPlayer = MediaPlayer().apply {
-                                                                    setDataSource(file.absolutePath)
-                                                                    isLooping = true
-                                                                    prepare()
-                                                                    start()
-                                                                }
-                                                            } catch (e: Exception) { e.printStackTrace() }
-                                                        }
-                                                        isAudioPickerExpanded = false
-                                                    },
-                                                    shape = RoundedCornerShape(6.dp),
-                                                    color = if (isSel) PrimaryViolet.copy(alpha = 0.15f) else DarkCard,
-                                                    border = BorderStroke(0.5.dp, if (isSel) PrimaryViolet else DarkBorder),
-                                                    modifier = Modifier.fillMaxWidth()
-                                                ) {
-                                                    Row(
-                                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
-                                                        verticalAlignment = Alignment.CenterVertically,
-                                                        horizontalArrangement = Arrangement.SpaceBetween
+                                                items(filteredList) { file ->
+                                                    val isSel = selectedAudioFile?.absolutePath == file.absolutePath
+                                                    Surface(
+                                                        onClick = {
+                                                            selectedAudioFile = file
+                                                            AudioSoundscapeManager.setLastSelectedAudio(context, file.name)
+                                                            if (isTimerRunning) {
+                                                                try {
+                                                                    mediaPlayer?.stop()
+                                                                    mediaPlayer?.release()
+                                                                    mediaPlayer = MediaPlayer().apply {
+                                                                        setDataSource(file.absolutePath)
+                                                                        isLooping = true
+                                                                        prepare()
+                                                                        start()
+                                                                    }
+                                                                } catch (e: Exception) { e.printStackTrace() }
+                                                            }
+                                                            isAudioPickerExpanded = false
+                                                        },
+                                                        shape = RoundedCornerShape(6.dp),
+                                                        color = if (isSel) PrimaryViolet.copy(alpha = 0.2f) else DarkCard,
+                                                        border = BorderStroke(0.5.dp, if (isSel) PrimaryViolet else DarkBorder),
+                                                        modifier = Modifier.fillMaxWidth()
                                                     ) {
-                                                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                                                            Icon(Icons.Default.MusicNote, contentDescription = null, tint = PrimaryViolet, modifier = Modifier.size(16.dp))
-                                                            Spacer(modifier = Modifier.width(6.dp))
-                                                            Text(
-                                                                text = file.nameWithoutExtension,
-                                                                style = MaterialTheme.typography.bodySmall,
-                                                                color = TextPrimary,
-                                                                fontSize = 12.sp,
-                                                                fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal,
-                                                                maxLines = 1,
-                                                                overflow = TextOverflow.Ellipsis
+                                                        Row(
+                                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                                                            verticalAlignment = Alignment.CenterVertically,
+                                                            horizontalArrangement = Arrangement.SpaceBetween
+                                                        ) {
+                                                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                                                Icon(Icons.Default.MusicNote, contentDescription = null, tint = PrimaryViolet, modifier = Modifier.size(16.dp))
+                                                                Spacer(modifier = Modifier.width(6.dp))
+                                                                Text(
+                                                                    text = file.nameWithoutExtension,
+                                                                    style = MaterialTheme.typography.bodySmall,
+                                                                    color = TextPrimary,
+                                                                    fontSize = 12.sp,
+                                                                    fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal,
+                                                                    maxLines = 1,
+                                                                    overflow = TextOverflow.Ellipsis
+                                                                )
+                                                            }
+                                                            RadioButton(
+                                                                selected = isSel,
+                                                                onClick = {
+                                                                    selectedAudioFile = file
+                                                                    AudioSoundscapeManager.setLastSelectedAudio(context, file.name)
+                                                                    if (isTimerRunning) {
+                                                                        try {
+                                                                            mediaPlayer?.stop()
+                                                                            mediaPlayer?.release()
+                                                                            mediaPlayer = MediaPlayer().apply {
+                                                                                setDataSource(file.absolutePath)
+                                                                                isLooping = true
+                                                                                prepare()
+                                                                                start()
+                                                                            }
+                                                                        } catch (e: Exception) { e.printStackTrace() }
+                                                                    }
+                                                                    isAudioPickerExpanded = false
+                                                                },
+                                                                colors = RadioButtonDefaults.colors(selectedColor = PrimaryViolet),
+                                                                modifier = Modifier.size(18.dp)
                                                             )
                                                         }
-                                                        RadioButton(
-                                                            selected = isSel,
-                                                            onClick = {
-                                                                selectedAudioFile = file
-                                                                AudioSoundscapeManager.setLastSelectedAudio(context, file.name)
-                                                                if (isTimerRunning) {
-                                                                    try {
-                                                                        mediaPlayer?.stop()
-                                                                        mediaPlayer?.release()
-                                                                        mediaPlayer = MediaPlayer().apply {
-                                                                            setDataSource(file.absolutePath)
-                                                                            isLooping = true
-                                                                            prepare()
-                                                                            start()
-                                                                        }
-                                                                    } catch (e: Exception) { e.printStackTrace() }
-                                                                }
-                                                                isAudioPickerExpanded = false
-                                                            },
-                                                            colors = RadioButtonDefaults.colors(selectedColor = PrimaryViolet),
-                                                            modifier = Modifier.size(18.dp)
-                                                        )
                                                     }
                                                 }
                                             }
                                         }
                                     }
-                                }                            }
+                                }
+                            }
                             
                             Spacer(modifier = Modifier.height(4.dp))
                         }
@@ -3281,20 +3266,24 @@ fun HabitItemRow(
     var lastDate by remember(habit.id) { mutableStateOf(selectedDate) }
     var wasCompleted by remember(habit.id) { mutableStateOf(isCompleted) }
     val completionAnim = remember { Animatable(0f) }
+    val coroutineScope = rememberCoroutineScope()
+
+    val triggerInAppCompletion = {
+        coroutineScope.launch {
+            completionAnim.snapTo(0f)
+            FeedbackHelper.playCompletionFeedback(context, vibrationEnabled)
+            completionAnim.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(durationMillis = 650, easing = FastOutSlowInEasing)
+            )
+        }
+    }
 
     LaunchedEffect(isCompleted, selectedDate) {
         if (selectedDate != lastDate) {
             lastDate = selectedDate
             wasCompleted = isCompleted
         } else {
-            if (isCompleted && !wasCompleted) {
-                completionAnim.snapTo(0f)
-                FeedbackHelper.playCompletionFeedback(context, vibrationEnabled)
-                completionAnim.animateTo(
-                    targetValue = 1f,
-                    animationSpec = tween(durationMillis = 650, easing = FastOutSlowInEasing)
-                )
-            }
             wasCompleted = isCompleted
         }
     }
@@ -3388,7 +3377,12 @@ fun HabitItemRow(
                 )
             }
             .combinedClickable(
-                onClick = { onToggle(habit.id, hasLog) },
+                onClick = {
+                    if (!isCompleted && !isPaused) {
+                        triggerInAppCompletion()
+                    }
+                    onToggle(habit.id, hasLog)
+                },
                 onLongClick = { onLongClick(habit) }
             )
             .testTag("habit_card_${habit.id}")
@@ -3533,9 +3527,14 @@ fun HabitItemRow(
                         )
                         .clickable(enabled = !isPaused) {
                             if (habit.type == "NUMBER") {
-                                // Mit einem Klick auf den Kreis rechts kann man den Wert um 1 erhöhen, nicht um mehrere
+                                if (!isCompleted && (currentValue + 1f) >= habit.targetValue) {
+                                    triggerInAppCompletion()
+                                }
                                 onAddQuantity(habit.id, currentValue, 1f)
                             } else {
+                                if (!isCompleted) {
+                                    triggerInAppCompletion()
+                                }
                                 onToggle(habit.id, hasLog)
                             }
                         },
