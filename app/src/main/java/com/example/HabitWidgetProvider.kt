@@ -60,8 +60,8 @@ class HabitWidgetProvider : AppWidgetProvider() {
             if (habitId != -1) {
                 val pendingResult = goAsync()
                 CoroutineScope(Dispatchers.IO).launch {
-                    updateMutex.withLock {
-                        try {
+                    try {
+                        updateMutex.withLock {
                             val db = AppDatabase.getDatabase(context)
                             val habit = db.habitDao().getHabitByIdSuspend(habitId)
                             if (habit != null) {
@@ -112,17 +112,17 @@ class HabitWidgetProvider : AppWidgetProvider() {
                                     db.habitDao().insertLog(newLog)
                                 }
                             }
-                            
-                            // Update widgets immediately and synchronously in the same coroutine!
-                            val appWidgetManager = AppWidgetManager.getInstance(context)
-                            val componentName = ComponentName(context, HabitWidgetProvider::class.java)
-                            val ids = appWidgetManager.getAppWidgetIds(componentName)
-                            updateAllWidgetsSuspend(context, appWidgetManager, ids, isFullUpdate = false)
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                        } finally {
-                            pendingResult.finish()
                         }
+                        
+                        // Update widgets immediately and synchronously after DB write lock is released
+                        val appWidgetManager = AppWidgetManager.getInstance(context)
+                        val componentName = ComponentName(context, HabitWidgetProvider::class.java)
+                        val ids = appWidgetManager.getAppWidgetIds(componentName)
+                        updateAllWidgetsSuspend(context, appWidgetManager, ids, isFullUpdate = false)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    } finally {
+                        pendingResult.finish()
                     }
                 }
             }
@@ -133,8 +133,8 @@ class HabitWidgetProvider : AppWidgetProvider() {
             if (habitId != -1 && delta != 0f) {
                 val pendingResult = goAsync()
                 CoroutineScope(Dispatchers.IO).launch {
-                    updateMutex.withLock {
-                        try {
+                    try {
+                        updateMutex.withLock {
                             val db = AppDatabase.getDatabase(context)
                             val habit = db.habitDao().getHabitByIdSuspend(habitId)
                             if (habit != null) {
@@ -164,17 +164,16 @@ class HabitWidgetProvider : AppWidgetProvider() {
                                     db.habitDao().insertLog(newLog)
                                 }
                             }
-                            
-                            // Update widgets immediately and synchronously in the same coroutine!
-                            val appWidgetManager = AppWidgetManager.getInstance(context)
-                            val componentName = ComponentName(context, HabitWidgetProvider::class.java)
-                            val ids = appWidgetManager.getAppWidgetIds(componentName)
-                            updateAllWidgetsSuspend(context, appWidgetManager, ids, isFullUpdate = false)
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                        } finally {
-                            pendingResult.finish()
                         }
+                        
+                        val appWidgetManager = AppWidgetManager.getInstance(context)
+                        val componentName = ComponentName(context, HabitWidgetProvider::class.java)
+                        val ids = appWidgetManager.getAppWidgetIds(componentName)
+                        updateAllWidgetsSuspend(context, appWidgetManager, ids, isFullUpdate = false)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    } finally {
+                        pendingResult.finish()
                     }
                 }
             }
@@ -197,8 +196,8 @@ class HabitWidgetProvider : AppWidgetProvider() {
             if (itemAction == "TOGGLE" && habitId != -1) {
                 val pendingResult = goAsync()
                 CoroutineScope(Dispatchers.IO).launch {
-                    updateMutex.withLock {
-                        try {
+                    try {
+                        updateMutex.withLock {
                             val db = AppDatabase.getDatabase(context)
                             val habit = db.habitDao().getHabitByIdSuspend(habitId)
                             if (habit != null) {
@@ -249,23 +248,23 @@ class HabitWidgetProvider : AppWidgetProvider() {
                                     db.habitDao().insertLog(newLog)
                                 }
                             }
-                            
-                            val appWidgetManager = AppWidgetManager.getInstance(context)
-                            val componentName = ComponentName(context, HabitWidgetProvider::class.java)
-                            val ids = appWidgetManager.getAppWidgetIds(componentName)
-                            updateAllWidgetsSuspend(context, appWidgetManager, ids, isFullUpdate = false)
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                        } finally {
-                            pendingResult.finish()
                         }
+                        
+                        val appWidgetManager = AppWidgetManager.getInstance(context)
+                        val componentName = ComponentName(context, HabitWidgetProvider::class.java)
+                        val ids = appWidgetManager.getAppWidgetIds(componentName)
+                        updateAllWidgetsSuspend(context, appWidgetManager, ids, isFullUpdate = false)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    } finally {
+                        pendingResult.finish()
                     }
                 }
             } else if (itemAction == "DELTA" && habitId != -1 && delta != 0f) {
                 val pendingResult = goAsync()
                 CoroutineScope(Dispatchers.IO).launch {
-                    updateMutex.withLock {
-                        try {
+                    try {
+                        updateMutex.withLock {
                             val db = AppDatabase.getDatabase(context)
                             val habit = db.habitDao().getHabitByIdSuspend(habitId)
                             if (habit != null) {
@@ -295,16 +294,16 @@ class HabitWidgetProvider : AppWidgetProvider() {
                                     db.habitDao().insertLog(newLog)
                                 }
                             }
-                            
-                            val appWidgetManager = AppWidgetManager.getInstance(context)
-                            val componentName = ComponentName(context, HabitWidgetProvider::class.java)
-                            val ids = appWidgetManager.getAppWidgetIds(componentName)
-                            updateAllWidgetsSuspend(context, appWidgetManager, ids, isFullUpdate = false)
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                        } finally {
-                            pendingResult.finish()
                         }
+                        
+                        val appWidgetManager = AppWidgetManager.getInstance(context)
+                        val componentName = ComponentName(context, HabitWidgetProvider::class.java)
+                        val ids = appWidgetManager.getAppWidgetIds(componentName)
+                        updateAllWidgetsSuspend(context, appWidgetManager, ids, isFullUpdate = false)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    } finally {
+                        pendingResult.finish()
                     }
                 }
             } else if (itemAction == "OPEN_APP" && habitId != -1) {
@@ -359,88 +358,89 @@ class HabitWidgetProvider : AppWidgetProvider() {
         appWidgetIds: IntArray,
         isFullUpdate: Boolean = true
     ) {
+        updateMutex.withLock {
+            val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+            val todayStr = sdf.format(Date())
+            val db = AppDatabase.getDatabase(context)
+            val allHabits = db.habitDao().getAllHabitsRaw()
 
-        val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-        val todayStr = sdf.format(Date())
-        val db = AppDatabase.getDatabase(context)
-        val allHabits = db.habitDao().getAllHabitsRaw()
+            appWidgetIds.forEach { widgetId ->
+                val selectedDate = todayStr
+                val widgetLogs = db.habitDao().getLogsForDateRaw(selectedDate)
+                val logsMap = widgetLogs.associateBy { it.habitId }
 
-        appWidgetIds.forEach { widgetId ->
-            val selectedDate = todayStr
-            val widgetLogs = db.habitDao().getLogsForDateRaw(selectedDate)
-            val logsMap = widgetLogs.associateBy { it.habitId }
+                val activeHabits = allHabits
+                    .filter { !it.isArchived && com.example.data.isHabitActiveOnDate(it, todayStr) }
+                    .sortedWith(compareBy<com.example.data.Habit> { it.sortOrder }.thenByDescending { it.id })
 
-            val activeHabits = allHabits
-                .filter { !it.isArchived && com.example.data.isHabitActiveOnDate(it, todayStr) }
-                .sortedWith(compareBy<com.example.data.Habit> { it.sortOrder }.thenByDescending { it.id })
+                var completed = 0
+                var nonPausedCount = 0
 
-            var completed = 0
-            var nonPausedCount = 0
-
-            activeHabits.forEach { habit ->
-                val log = logsMap[habit.id]
-                val isPaused = log != null && log.isPaused
-                if (!isPaused) {
-                    nonPausedCount++
-                    if (com.example.data.isLogCompleted(habit, log)) {
-                        completed++
+                activeHabits.forEach { habit ->
+                    val log = logsMap[habit.id]
+                    val isPaused = log != null && log.isPaused
+                    if (!isPaused) {
+                        nonPausedCount++
+                        if (com.example.data.isLogCompleted(habit, log)) {
+                            completed++
+                        }
                     }
                 }
+
+                val progressPercent = if (nonPausedCount > 0) (completed.toFloat() / nonPausedCount * 100).toInt() else 0
+                val isCompleted = progressPercent >= 100 && nonPausedCount > 0
+
+                val views = RemoteViews(context.packageName, R.layout.habit_widget)
+                
+                views.setProgressBar(R.id.widget_progress_bar, 100, progressPercent, false)
+                views.setProgressBar(R.id.widget_progress_bar_completed, 100, progressPercent, false)
+                
+                if (isCompleted) {
+                    views.setViewVisibility(R.id.widget_progress_bar_completed, android.view.View.VISIBLE)
+                    views.setViewVisibility(R.id.widget_progress_bar, android.view.View.GONE)
+                } else {
+                    views.setViewVisibility(R.id.widget_progress_bar, android.view.View.VISIBLE)
+                    views.setViewVisibility(R.id.widget_progress_bar_completed, android.view.View.GONE)
+                }
+
+                val displayDate = getDisplayDate(selectedDate)
+                views.setTextViewText(R.id.widget_date_title, displayDate)
+
+                // Set up RemoteViewsService for the ListView
+                val serviceIntent = Intent(context, HabitWidgetService::class.java).apply {
+                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+                    data = android.net.Uri.parse(toUri(Intent.URI_INTENT_SCHEME))
+                }
+                views.setRemoteAdapter(R.id.widget_habits_list, serviceIntent)
+
+                // Set up PendingIntent Template for ListView item clicks
+                val clickIntent = Intent(context, HabitWidgetProvider::class.java).apply {
+                    action = ACTION_WIDGET_ITEM_CLICK
+                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+                }
+                val clickPIntent = PendingIntent.getBroadcast(
+                    context,
+                    widgetId * 1000 + 5,
+                    clickIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
+                )
+                views.setPendingIntentTemplate(R.id.widget_habits_list, clickPIntent)
+
+                val openAppInt = Intent(context, MainActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                }
+                val pendingInt = PendingIntent.getActivity(
+                    context,
+                    widgetId * 5000,
+                    openAppInt,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                views.setOnClickPendingIntent(R.id.widget_date_title, pendingInt)
+                views.setOnClickPendingIntent(R.id.widget_progress_container, pendingInt)
+                
+                appWidgetManager.updateAppWidget(widgetId, views)
+                appWidgetManager.notifyAppWidgetViewDataChanged(widgetId, R.id.widget_habits_list)
             }
-
-            val progressPercent = if (nonPausedCount > 0) (completed.toFloat() / nonPausedCount * 100).toInt() else 0
-            val isCompleted = progressPercent >= 100 && nonPausedCount > 0
-
-            val views = RemoteViews(context.packageName, R.layout.habit_widget)
-            
-            views.setProgressBar(R.id.widget_progress_bar, 100, progressPercent, false)
-            views.setProgressBar(R.id.widget_progress_bar_completed, 100, progressPercent, false)
-            
-            if (isCompleted) {
-                views.setViewVisibility(R.id.widget_progress_bar_completed, android.view.View.VISIBLE)
-                views.setViewVisibility(R.id.widget_progress_bar, android.view.View.GONE)
-            } else {
-                views.setViewVisibility(R.id.widget_progress_bar, android.view.View.VISIBLE)
-                views.setViewVisibility(R.id.widget_progress_bar_completed, android.view.View.GONE)
-            }
-
-            val displayDate = getDisplayDate(selectedDate)
-            views.setTextViewText(R.id.widget_date_title, displayDate)
-
-            // Set up RemoteViewsService for the ListView
-            val serviceIntent = Intent(context, HabitWidgetService::class.java).apply {
-                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
-                data = android.net.Uri.parse(toUri(Intent.URI_INTENT_SCHEME))
-            }
-            views.setRemoteAdapter(R.id.widget_habits_list, serviceIntent)
-
-            // Set up PendingIntent Template for ListView item clicks
-            val clickIntent = Intent(context, HabitWidgetProvider::class.java).apply {
-                action = ACTION_WIDGET_ITEM_CLICK
-                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
-            }
-            val clickPIntent = PendingIntent.getBroadcast(
-                context,
-                widgetId * 1000 + 5,
-                clickIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
-            )
-            views.setPendingIntentTemplate(R.id.widget_habits_list, clickPIntent)
-
-            val openAppInt = Intent(context, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            }
-            val pendingInt = PendingIntent.getActivity(
-                context,
-                widgetId * 5000,
-                openAppInt,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-            views.setOnClickPendingIntent(R.id.widget_date_title, pendingInt)
-            views.setOnClickPendingIntent(R.id.widget_progress_container, pendingInt)
-            
-            appWidgetManager.updateAppWidget(widgetId, views)
-            appWidgetManager.notifyAppWidgetViewDataChanged(widgetId, R.id.widget_habits_list)
         }
     }
 

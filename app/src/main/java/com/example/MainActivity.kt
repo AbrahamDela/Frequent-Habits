@@ -1513,41 +1513,8 @@ fun WidgetAddValueDialog(
                                                     style = MaterialTheme.typography.titleLarge,
                                                     color = TextPrimary,
                                                     fontWeight = FontWeight.ExtraBold,
-                                                    fontSize = 28.sp,
+                                                    fontSize = 32.sp,
                                                     letterSpacing = 1.sp
-                                                )
-                                            }
-
-                                            Spacer(modifier = Modifier.height(4.dp))
-
-                                            // Status and Audio Waveform Bar
-                                            Row(
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                            ) {
-                                                if (isTimerRunning) {
-                                                    // Animated Sound Wave
-                                                    Row(
-                                                        verticalAlignment = Alignment.CenterVertically,
-                                                        horizontalArrangement = Arrangement.spacedBy(2.dp)
-                                                    ) {
-                                                        Box(modifier = Modifier.width(2.5.dp).height((10 * waveScale1).dp).background(PrimaryViolet, RoundedCornerShape(2.dp)))
-                                                        Box(modifier = Modifier.width(2.5.dp).height((10 * waveScale2).dp).background(Color(0xFFA855F7), RoundedCornerShape(2.dp)))
-                                                        Box(modifier = Modifier.width(2.5.dp).height((10 * waveScale3).dp).background(Color(0xFFC084FC), RoundedCornerShape(2.dp)))
-                                                    }
-                                                    Spacer(modifier = Modifier.width(2.dp))
-                                                }
-
-                                                Text(
-                                                    text = if (isTimerRunning) {
-                                                        if (language == "de") "FOKUS AKTIV" else "FOCUS ACTIVE"
-                                                    } else {
-                                                        if (language == "de") "BEREIT" else "READY"
-                                                    },
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = if (isTimerRunning) SuccessGreen else TextSecondary,
-                                                    fontWeight = FontWeight.Bold,
-                                                    letterSpacing = 0.5.sp
                                                 )
                                             }
                                         }
@@ -1624,7 +1591,7 @@ fun WidgetAddValueDialog(
                                                     colors = if (isTimerRunning) {
                                                         listOf(Color(0xFFEF4444), Color(0xFFDC2626))
                                                     } else {
-                                                        listOf(PrimaryViolet, HabitCyan)
+                                                        listOf(Color(0xFF8B5CF6), PrimaryViolet)
                                                     }
                                                 )
                                             )
@@ -1744,56 +1711,40 @@ fun WidgetAddValueDialog(
                                     Column(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .background(DarkBg, RoundedCornerShape(14.dp))
-                                            .border(1.dp, DarkBorder, RoundedCornerShape(14.dp))
-                                            .padding(10.dp),
-                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                            .background(DarkBg, RoundedCornerShape(12.dp))
+                                            .border(1.dp, DarkBorder, RoundedCornerShape(12.dp))
+                                            .padding(8.dp),
+                                        verticalArrangement = Arrangement.spacedBy(6.dp)
                                     ) {
-                                        // Search Bar
-                                        OutlinedTextField(
-                                            value = audioSearchQuery,
-                                            onValueChange = { audioSearchQuery = it },
-                                            placeholder = { Text(if (language == "de") "Sound suchen..." else "Search sound...", color = TextSecondary, fontSize = 13.sp) },
-                                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(18.dp)) },
-                                            trailingIcon = {
-                                                if (audioSearchQuery.isNotEmpty()) {
-                                                    IconButton(onClick = { audioSearchQuery = "" }, modifier = Modifier.size(24.dp)) {
-                                                        Icon(Icons.Default.Close, contentDescription = "Clear", tint = TextSecondary, modifier = Modifier.size(16.dp))
+                                        // Only show search if there are more than 5 sounds
+                                        if (importedAudios.size > 5) {
+                                            OutlinedTextField(
+                                                value = audioSearchQuery,
+                                                onValueChange = { audioSearchQuery = it },
+                                                placeholder = { Text(if (language == "de") "Sound suchen..." else "Search sound...", color = TextSecondary, fontSize = 12.sp) },
+                                                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(16.dp)) },
+                                                trailingIcon = {
+                                                    if (audioSearchQuery.isNotEmpty()) {
+                                                        IconButton(onClick = { audioSearchQuery = "" }, modifier = Modifier.size(20.dp)) {
+                                                            Icon(Icons.Default.Close, contentDescription = "Clear", tint = TextSecondary, modifier = Modifier.size(14.dp))
+                                                        }
                                                     }
-                                                }
-                                            },
-                                            modifier = Modifier.fillMaxWidth(),
-                                            colors = OutlinedTextFieldDefaults.colors(
-                                                focusedBorderColor = PrimaryViolet,
-                                                unfocusedBorderColor = DarkBorder,
-                                                focusedContainerColor = DarkCard,
-                                                unfocusedContainerColor = DarkCard,
-                                                focusedTextColor = TextPrimary,
-                                                unfocusedTextColor = TextPrimary
-                                            ),
-                                            shape = RoundedCornerShape(10.dp),
-                                            singleLine = true
-                                        )
-
-                                        // Info hint: Upload/manage in settings
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .background(DarkCard, RoundedCornerShape(8.dp))
-                                                .border(0.5.dp, DarkBorder, RoundedCornerShape(8.dp))
-                                                .padding(8.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Icon(Icons.Default.Info, contentDescription = null, tint = PrimaryViolet, modifier = Modifier.size(16.dp))
-                                            Spacer(modifier = Modifier.width(6.dp))
-                                            Text(
-                                                text = if (language == "de") "Tipp: Sounds hochladen & verwalten in den Einstellungen." else "Tip: Upload & manage sounds in Settings.",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = TextSecondary,
-                                                fontSize = 11.sp
+                                                },
+                                                modifier = Modifier.fillMaxWidth().height(42.dp),
+                                                colors = OutlinedTextFieldDefaults.colors(
+                                                    focusedBorderColor = PrimaryViolet,
+                                                    unfocusedBorderColor = DarkBorder,
+                                                    focusedContainerColor = DarkCard,
+                                                    unfocusedContainerColor = DarkCard,
+                                                    focusedTextColor = TextPrimary,
+                                                    unfocusedTextColor = TextPrimary
+                                                ),
+                                                shape = RoundedCornerShape(8.dp),
+                                                singleLine = true
                                             )
                                         }
 
+                                        // Only show recent if more than 5 sounds exist
                                         val recentFileNames = remember(importedAudios, isAudioPickerExpanded) {
                                             AudioSoundscapeManager.getRecentAudios(context)
                                         }
@@ -1801,17 +1752,20 @@ fun WidgetAddValueDialog(
                                             recentFileNames.mapNotNull { name -> importedAudios.find { it.name == name } }
                                         }
 
-                                        if (recentFiles.isNotEmpty() && audioSearchQuery.isBlank()) {
-                                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        if (importedAudios.size > 5 && recentFiles.isNotEmpty() && audioSearchQuery.isBlank()) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
                                                 Text(
-                                                    text = if (language == "de") "Zuletzt verwendet:" else "Recently used:",
+                                                    text = if (language == "de") "Zuletzt:" else "Recent:",
                                                     style = MaterialTheme.typography.labelSmall,
                                                     color = TextSecondary,
-                                                    fontSize = 11.sp,
+                                                    fontSize = 10.sp,
                                                     fontWeight = FontWeight.SemiBold
                                                 )
                                                 LazyRow(
-                                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
                                                     modifier = Modifier.fillMaxWidth()
                                                 ) {
                                                     items(recentFiles) { file ->
@@ -1834,24 +1788,18 @@ fun WidgetAddValueDialog(
                                                                 }
                                                                 isAudioPickerExpanded = false
                                                             },
-                                                            shape = RoundedCornerShape(10.dp),
+                                                            shape = RoundedCornerShape(8.dp),
                                                             color = if (isSel) PrimaryViolet.copy(alpha = 0.2f) else DarkCard,
                                                             border = BorderStroke(1.dp, if (isSel) PrimaryViolet else DarkBorder)
                                                         ) {
-                                                            Row(
-                                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                                                verticalAlignment = Alignment.CenterVertically
-                                                            ) {
-                                                                Icon(Icons.Default.History, contentDescription = null, tint = PrimaryViolet, modifier = Modifier.size(12.dp))
-                                                                Spacer(modifier = Modifier.width(4.dp))
-                                                                Text(
-                                                                    text = file.nameWithoutExtension,
-                                                                    style = MaterialTheme.typography.labelSmall,
-                                                                    color = TextPrimary,
-                                                                    maxLines = 1,
-                                                                    fontSize = 11.sp
-                                                                )
-                                                            }
+                                                            Text(
+                                                                text = file.nameWithoutExtension,
+                                                                style = MaterialTheme.typography.labelSmall,
+                                                                color = TextPrimary,
+                                                                maxLines = 1,
+                                                                fontSize = 10.sp,
+                                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                            )
                                                         }
                                                     }
                                                 }
@@ -1863,8 +1811,8 @@ fun WidgetAddValueDialog(
                                         }
 
                                         LazyColumn(
-                                            verticalArrangement = Arrangement.spacedBy(6.dp),
-                                            modifier = Modifier.heightIn(max = 160.dp)
+                                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                                            modifier = Modifier.heightIn(max = 140.dp)
                                         ) {
                                             // Option: Mute
                                             item {
@@ -1882,23 +1830,24 @@ fun WidgetAddValueDialog(
                                                         }
                                                         isAudioPickerExpanded = false
                                                     },
-                                                    shape = RoundedCornerShape(8.dp),
+                                                    shape = RoundedCornerShape(6.dp),
                                                     color = if (isNoSound) PrimaryViolet.copy(alpha = 0.15f) else DarkCard,
-                                                    border = BorderStroke(1.dp, if (isNoSound) PrimaryViolet else DarkBorder),
+                                                    border = BorderStroke(0.5.dp, if (isNoSound) PrimaryViolet else DarkBorder),
                                                     modifier = Modifier.fillMaxWidth()
                                                 ) {
                                                     Row(
-                                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
                                                         verticalAlignment = Alignment.CenterVertically,
                                                         horizontalArrangement = Arrangement.SpaceBetween
                                                     ) {
                                                         Row(verticalAlignment = Alignment.CenterVertically) {
-                                                            Icon(Icons.Default.VolumeOff, contentDescription = null, tint = if (isNoSound) PrimaryViolet else TextSecondary, modifier = Modifier.size(18.dp))
-                                                            Spacer(modifier = Modifier.width(8.dp))
+                                                            Icon(Icons.Default.VolumeOff, contentDescription = null, tint = if (isNoSound) PrimaryViolet else TextSecondary, modifier = Modifier.size(16.dp))
+                                                            Spacer(modifier = Modifier.width(6.dp))
                                                             Text(
                                                                 text = if (language == "de") "Kein Sound (Stumm)" else "No Sound (Mute)",
                                                                 style = MaterialTheme.typography.bodySmall,
                                                                 color = TextPrimary,
+                                                                fontSize = 12.sp,
                                                                 fontWeight = if (isNoSound) FontWeight.Bold else FontWeight.Normal
                                                             )
                                                         }
@@ -1917,7 +1866,7 @@ fun WidgetAddValueDialog(
                                                                 isAudioPickerExpanded = false
                                                             },
                                                             colors = RadioButtonDefaults.colors(selectedColor = PrimaryViolet),
-                                                            modifier = Modifier.size(20.dp)
+                                                            modifier = Modifier.size(18.dp)
                                                         )
                                                     }
                                                 }
@@ -1943,23 +1892,24 @@ fun WidgetAddValueDialog(
                                                         }
                                                         isAudioPickerExpanded = false
                                                     },
-                                                    shape = RoundedCornerShape(8.dp),
+                                                    shape = RoundedCornerShape(6.dp),
                                                     color = if (isSel) PrimaryViolet.copy(alpha = 0.15f) else DarkCard,
-                                                    border = BorderStroke(1.dp, if (isSel) PrimaryViolet else DarkBorder),
+                                                    border = BorderStroke(0.5.dp, if (isSel) PrimaryViolet else DarkBorder),
                                                     modifier = Modifier.fillMaxWidth()
                                                 ) {
                                                     Row(
-                                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
                                                         verticalAlignment = Alignment.CenterVertically,
                                                         horizontalArrangement = Arrangement.SpaceBetween
                                                     ) {
                                                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                                                            Icon(Icons.Default.MusicNote, contentDescription = null, tint = PrimaryViolet, modifier = Modifier.size(18.dp))
-                                                            Spacer(modifier = Modifier.width(8.dp))
+                                                            Icon(Icons.Default.MusicNote, contentDescription = null, tint = PrimaryViolet, modifier = Modifier.size(16.dp))
+                                                            Spacer(modifier = Modifier.width(6.dp))
                                                             Text(
                                                                 text = file.nameWithoutExtension,
                                                                 style = MaterialTheme.typography.bodySmall,
                                                                 color = TextPrimary,
+                                                                fontSize = 12.sp,
                                                                 fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal,
                                                                 maxLines = 1,
                                                                 overflow = TextOverflow.Ellipsis
@@ -1985,15 +1935,14 @@ fun WidgetAddValueDialog(
                                                                 isAudioPickerExpanded = false
                                                             },
                                                             colors = RadioButtonDefaults.colors(selectedColor = PrimaryViolet),
-                                                            modifier = Modifier.size(20.dp)
+                                                            modifier = Modifier.size(18.dp)
                                                         )
                                                     }
                                                 }
                                             }
                                         }
                                     }
-                                }
-                            }
+                                }                            }
                             
                             Spacer(modifier = Modifier.height(4.dp))
                         }

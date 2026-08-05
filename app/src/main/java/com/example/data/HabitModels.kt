@@ -259,6 +259,7 @@ data class PerfectDaysStats(
 )
 
 fun isHabitActiveOnDate(habit: Habit, dateStr: String): Boolean {
+    if (habit.isArchived) return false
     val date = try {
         java.time.LocalDate.parse(dateStr)
     } catch (e: Exception) {
