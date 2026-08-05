@@ -1691,7 +1691,7 @@ fun WidgetAddValueDialog(
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
                                             text = selectedAudioFile?.nameWithoutExtension ?: (if (language == "de") "Kein Sound (Stumm)" else "No Sound (Mute)"),
-                                            color = TextPrimary,
+                                            color = if (selectedAudioFile != null) TextPrimary else TextSecondary,
                                             style = MaterialTheme.typography.bodyMedium,
                                             fontWeight = FontWeight.Medium,
                                             maxLines = 1,
@@ -1699,12 +1699,41 @@ fun WidgetAddValueDialog(
                                         )
                                     }
 
-                                    Icon(
-                                        imageVector = if (isAudioPickerExpanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
-                                        contentDescription = null,
-                                        tint = TextSecondary,
-                                        modifier = Modifier.size(24.dp)
-                                    )
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        if (selectedAudioFile != null) {
+                                            IconButton(
+                                                onClick = {
+                                                    selectedAudioFile = null
+                                                    AudioSoundscapeManager.setLastSelectedAudio(context, "")
+                                                    if (isTimerRunning) {
+                                                        try {
+                                                            mediaPlayer?.stop()
+                                                            mediaPlayer?.release()
+                                                            mediaPlayer = null
+                                                        } catch (e: Exception) { e.printStackTrace() }
+                                                    }
+                                                },
+                                                modifier = Modifier.size(24.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Close,
+                                                    contentDescription = if (language == "de") "Sound entfernen" else "Remove sound",
+                                                    tint = Color(0xFFEF4444),
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
+                                        }
+
+                                        Icon(
+                                            imageVector = if (isAudioPickerExpanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
+                                            contentDescription = null,
+                                            tint = TextSecondary,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
                                 }
 
                                 AnimatedVisibility(visible = isAudioPickerExpanded) {
@@ -1814,64 +1843,6 @@ fun WidgetAddValueDialog(
                                             verticalArrangement = Arrangement.spacedBy(4.dp),
                                             modifier = Modifier.heightIn(max = 140.dp)
                                         ) {
-                                            // Option: Mute
-                                            item {
-                                                val isNoSound = selectedAudioFile == null
-                                                Surface(
-                                                    onClick = {
-                                                        selectedAudioFile = null
-                                                        AudioSoundscapeManager.setLastSelectedAudio(context, "")
-                                                        if (isTimerRunning) {
-                                                            try {
-                                                                mediaPlayer?.stop()
-                                                                mediaPlayer?.release()
-                                                                mediaPlayer = null
-                                                            } catch (e: Exception) { e.printStackTrace() }
-                                                        }
-                                                        isAudioPickerExpanded = false
-                                                    },
-                                                    shape = RoundedCornerShape(6.dp),
-                                                    color = if (isNoSound) PrimaryViolet.copy(alpha = 0.15f) else DarkCard,
-                                                    border = BorderStroke(0.5.dp, if (isNoSound) PrimaryViolet else DarkBorder),
-                                                    modifier = Modifier.fillMaxWidth()
-                                                ) {
-                                                    Row(
-                                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
-                                                        verticalAlignment = Alignment.CenterVertically,
-                                                        horizontalArrangement = Arrangement.SpaceBetween
-                                                    ) {
-                                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                                            Icon(Icons.Default.VolumeOff, contentDescription = null, tint = if (isNoSound) PrimaryViolet else TextSecondary, modifier = Modifier.size(16.dp))
-                                                            Spacer(modifier = Modifier.width(6.dp))
-                                                            Text(
-                                                                text = if (language == "de") "Kein Sound (Stumm)" else "No Sound (Mute)",
-                                                                style = MaterialTheme.typography.bodySmall,
-                                                                color = TextPrimary,
-                                                                fontSize = 12.sp,
-                                                                fontWeight = if (isNoSound) FontWeight.Bold else FontWeight.Normal
-                                                            )
-                                                        }
-                                                        RadioButton(
-                                                            selected = isNoSound,
-                                                            onClick = {
-                                                                selectedAudioFile = null
-                                                                AudioSoundscapeManager.setLastSelectedAudio(context, "")
-                                                                if (isTimerRunning) {
-                                                                    try {
-                                                                        mediaPlayer?.stop()
-                                                                        mediaPlayer?.release()
-                                                                        mediaPlayer = null
-                                                                    } catch (e: Exception) { e.printStackTrace() }
-                                                                }
-                                                                isAudioPickerExpanded = false
-                                                            },
-                                                            colors = RadioButtonDefaults.colors(selectedColor = PrimaryViolet),
-                                                            modifier = Modifier.size(18.dp)
-                                                        )
-                                                    }
-                                                }
-                                            }
-
                                             items(filteredList) { file ->
                                                 val isSel = selectedAudioFile?.absolutePath == file.absolutePath
                                                 Surface(

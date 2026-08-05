@@ -19,34 +19,17 @@
         android:textStyle="bold"
         android:layout_marginBottom="0dp" />
 
-    <!-- Rounded training progress bar matching the app's style -->
-    <FrameLayout
-        android:id="@+id/widget_progress_container"
+    <!-- Rounded daily progress bar matching the app's style -->
+    <ProgressBar
+        android:id="@+id/widget_progress_bar"
+        style="?android:attr/progressBarStyleHorizontal"
         android:layout_width="match_parent"
         android:layout_height="8dp"
-        android:layout_marginBottom="12dp">
-
-        <ProgressBar
-            android:id="@+id/widget_progress_bar"
-            style="?android:attr/progressBarStyleHorizontal"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:indeterminate="false"
-            android:max="100"
-            android:progress="0"
-            android:progressDrawable="@drawable/widget_progress_bar_custom" />
-
-        <ProgressBar
-            android:id="@+id/widget_progress_bar_completed"
-            style="?android:attr/progressBarStyleHorizontal"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:indeterminate="false"
-            android:max="100"
-            android:progress="0"
-            android:progressDrawable="@drawable/widget_progress_bar_completed"
-            android:visibility="gone" />
-    </FrameLayout>
+        android:layout_marginBottom="12dp"
+        android:indeterminate="false"
+        android:max="100"
+        android:progress="0"
+        android:progressDrawable="@drawable/widget_progress_bar_custom" />
 
     <!-- Scrollable Habits List -->
     <ListView

@@ -388,20 +388,9 @@ class HabitWidgetProvider : AppWidgetProvider() {
                 }
 
                 val progressPercent = if (nonPausedCount > 0) (completed.toFloat() / nonPausedCount * 100).toInt() else 0
-                val isCompleted = progressPercent >= 100 && nonPausedCount > 0
 
                 val views = RemoteViews(context.packageName, R.layout.habit_widget)
-                
                 views.setProgressBar(R.id.widget_progress_bar, 100, progressPercent, false)
-                views.setProgressBar(R.id.widget_progress_bar_completed, 100, progressPercent, false)
-                
-                if (isCompleted) {
-                    views.setViewVisibility(R.id.widget_progress_bar_completed, android.view.View.VISIBLE)
-                    views.setViewVisibility(R.id.widget_progress_bar, android.view.View.GONE)
-                } else {
-                    views.setViewVisibility(R.id.widget_progress_bar, android.view.View.VISIBLE)
-                    views.setViewVisibility(R.id.widget_progress_bar_completed, android.view.View.GONE)
-                }
 
                 val displayDate = getDisplayDate(selectedDate)
                 views.setTextViewText(R.id.widget_date_title, displayDate)
@@ -436,7 +425,7 @@ class HabitWidgetProvider : AppWidgetProvider() {
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                 )
                 views.setOnClickPendingIntent(R.id.widget_date_title, pendingInt)
-                views.setOnClickPendingIntent(R.id.widget_progress_container, pendingInt)
+                views.setOnClickPendingIntent(R.id.widget_progress_bar, pendingInt)
                 
                 appWidgetManager.updateAppWidget(widgetId, views)
                 appWidgetManager.notifyAppWidgetViewDataChanged(widgetId, R.id.widget_habits_list)
