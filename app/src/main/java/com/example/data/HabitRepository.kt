@@ -43,18 +43,9 @@ class HabitRepository(private val habitDao: HabitDao) {
         habitDao.getLogsForHabitOnDate(habitId, date)
 
     suspend fun logHabit(habitId: Int, date: String, value: Float) {
-        val existing = habitDao.getLogsForHabitOnDate(habitId, date)
-        if (existing.isNotEmpty()) {
-            val first = existing.first()
-            val updated = first.copy(value = value, isPaused = false, timestamp = System.currentTimeMillis())
-            habitDao.insertLog(updated)
-            if (existing.size > 1) {
-                for (i in 1 until existing.size) {
-                    habitDao.deleteLog(existing[i])
-                }
-            }
-        } else {
-            val log = HabitLog(habitId = habitId, date = date, value = value)
+        habitDao.deleteLogsForHabitOnDate(habitId, date)
+        if (value != 0f) {
+            val log = HabitLog(habitId = habitId, date = date, value = value, isPaused = false, timestamp = System.currentTimeMillis())
             habitDao.insertLog(log)
         }
     }

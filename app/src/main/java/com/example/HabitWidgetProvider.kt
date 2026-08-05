@@ -95,16 +95,15 @@ class HabitWidgetProvider : AppWidgetProvider() {
                                     else -> "PENDING"
                                 }
                                 
-                                if (nextStatus == "PENDING") {
-                                    db.habitDao().deleteLogsForHabitOnDate(habitId, selectedDate)
-                                } else {
+                                db.habitDao().deleteLogsForHabitOnDate(habitId, selectedDate)
+                                if (nextStatus != "PENDING") {
                                     val nextValue = if (nextStatus == "SUCCESS") {
                                         if (habit.type == "BINARY") -2f else habit.targetValue
                                     } else {
                                         -1f
                                     }
                                     val newLog = com.example.data.HabitLog(
-                                        id = currentLog?.id ?: 0,
+                                        id = 0,
                                         habitId = habitId,
                                         date = selectedDate,
                                         value = nextValue
@@ -152,11 +151,10 @@ class HabitWidgetProvider : AppWidgetProvider() {
                                 }
                                 val newValue = (currentValue + delta).coerceAtLeast(0f)
                                 
-                                if (newValue <= 0f) {
-                                    db.habitDao().deleteLogsForHabitOnDate(habitId, selectedDate)
-                                } else {
+                                db.habitDao().deleteLogsForHabitOnDate(habitId, selectedDate)
+                                if (newValue > 0f) {
                                     val newLog = com.example.data.HabitLog(
-                                        id = currentLog?.id ?: 0,
+                                        id = 0,
                                         habitId = habitId,
                                         date = selectedDate,
                                         value = newValue
@@ -185,7 +183,7 @@ class HabitWidgetProvider : AppWidgetProvider() {
 
             if (itemAction == "TOGGLE" || itemAction == "DELTA") {
                 val now = System.currentTimeMillis()
-                if (habitId == lastClickedHabitId && (now - lastClickTime) < 150L) {
+                if (habitId == lastClickedHabitId && (now - lastClickTime) < 300L) {
                     // Debounce rapid double-clicks or bubbling nested view events
                     return
                 }
@@ -231,16 +229,15 @@ class HabitWidgetProvider : AppWidgetProvider() {
                                     else -> "PENDING"
                                 }
                                 
-                                if (nextStatus == "PENDING") {
-                                    db.habitDao().deleteLogsForHabitOnDate(habitId, selectedDate)
-                                } else {
+                                db.habitDao().deleteLogsForHabitOnDate(habitId, selectedDate)
+                                if (nextStatus != "PENDING") {
                                     val nextValue = if (nextStatus == "SUCCESS") {
                                         if (habit.type == "BINARY") -2f else habit.targetValue
                                     } else {
                                         -1f
                                     }
                                     val newLog = com.example.data.HabitLog(
-                                        id = currentLog?.id ?: 0,
+                                        id = 0,
                                         habitId = habitId,
                                         date = selectedDate,
                                         value = nextValue
@@ -282,11 +279,10 @@ class HabitWidgetProvider : AppWidgetProvider() {
                                 }
                                 val newValue = (currentValue + delta).coerceAtLeast(0f)
                                 
-                                if (newValue <= 0f) {
-                                    db.habitDao().deleteLogsForHabitOnDate(habitId, selectedDate)
-                                } else {
+                                db.habitDao().deleteLogsForHabitOnDate(habitId, selectedDate)
+                                if (newValue > 0f) {
                                     val newLog = com.example.data.HabitLog(
-                                        id = currentLog?.id ?: 0,
+                                        id = 0,
                                         habitId = habitId,
                                         date = selectedDate,
                                         value = newValue
