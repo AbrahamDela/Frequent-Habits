@@ -1582,7 +1582,8 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
         reminderEnabled: Boolean = false,
         reminderHour: Int = 18,
         reminderMinute: Int = 0,
-        customReminders: String = ""
+        customReminders: String = "",
+        description: String = ""
     ) {
         viewModelScope.launch {
             try {
@@ -1601,7 +1602,8 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
                     reminderEnabled = reminderEnabled,
                     reminderHour = reminderHour,
                     reminderMinute = reminderMinute,
-                    customReminders = customReminders
+                    customReminders = customReminders,
+                    description = description
                 )
                 val insertedId = repository.insertHabit(habit).toInt()
                 val finalHabit = habit.copy(id = insertedId)

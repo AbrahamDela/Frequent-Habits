@@ -25,7 +25,13 @@ import java.util.*
 
 class HabitWidgetProvider : AppWidgetProvider() {
 
+    override fun onEnabled(context: Context) {
+        super.onEnabled(context)
+        scheduleNextMidnightAlarm(context)
+    }
+
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
+        scheduleNextMidnightAlarm(context)
         val pendingResult = goAsync()
         updateAllWidgets(context, appWidgetManager, appWidgetIds, pendingResult)
     }
@@ -34,12 +40,20 @@ class HabitWidgetProvider : AppWidgetProvider() {
         val action = intent.action
         val widgetId = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
 
-        if (action == ACTION_UPDATE_HABITS) {
+        if (action == ACTION_UPDATE_HABITS ||
+            action == Intent.ACTION_DATE_CHANGED ||
+            action == Intent.ACTION_TIME_CHANGED ||
+            action == Intent.ACTION_TIMEZONE_CHANGED ||
+            action == Intent.ACTION_BOOT_COMPLETED ||
+            action == "android.intent.action.MY_PACKAGE_REPLACED" ||
+            action == "android.intent.action.TIME_SET") {
+            
+            scheduleNextMidnightAlarm(context)
             val pendingResult = goAsync()
             val appWidgetManager = AppWidgetManager.getInstance(context)
             val componentName = ComponentName(context, HabitWidgetProvider::class.java)
             val ids = appWidgetManager.getAppWidgetIds(componentName)
-            updateAllWidgets(context, appWidgetManager, ids, pendingResult, isFullUpdate = false)
+            updateAllWidgets(context, appWidgetManager, ids, pendingResult, isFullUpdate = true)
         } else if (action == ACTION_TOGGLE_BINARY_HABIT) {
             val habitId = intent.getIntExtra(EXTRA_HABIT_ID, -1)
             val targetWidgetId = if (widgetId != AppWidgetManager.INVALID_APPWIDGET_ID) widgetId else -1
@@ -393,45 +407,69 @@ class HabitWidgetProvider : AppWidgetProvider() {
             val displayDate = getDisplayDate(selectedDate)
             views.setTextViewText(R.id.widget_date_title, displayDate)
 
-            if (isFullUpdate) {
-                // Set up RemoteViewsService for the ListView
-                val serviceIntent = Intent(context, HabitWidgetService::class.java).apply {
-                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
-                    data = android.net.Uri.parse(toUri(Intent.URI_INTENT_SCHEME))
-                }
-                views.setRemoteAdapter(R.id.widget_habits_list, serviceIntent)
-
-                // Set up PendingIntent Template for ListView item clicks
-                val clickIntent = Intent(context, HabitWidgetProvider::class.java).apply {
-                    action = ACTION_WIDGET_ITEM_CLICK
-                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
-                }
-                val clickPIntent = PendingIntent.getBroadcast(
-                    context,
-                    widgetId * 1000 + 5,
-                    clickIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
-                )
-                views.setPendingIntentTemplate(R.id.widget_habits_list, clickPIntent)
-
-                val openAppInt = Intent(context, MainActivity::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                }
-                val pendingInt = PendingIntent.getActivity(
-                    context,
-                    widgetId * 5000,
-                    openAppInt,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-                views.setOnClickPendingIntent(R.id.widget_date_title, pendingInt)
-                views.setOnClickPendingIntent(R.id.widget_progress_container, pendingInt)
-                
-                appWidgetManager.updateAppWidget(widgetId, views)
-            } else {
-                appWidgetManager.partiallyUpdateAppWidget(widgetId, views)
+            // Set up RemoteViewsService for the ListView
+            val serviceIntent = Intent(context, HabitWidgetService::class.java).apply {
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+                data = android.net.Uri.parse(toUri(Intent.URI_INTENT_SCHEME))
             }
+            views.setRemoteAdapter(R.id.widget_habits_list, serviceIntent)
+
+            // Set up PendingIntent Template for ListView item clicks
+            val clickIntent = Intent(context, HabitWidgetProvider::class.java).apply {
+                action = ACTION_WIDGET_ITEM_CLICK
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+            }
+            val clickPIntent = PendingIntent.getBroadcast(
+                context,
+                widgetId * 1000 + 5,
+                clickIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
+            )
+            views.setPendingIntentTemplate(R.id.widget_habits_list, clickPIntent)
+
+            val openAppInt = Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
+            val pendingInt = PendingIntent.getActivity(
+                context,
+                widgetId * 5000,
+                openAppInt,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            views.setOnClickPendingIntent(R.id.widget_date_title, pendingInt)
+            views.setOnClickPendingIntent(R.id.widget_progress_container, pendingInt)
             
+            appWidgetManager.updateAppWidget(widgetId, views)
             appWidgetManager.notifyAppWidgetViewDataChanged(widgetId, R.id.widget_habits_list)
+        }
+    }
+
+    private fun scheduleNextMidnightAlarm(context: Context) {
+        try {
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? android.app.AlarmManager ?: return
+            val intent = Intent(context, HabitWidgetProvider::class.java).apply {
+                action = ACTION_UPDATE_HABITS
+            }
+            val pendingIntent = PendingIntent.getBroadcast(
+                context,
+                998877,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            val calendar = Calendar.getInstance().apply {
+                add(Calendar.DAY_OF_YEAR, 1)
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 2)
+                set(Calendar.MILLISECOND, 0)
+            }
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                alarmManager.setAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, calendar.timeInMillis, pendingIntent)
+            } else {
+                alarmManager.setExact(android.app.AlarmManager.RTC_WAKEUP, calendar.timeInMillis, pendingIntent)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 

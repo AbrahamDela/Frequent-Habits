@@ -48,6 +48,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -340,7 +341,7 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
                                 }
                             }
                         },
-                        onSave = { name, isNeg, cat, icon, color, type, unit, target, freq, start, specDays, remEnabled, remHour, remMin, customReminders ->
+                        onSave = { name, isNeg, cat, icon, color, type, unit, target, freq, start, specDays, remEnabled, remHour, remMin, customReminders, description ->
                             if (editingHabit != null) {
                                 val updated = editingHabit!!.copy(
                                     name = name,
@@ -357,7 +358,8 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
                                     reminderEnabled = remEnabled,
                                     reminderHour = remHour,
                                     reminderMinute = remMin,
-                                    customReminders = customReminders
+                                    customReminders = customReminders,
+                                    description = description
                                 )
                                 viewModel.updateHabit(updated)
                                 editingHabit = null
@@ -367,7 +369,7 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
                                     Toast.LENGTH_SHORT
                                 ).show()
                             } else {
-                                viewModel.addHabit(name, cat, icon, color, isNeg, type, unit, target, freq, start, specDays, remEnabled, remHour, remMin, customReminders)
+                                viewModel.addHabit(name, cat, icon, color, isNeg, type, unit, target, freq, start, specDays, remEnabled, remHour, remMin, customReminders, description)
                                 Toast.makeText(
                                     context,
                                     if (language == "de") "Gewohnheit hinzugefügt!" else "Habit added!",
@@ -544,6 +546,509 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
     }
 }
 
+// AUDIO SOUNDSCAPE MANAGER & PERSISTENCE
+object AudioSoundscapeManager {
+    private const val PREFS_NAME = "audio_soundscape_prefs"
+    private const val KEY_LAST_SELECTED_AUDIO = "last_selected_audio_filename"
+    private const val KEY_RECENT_AUDIOS = "recent_audio_filenames"
+    private const val PREFIX_CATEGORY = "sound_category_"
+
+    val CATEGORIES = listOf(
+        "Alle",
+        "Natur & Wetter",
+        "Fokus & Noise",
+        "Ambiente & Ruhe",
+        "Eigene Sounds"
+    )
+
+    fun getLastSelectedAudio(context: android.content.Context): String {
+        val prefs = context.getSharedPreferences(PREFS_NAME, android.content.Context.MODE_PRIVATE)
+        return prefs.getString(KEY_LAST_SELECTED_AUDIO, "") ?: ""
+    }
+
+    fun getRecentAudios(context: android.content.Context): List<String> {
+        val prefs = context.getSharedPreferences(PREFS_NAME, android.content.Context.MODE_PRIVATE)
+        val raw = prefs.getString(KEY_RECENT_AUDIOS, "") ?: ""
+        if (raw.isEmpty()) return emptyList()
+        return raw.split(";").filter { it.isNotEmpty() }
+    }
+
+    fun setLastSelectedAudio(context: android.content.Context, filename: String?) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, android.content.Context.MODE_PRIVATE)
+        prefs.edit().putString(KEY_LAST_SELECTED_AUDIO, filename ?: "").apply()
+        if (!filename.isNullOrEmpty()) {
+            val recents = getRecentAudios(context).toMutableList()
+            recents.remove(filename)
+            recents.add(0, filename)
+            val trimmed = recents.take(3)
+            prefs.edit().putString(KEY_RECENT_AUDIOS, trimmed.joinToString(";")).apply()
+        }
+    }
+
+    fun getSoundCategory(context: android.content.Context, filename: String): String {
+        val prefs = context.getSharedPreferences(PREFS_NAME, android.content.Context.MODE_PRIVATE)
+        val stored = prefs.getString(PREFIX_CATEGORY + filename, null)
+        if (!stored.isNullOrEmpty()) return stored
+
+        val lower = filename.lowercase()
+        return when {
+            lower.contains("rain") || lower.contains("regen") || lower.contains("forest") || lower.contains("wald") ||
+            lower.contains("ocean") || lower.contains("meer") || lower.contains("wind") || lower.contains("stream") || lower.contains("fluss") ||
+            lower.contains("water") || lower.contains("wasser") || lower.contains("storm") -> "Natur & Wetter"
+
+            lower.contains("binaural") || lower.contains("focus") || lower.contains("fokus") || lower.contains("white") ||
+            lower.contains("noise") || lower.contains("alpha") || lower.contains("wave") || lower.contains("brown") || lower.contains("pink") -> "Fokus & Noise"
+
+            lower.contains("meditation") || lower.contains("zen") || lower.contains("piano") || lower.contains("ambient") ||
+            lower.contains("ruhe") || lower.contains("calm") || lower.contains("sleep") || lower.contains("relax") -> "Ambiente & Ruhe"
+
+            else -> "Eigene Sounds"
+        }
+    }
+
+    fun setSoundCategory(context: android.content.Context, filename: String, category: String) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, android.content.Context.MODE_PRIVATE)
+        prefs.edit().putString(PREFIX_CATEGORY + filename, category).apply()
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AudioSoundscapeDialog(
+    language: String,
+    importedAudios: List<File>,
+    selectedAudioFile: File?,
+    onSelectAudio: (File?) -> Unit,
+    onImportAudioClick: () -> Unit,
+    onDeleteAudioClick: (File) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedCategory by remember { mutableStateOf("Alle") }
+    var previewFile by remember { mutableStateOf<File?>(null) }
+    var previewPlayer by remember { mutableStateOf<android.media.MediaPlayer?>(null) }
+    var editingCategoryForFile by remember { mutableStateOf<File?>(null) }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            try {
+                previewPlayer?.stop()
+                previewPlayer?.release()
+                previewPlayer = null
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    val filteredAudios = remember(importedAudios, searchQuery) {
+        importedAudios.filter { file ->
+            searchQuery.isBlank() || file.name.contains(searchQuery, ignoreCase = true)
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = {
+            try {
+                previewPlayer?.stop()
+                previewPlayer?.release()
+                previewPlayer = null
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            onDismiss()
+        },
+        containerColor = DarkCard,
+        shape = RoundedCornerShape(24.dp),
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(PrimaryViolet.copy(alpha = 0.2f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.LibraryMusic,
+                            contentDescription = null,
+                            tint = PrimaryViolet,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column {
+                        Text(
+                            text = if (language == "de") "Fokus-Audio Bibliothek" else "Focus Audio Soundscapes",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = TextPrimary,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = if (language == "de") "Sound auswählen & verwalten" else "Select & manage sounds",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary
+                        )
+                    }
+                }
+                IconButton(onClick = {
+                    try {
+                        previewPlayer?.stop()
+                        previewPlayer?.release()
+                        previewPlayer = null
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                    onDismiss()
+                }) {
+                    Icon(imageVector = Icons.Default.Close, contentDescription = "Close", tint = TextSecondary)
+                }
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 480.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Search Field
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text(if (language == "de") "Sound suchen..." else "Search sound...", color = TextSecondary) },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextSecondary) },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }) {
+                                Icon(Icons.Default.Close, contentDescription = "Clear", tint = TextSecondary)
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = PrimaryViolet,
+                        unfocusedBorderColor = DarkBorder,
+                        focusedContainerColor = DarkBg,
+                        unfocusedContainerColor = DarkBg
+                    ),
+                    shape = RoundedCornerShape(14.dp),
+                    singleLine = true
+                )
+
+                // Info Banner
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(DarkBg, RoundedCornerShape(12.dp))
+                        .border(1.dp, DarkBorder, RoundedCornerShape(12.dp))
+                        .padding(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = null,
+                        tint = PrimaryViolet,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = if (language == "de") {
+                            "Hier kannst du eigene Audio-Dateien (MP3, WAV, M4A) importieren und als Fokus-Soundscapes verwalten."
+                        } else {
+                            "Import and manage custom audio files (MP3, WAV, M4A) for your focus soundscapes here."
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary
+                    )
+                }
+
+                HorizontalDivider(color = DarkBorder, thickness = 1.dp)
+
+                // List of Audios
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    // Item: Kein Sound / No Sound
+                    item {
+                        val isNoSoundSelected = selectedAudioFile == null
+                        Surface(
+                            onClick = {
+                                try {
+                                    previewPlayer?.stop()
+                                    previewPlayer?.release()
+                                    previewPlayer = null
+                                    previewFile = null
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                }
+                                onSelectAudio(null)
+                            },
+                            shape = RoundedCornerShape(14.dp),
+                            color = if (isNoSoundSelected) PrimaryViolet.copy(alpha = 0.15f) else DarkBg,
+                            border = BorderStroke(1.dp, if (isNoSoundSelected) PrimaryViolet else DarkBorder),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.VolumeOff,
+                                        contentDescription = null,
+                                        tint = if (isNoSoundSelected) PrimaryViolet else TextSecondary,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(
+                                        text = if (language == "de") "Kein Sound (Stumm)" else "No Sound (Mute)",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = TextPrimary,
+                                        fontWeight = if (isNoSoundSelected) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                }
+                                RadioButton(
+                                    selected = isNoSoundSelected,
+                                    onClick = {
+                                        try {
+                                            previewPlayer?.stop()
+                                            previewPlayer?.release()
+                                            previewPlayer = null
+                                            previewFile = null
+                                        } catch (e: Exception) {
+                                            e.printStackTrace()
+                                        }
+                                        onSelectAudio(null)
+                                    },
+                                    colors = RadioButtonDefaults.colors(selectedColor = PrimaryViolet)
+                                )
+                            }
+                        }
+                    }
+
+                    if (filteredAudios.isEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 24.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = if (language == "de") "Keine passenden Audio-Dateien gefunden." else "No matching audio files found.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = TextSecondary,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    } else {
+                        items(filteredAudios, key = { it.absolutePath }) { file ->
+                            val isSelected = selectedAudioFile?.absolutePath == file.absolutePath
+                            val isPreviewing = previewFile?.absolutePath == file.absolutePath
+                            var currentCategory by remember(file.name) { mutableStateOf(AudioSoundscapeManager.getSoundCategory(context, file.name)) }
+
+                            Surface(
+                                onClick = {
+                                    onSelectAudio(file)
+                                },
+                                shape = RoundedCornerShape(14.dp),
+                                color = if (isSelected) PrimaryViolet.copy(alpha = 0.15f) else DarkBg,
+                                border = BorderStroke(1.dp, if (isSelected) PrimaryViolet else DarkBorder),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        // Preview Play/Pause button
+                                        IconButton(
+                                            onClick = {
+                                                if (isPreviewing) {
+                                                    try {
+                                                        previewPlayer?.stop()
+                                                        previewPlayer?.release()
+                                                        previewPlayer = null
+                                                        previewFile = null
+                                                    } catch (e: Exception) {
+                                                        e.printStackTrace()
+                                                    }
+                                                } else {
+                                                    try {
+                                                        previewPlayer?.stop()
+                                                        previewPlayer?.release()
+                                                        val mp = android.media.MediaPlayer().apply {
+                                                            setDataSource(file.absolutePath)
+                                                            isLooping = true
+                                                            prepare()
+                                                            start()
+                                                        }
+                                                        previewPlayer = mp
+                                                        previewFile = file
+                                                    } catch (e: Exception) {
+                                                        e.printStackTrace()
+                                                    }
+                                                }
+                                            },
+                                            modifier = Modifier
+                                                .size(36.dp)
+                                                .background(if (isPreviewing) SuccessGreen.copy(alpha = 0.2f) else ProgressTrack, CircleShape)
+                                        ) {
+                                            Icon(
+                                                imageVector = if (isPreviewing) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                                contentDescription = "Preview",
+                                                tint = if (isPreviewing) SuccessGreen else PrimaryViolet,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+
+                                        Spacer(modifier = Modifier.width(10.dp))
+
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = file.nameWithoutExtension,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = TextPrimary,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+
+                                            Spacer(modifier = Modifier.height(2.dp))
+
+                                            // Category Tag Chip with Dropdown
+                                            Box {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    modifier = Modifier
+                                                        .background(DarkCard, RoundedCornerShape(6.dp))
+                                                        .border(0.5.dp, DarkBorder, RoundedCornerShape(6.dp))
+                                                        .clickable { editingCategoryForFile = file }
+                                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                                ) {
+                                                    Text(
+                                                        text = currentCategory,
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = HabitCyan,
+                                                        fontSize = 10.sp
+                                                    )
+                                                    Spacer(modifier = Modifier.width(3.dp))
+                                                    Icon(
+                                                        imageVector = Icons.Default.Edit,
+                                                        contentDescription = "Change category",
+                                                        tint = TextSecondary,
+                                                        modifier = Modifier.size(10.dp)
+                                                    )
+                                                }
+
+                                                DropdownMenu(
+                                                    expanded = editingCategoryForFile?.absolutePath == file.absolutePath,
+                                                    onDismissRequest = { editingCategoryForFile = null },
+                                                    modifier = Modifier.background(DarkCard).border(1.dp, DarkBorder)
+                                                ) {
+                                                    AudioSoundscapeManager.CATEGORIES.filter { it != "Alle" }.forEach { c ->
+                                                        DropdownMenuItem(
+                                                            text = { Text(c, color = TextPrimary) },
+                                                            onClick = {
+                                                                AudioSoundscapeManager.setSoundCategory(context, file.name, c)
+                                                                currentCategory = c
+                                                                editingCategoryForFile = null
+                                                            }
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        // Delete File Button
+                                        IconButton(
+                                            onClick = {
+                                                if (previewFile?.absolutePath == file.absolutePath) {
+                                                    try {
+                                                        previewPlayer?.stop()
+                                                        previewPlayer?.release()
+                                                        previewPlayer = null
+                                                        previewFile = null
+                                                    } catch (e: Exception) {
+                                                        e.printStackTrace()
+                                                    }
+                                                }
+                                                onDeleteAudioClick(file)
+                                            },
+                                            modifier = Modifier.size(32.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Delete,
+                                                contentDescription = "Delete audio",
+                                                tint = ErrorRed.copy(alpha = 0.7f),
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+
+                                        RadioButton(
+                                            selected = isSelected,
+                                            onClick = { onSelectAudio(file) },
+                                            colors = RadioButtonDefaults.colors(selectedColor = PrimaryViolet)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Import Button
+                Button(
+                    onClick = { onImportAudioClick() },
+                    colors = ButtonDefaults.buttonColors(containerColor = SuccessGreen),
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(imageVector = Icons.Default.AddCircle, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = if (language == "de") "Neues Audio importieren (.mp3, .wav, .m4a)" else "Import new audio (.mp3, .wav, .m4a)",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    try {
+                        previewPlayer?.stop()
+                        previewPlayer?.release()
+                        previewPlayer = null
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                    onDismiss()
+                }
+            ) {
+                Text(if (language == "de") "Fertig" else "Done", color = PrimaryViolet, fontWeight = FontWeight.Bold)
+            }
+        }
+    )
+}
+
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun WidgetAddValueDialog(
@@ -613,7 +1118,8 @@ fun WidgetAddValueDialog(
         // Audio State variables
         var importedAudios by remember { mutableStateOf<List<File>>(emptyList()) }
         var selectedAudioFile by remember { mutableStateOf<File?>(null) }
-        var showAudioDropdown by remember { mutableStateOf(false) }
+        var isAudioPickerExpanded by remember { mutableStateOf(false) }
+        var audioSearchQuery by remember { mutableStateOf("") }
         var mediaPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
 
         // Refresh audio function
@@ -629,6 +1135,18 @@ fun WidgetAddValueDialog(
 
         LaunchedEffect(Unit) {
             refreshAudios()
+        }
+
+        LaunchedEffect(importedAudios) {
+            if (selectedAudioFile == null) {
+                val lastSelected = AudioSoundscapeManager.getLastSelectedAudio(context)
+                if (lastSelected.isNotEmpty()) {
+                    val matched = importedAudios.find { it.name == lastSelected }
+                    if (matched != null) {
+                        selectedAudioFile = matched
+                    }
+                }
+            }
         }
 
         // File picker for audio import
@@ -658,6 +1176,7 @@ fun WidgetAddValueDialog(
                     }
                     refreshAudios()
                     selectedAudioFile = destFile
+                    AudioSoundscapeManager.setLastSelectedAudio(context, destFile.name)
                 } catch (e: Exception) {
                     e.printStackTrace()
                     android.widget.Toast.makeText(context, "Import failed", android.widget.Toast.LENGTH_SHORT).show()
@@ -790,52 +1309,149 @@ fun WidgetAddValueDialog(
 
 
 
+                        // REDESIGNED AUDIO FOCUS TIMER SECTION
+                        val infiniteTransition = rememberInfiniteTransition(label = "timer_pulse")
+                        val timerPulseAlpha by infiniteTransition.animateFloat(
+                            initialValue = 0.3f,
+                            targetValue = 0.85f,
+                            animationSpec = infiniteRepeatable(
+                                animation = tween(1200, easing = FastOutSlowInEasing),
+                                repeatMode = RepeatMode.Reverse
+                            ),
+                            label = "timer_pulse_alpha"
+                        )
+                        val waveScale1 by infiniteTransition.animateFloat(
+                            initialValue = 0.3f,
+                            targetValue = 1.0f,
+                            animationSpec = infiniteRepeatable(tween(400, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+                            label = "wave1"
+                        )
+                        val waveScale2 by infiniteTransition.animateFloat(
+                            initialValue = 0.8f,
+                            targetValue = 0.2f,
+                            animationSpec = infiniteRepeatable(tween(500, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+                            label = "wave2"
+                        )
+                        val waveScale3 by infiniteTransition.animateFloat(
+                            initialValue = 0.4f,
+                            targetValue = 0.9f,
+                            animationSpec = infiniteRepeatable(tween(450, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+                            label = "wave3"
+                        )
+
                         Column(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            // Circular Clock View
+                            // Circular Clock View with Glowing Ring & Minute Ticks
                             Box(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Box(
-                                    modifier = Modifier.size(180.dp),
+                                    modifier = Modifier.size(190.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
+                                    // Ambient Outer Pulse Glow when running
+                                    if (isTimerRunning) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(185.dp)
+                                                .clip(CircleShape)
+                                                .background(
+                                                    Brush.radialGradient(
+                                                        colors = listOf(
+                                                            PrimaryViolet.copy(alpha = 0.35f * timerPulseAlpha),
+                                                            Color(0xFF8B5CF6).copy(alpha = 0.15f * timerPulseAlpha),
+                                                            Color.Transparent
+                                                        )
+                                                    )
+                                                )
+                                        )
+                                    }
+
+                                    // Canvas Draw Ring & Ticks
                                     Box(
                                         contentAlignment = Alignment.Center,
                                         modifier = Modifier
-                                            .size(120.dp)
-                                            .padding(4.dp)
+                                            .size(160.dp)
                                             .drawWithCache {
-                                                val strokeWidth = 6.dp.toPx()
-                                                val trackStroke = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWidth)
-                                                val progressStroke = androidx.compose.ui.graphics.drawscope.Stroke(
-                                                    width = strokeWidth,
-                                                    cap = StrokeCap.Round
-                                                )
+                                                val strokeWidth = 8.dp.toPx()
+                                                val activeColor = PrimaryViolet
+                                                val inactiveColor = ProgressTrack
+                                                val sweepAngle = 360f * progressFraction
+
                                                 onDrawBehind {
+                                                    val radius = size.minDimension / 2f - strokeWidth
+                                                    val centerPoint = Offset(size.width / 2f, size.height / 2f)
+
+                                                    // Track circle
                                                     drawCircle(
-                                                        color = ProgressTrack,
-                                                        radius = size.minDimension / 2f,
-                                                        style = trackStroke
+                                                        color = inactiveColor,
+                                                        radius = radius,
+                                                        style = Stroke(width = strokeWidth)
                                                     )
+
+                                                    // Active progress arc with gradient
                                                     drawArc(
-                                                        color = PrimaryViolet,
+                                                        brush = Brush.sweepGradient(
+                                                            colors = listOf(PrimaryViolet, Color(0xFFA855F7), Color(0xFFC084FC), PrimaryViolet)
+                                                        ),
                                                         startAngle = -90f,
-                                                        sweepAngle = 360f * progressFraction,
+                                                        sweepAngle = sweepAngle,
                                                         useCenter = false,
-                                                        style = progressStroke
+                                                        style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
                                                     )
+
+                                                    // Draw 60 Radial Tick Marks
+                                                    for (i in 0 until 60) {
+                                                        val angleRad = Math.toRadians((i * 6 - 90).toDouble())
+                                                        val isMajor = i % 5 == 0
+                                                        val tickLength = if (isMajor) 8.dp.toPx() else 4.dp.toPx()
+                                                        val innerR = radius - strokeWidth / 2f - 4.dp.toPx()
+                                                        val outerR = innerR - tickLength
+
+                                                        val startX = centerPoint.x + innerR * Math.cos(angleRad).toFloat()
+                                                        val startY = centerPoint.y + innerR * Math.sin(angleRad).toFloat()
+                                                        val endX = centerPoint.x + outerR * Math.cos(angleRad).toFloat()
+                                                        val endY = centerPoint.y + outerR * Math.sin(angleRad).toFloat()
+
+                                                        val tickProgress = (i * 6).toFloat()
+                                                        val isPassed = tickProgress <= sweepAngle
+                                                        drawLine(
+                                                            color = if (isPassed) activeColor.copy(alpha = 0.8f) else DarkBorder.copy(alpha = 0.5f),
+                                                            start = Offset(startX, startY),
+                                                            end = Offset(endX, endY),
+                                                            strokeWidth = if (isMajor) 2.dp.toPx() else 1.dp.toPx()
+                                                        )
+                                                    }
+
+                                                    // Endpoint Dot Indicator
+                                                    if (progressFraction > 0.01f) {
+                                                        val endAngleRad = Math.toRadians((sweepAngle - 90).toDouble())
+                                                        val dotX = centerPoint.x + radius * Math.cos(endAngleRad).toFloat()
+                                                        val dotY = centerPoint.y + radius * Math.sin(endAngleRad).toFloat()
+                                                        drawCircle(
+                                                            color = Color.White,
+                                                            radius = strokeWidth / 1.4f,
+                                                            center = Offset(dotX, dotY)
+                                                        )
+                                                        drawCircle(
+                                                            color = PrimaryViolet,
+                                                            radius = strokeWidth / 2.2f,
+                                                            center = Offset(dotX, dotY)
+                                                        )
+                                                    }
                                                 }
                                             }
                                     ) {
                                         Column(
                                             horizontalAlignment = Alignment.CenterHorizontally,
                                             verticalArrangement = Arrangement.Center,
-                                            modifier = Modifier.padding(4.dp)
+                                            modifier = Modifier.padding(8.dp)
                                         ) {
                                             if (isEditingTimerDuration) {
                                                 val focusRequester = remember { FocusRequester() }
@@ -862,11 +1478,11 @@ fun WidgetAddValueDialog(
                                                         color = TextPrimary,
                                                         textAlign = TextAlign.Center,
                                                         fontWeight = FontWeight.Bold,
-                                                        fontSize = 22.sp
+                                                        fontSize = 26.sp
                                                     ),
-                                                    cursorBrush = androidx.compose.ui.graphics.SolidColor(TextPrimary),
+                                                    cursorBrush = SolidColor(TextPrimary),
                                                     modifier = Modifier
-                                                        .width(80.dp)
+                                                        .width(90.dp)
                                                         .focusRequester(focusRequester),
                                                     decorationBox = { innerTextField ->
                                                         Box(
@@ -879,7 +1495,7 @@ fun WidgetAddValueDialog(
                                                                     color = TextSecondary.copy(alpha = 0.5f),
                                                                     style = MaterialTheme.typography.titleLarge,
                                                                     fontWeight = FontWeight.Bold,
-                                                                    fontSize = 22.sp,
+                                                                    fontSize = 26.sp,
                                                                     textAlign = TextAlign.Center
                                                                 )
                                                             }
@@ -896,21 +1512,44 @@ fun WidgetAddValueDialog(
                                                     text = timeText,
                                                     style = MaterialTheme.typography.titleLarge,
                                                     color = TextPrimary,
-                                                    fontWeight = FontWeight.Bold,
-                                                    fontSize = 22.sp
+                                                    fontWeight = FontWeight.ExtraBold,
+                                                    fontSize = 28.sp,
+                                                    letterSpacing = 1.sp
                                                 )
                                             }
-                                            Spacer(modifier = Modifier.height(2.dp))
-                                            Text(
-                                                text = if (isTimerRunning) {
-                                                    if (language == "de") "AKTIV..." else "ACTIVE..."
-                                                  } else {
-                                                    if (language == "de") "BEREIT" else "READY"
-                                                  },
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = if (isTimerRunning) SuccessGreen else TextSecondary,
-                                                fontWeight = FontWeight.Bold
-                                            )
+
+                                            Spacer(modifier = Modifier.height(4.dp))
+
+                                            // Status and Audio Waveform Bar
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                if (isTimerRunning) {
+                                                    // Animated Sound Wave
+                                                    Row(
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                                    ) {
+                                                        Box(modifier = Modifier.width(2.5.dp).height((10 * waveScale1).dp).background(PrimaryViolet, RoundedCornerShape(2.dp)))
+                                                        Box(modifier = Modifier.width(2.5.dp).height((10 * waveScale2).dp).background(Color(0xFFA855F7), RoundedCornerShape(2.dp)))
+                                                        Box(modifier = Modifier.width(2.5.dp).height((10 * waveScale3).dp).background(Color(0xFFC084FC), RoundedCornerShape(2.dp)))
+                                                    }
+                                                    Spacer(modifier = Modifier.width(2.dp))
+                                                }
+
+                                                Text(
+                                                    text = if (isTimerRunning) {
+                                                        if (language == "de") "FOKUS AKTIV" else "FOCUS ACTIVE"
+                                                    } else {
+                                                        if (language == "de") "BEREIT" else "READY"
+                                                    },
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = if (isTimerRunning) SuccessGreen else TextSecondary,
+                                                    fontWeight = FontWeight.Bold,
+                                                    letterSpacing = 0.5.sp
+                                                )
+                                            }
                                         }
                                     }
 
@@ -928,9 +1567,9 @@ fun WidgetAddValueDialog(
                                             },
                                             modifier = Modifier
                                                 .align(Alignment.TopEnd)
-                                                .size(36.dp)
-                                                .background(ProgressTrack, CircleShape)
-                                                .border(1.dp, DarkBorder, CircleShape)
+                                                .size(34.dp)
+                                                .background(DarkCard, CircleShape)
+                                                .border(1.dp, PrimaryViolet.copy(alpha = 0.5f), CircleShape)
                                         ) {
                                             Icon(
                                                 imageVector = if (isEditingTimerDuration) Icons.Default.Check else Icons.Default.Edit,
@@ -943,94 +1582,114 @@ fun WidgetAddValueDialog(
                                 }
                             }
 
-
-
-                            // Play/Pause, Reset, and Finish Buttons
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                            // Control Pill Dock (Reset, Play/Pause, Finish/Log)
+                            Surface(
+                                color = DarkCard,
+                                shape = RoundedCornerShape(24.dp),
+                                border = BorderStroke(1.dp, DarkBorder),
+                                modifier = Modifier.padding(horizontal = 12.dp)
                             ) {
-                                IconButton(
-                                    onClick = {
-                                        isTimerRunning = false
-                                        val mins = timerDurationMinutes.toIntOrNull() ?: 25
-                                        timerSecondsRemaining = mins * 60
-                                        initialTimerSeconds = mins * 60
-                                    },
-                                    modifier = Modifier
-                                        .size(36.dp)
-                                        .background(ProgressTrack, CircleShape)
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(20.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp)
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Refresh,
-                                        contentDescription = "Reset",
-                                        tint = TextPrimary,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
-
-                                Box(
-                                    modifier = Modifier
-                                        .size(44.dp)
-                                        .clip(CircleShape)
-                                        .background(PrimaryViolet)
-                                        .clickable {
-                                            if (timerSecondsRemaining <= 0) {
-                                                val mins = timerDurationMinutes.toIntOrNull() ?: 25
-                                                timerSecondsRemaining = mins * 60
-                                                initialTimerSeconds = mins * 60
-                                            }
-                                            isTimerRunning = !isTimerRunning
+                                    // Reset Button
+                                    IconButton(
+                                        onClick = {
+                                            isTimerRunning = false
+                                            val mins = timerDurationMinutes.toIntOrNull() ?: 25
+                                            timerSecondsRemaining = mins * 60
+                                            initialTimerSeconds = mins * 60
                                         },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = if (isTimerRunning) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                        contentDescription = if (isTimerRunning) "Pause" else "Play",
-                                        tint = TextPrimary,
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                }
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .background(ProgressTrack, CircleShape)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Refresh,
+                                            contentDescription = "Reset",
+                                            tint = TextPrimary,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
 
-                                val totalSecondsElapsed = initialTimerSeconds - timerSecondsRemaining
-                                val canLogElapsed = totalSecondsElapsed >= 1
+                                    // Main Play/Pause Button
+                                    Box(
+                                        modifier = Modifier
+                                            .size(52.dp)
+                                            .clip(CircleShape)
+                                            .background(
+                                                Brush.linearGradient(
+                                                    colors = if (isTimerRunning) {
+                                                        listOf(Color(0xFFEF4444), Color(0xFFDC2626))
+                                                    } else {
+                                                        listOf(PrimaryViolet, HabitCyan)
+                                                    }
+                                                )
+                                            )
+                                            .clickable {
+                                                if (timerSecondsRemaining <= 0) {
+                                                    val mins = timerDurationMinutes.toIntOrNull() ?: 25
+                                                    timerSecondsRemaining = mins * 60
+                                                    initialTimerSeconds = mins * 60
+                                                }
+                                                isTimerRunning = !isTimerRunning
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = if (isTimerRunning) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                            contentDescription = if (isTimerRunning) "Pause" else "Play",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(28.dp)
+                                        )
+                                    }
 
-                                IconButton(
-                                    onClick = {
-                                        isTimerRunning = false
-                                        val minutesToLog = Math.round(totalSecondsElapsed / 60f).toInt().coerceAtLeast(0)
-                                        if (minutesToLog > 0) {
-                                            viewModel.logNumericalHabit(habitToLog!!.id, selectedDate, currentValue + minutesToLog)
-                                            android.widget.Toast.makeText(
-                                                context,
-                                                if (language == "de") "$minutesToLog Min. wurden eingetragen!" else "$minutesToLog min logged!",
-                                                android.widget.Toast.LENGTH_SHORT
-                                            ).show()
-                                        } else {
-                                            viewModel.logNumericalHabit(habitToLog!!.id, selectedDate, -1f)
-                                            android.widget.Toast.makeText(
-                                                context,
-                                                if (language == "de") "Unter 30 Sek. vergangen. Als fehlgeschlagen markiert." else "Under 30s elapsed. Marked as failed.",
-                                                android.widget.Toast.LENGTH_SHORT
-                                            ).show()
-                                        }
-                                        onDismiss()
-                                    },
-                                    modifier = Modifier
-                                        .size(36.dp)
-                                        .background(if (canLogElapsed) SuccessGreen.copy(alpha = 0.2f) else ProgressTrack, CircleShape),
-                                    enabled = canLogElapsed
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Check,
-                                        contentDescription = "Finish",
-                                        tint = if (canLogElapsed) SuccessGreen else TextSecondary.copy(alpha = 0.4f),
-                                        modifier = Modifier.size(16.dp)
-                                    )
+                                    val totalSecondsElapsed = initialTimerSeconds - timerSecondsRemaining
+                                    val canLogElapsed = totalSecondsElapsed >= 1
+
+                                    // Finish & Log Elapsed Button
+                                    IconButton(
+                                        onClick = {
+                                            isTimerRunning = false
+                                            val minutesToLog = Math.round(totalSecondsElapsed / 60f).toInt().coerceAtLeast(0)
+                                            if (minutesToLog > 0) {
+                                                viewModel.logNumericalHabit(habitToLog!!.id, selectedDate, currentValue + minutesToLog)
+                                                android.widget.Toast.makeText(
+                                                    context,
+                                                    if (language == "de") "$minutesToLog Min. wurden eingetragen!" else "$minutesToLog min logged!",
+                                                    android.widget.Toast.LENGTH_SHORT
+                                                ).show()
+                                            } else {
+                                                viewModel.logNumericalHabit(habitToLog!!.id, selectedDate, -1f)
+                                                android.widget.Toast.makeText(
+                                                    context,
+                                                    if (language == "de") "Unter 30 Sek. vergangen. Als fehlgeschlagen markiert." else "Under 30s elapsed. Marked as failed.",
+                                                    android.widget.Toast.LENGTH_SHORT
+                                                ).show()
+                                            }
+                                            onDismiss()
+                                        },
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .background(
+                                                if (canLogElapsed) SuccessGreen.copy(alpha = 0.25f) else ProgressTrack,
+                                                CircleShape
+                                            ),
+                                        enabled = canLogElapsed
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Check,
+                                            contentDescription = "Finish",
+                                            tint = if (canLogElapsed) SuccessGreen else TextSecondary.copy(alpha = 0.4f),
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
                                 }
                             }
 
-                            // Background Audio Selection
+                            // Background Audio Selection (Inline Dropdown, No Popup)
                             Column(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -1046,8 +1705,8 @@ fun WidgetAddValueDialog(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .background(ProgressTrack, RoundedCornerShape(12.dp))
-                                        .border(1.dp, DarkBorder, RoundedCornerShape(12.dp))
-                                        .clickable { showAudioDropdown = true }
+                                        .border(1.dp, if (isAudioPickerExpanded) PrimaryViolet else DarkBorder, RoundedCornerShape(12.dp))
+                                        .clickable { isAudioPickerExpanded = !isAudioPickerExpanded }
                                         .padding(horizontal = 14.dp, vertical = 10.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.SpaceBetween
@@ -1064,63 +1723,273 @@ fun WidgetAddValueDialog(
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
-                                            text = selectedAudioFile?.name ?: (if (language == "de") "Kein Sound" else "No Sound"),
+                                            text = selectedAudioFile?.nameWithoutExtension ?: (if (language == "de") "Kein Sound (Stumm)" else "No Sound (Mute)"),
                                             color = TextPrimary,
                                             style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Medium,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
                                         )
                                     }
 
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        IconButton(
-                                            onClick = {
-                                                try {
-                                                    audioPickerLauncher.launch("audio/*")
-                                                } catch (e: Exception) {
-                                                    e.printStackTrace()
+                                    Icon(
+                                        imageVector = if (isAudioPickerExpanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
+                                        contentDescription = null,
+                                        tint = TextSecondary,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+
+                                AnimatedVisibility(visible = isAudioPickerExpanded) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(DarkBg, RoundedCornerShape(14.dp))
+                                            .border(1.dp, DarkBorder, RoundedCornerShape(14.dp))
+                                            .padding(10.dp),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        // Search Bar
+                                        OutlinedTextField(
+                                            value = audioSearchQuery,
+                                            onValueChange = { audioSearchQuery = it },
+                                            placeholder = { Text(if (language == "de") "Sound suchen..." else "Search sound...", color = TextSecondary, fontSize = 13.sp) },
+                                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(18.dp)) },
+                                            trailingIcon = {
+                                                if (audioSearchQuery.isNotEmpty()) {
+                                                    IconButton(onClick = { audioSearchQuery = "" }, modifier = Modifier.size(24.dp)) {
+                                                        Icon(Icons.Default.Close, contentDescription = "Clear", tint = TextSecondary, modifier = Modifier.size(16.dp))
+                                                    }
                                                 }
                                             },
-                                            modifier = Modifier.size(36.dp)
+                                            modifier = Modifier.fillMaxWidth(),
+                                            colors = OutlinedTextFieldDefaults.colors(
+                                                focusedBorderColor = PrimaryViolet,
+                                                unfocusedBorderColor = DarkBorder,
+                                                focusedContainerColor = DarkCard,
+                                                unfocusedContainerColor = DarkCard,
+                                                focusedTextColor = TextPrimary,
+                                                unfocusedTextColor = TextPrimary
+                                            ),
+                                            shape = RoundedCornerShape(10.dp),
+                                            singleLine = true
+                                        )
+
+                                        // Info hint: Upload/manage in settings
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .background(DarkCard, RoundedCornerShape(8.dp))
+                                                .border(0.5.dp, DarkBorder, RoundedCornerShape(8.dp))
+                                                .padding(8.dp),
+                                            verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Icon(
-                                                imageVector = Icons.Default.AddCircle,
-                                                contentDescription = "Import",
-                                                tint = SuccessGreen,
-                                                modifier = Modifier.size(22.dp)
+                                            Icon(Icons.Default.Info, contentDescription = null, tint = PrimaryViolet, modifier = Modifier.size(16.dp))
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                text = if (language == "de") "Tipp: Sounds hochladen & verwalten in den Einstellungen." else "Tip: Upload & manage sounds in Settings.",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = TextSecondary,
+                                                fontSize = 11.sp
                                             )
                                         }
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Icon(
-                                            imageVector = Icons.Default.ArrowDropDown,
-                                            contentDescription = null,
-                                            tint = TextSecondary,
-                                            modifier = Modifier.size(24.dp)
-                                        )
-                                    }
 
-                                    DropdownMenu(
-                                        expanded = showAudioDropdown,
-                                        onDismissRequest = { showAudioDropdown = false },
-                                        modifier = Modifier
-                                            .background(DarkCard)
-                                            .border(1.dp, DarkBorder)
-                                    ) {
-                                        DropdownMenuItem(
-                                            text = { Text(if (language == "de") "Kein Sound" else "No Sound", color = TextPrimary) },
-                                            onClick = {
-                                                selectedAudioFile = null
-                                                showAudioDropdown = false
-                                            }
-                                        )
-                                        importedAudios.forEach { file ->
-                                            DropdownMenuItem(
-                                                text = { Text(file.name, color = TextPrimary) },
-                                                onClick = {
-                                                    selectedAudioFile = file
-                                                    showAudioDropdown = false
+                                        val recentFileNames = remember(importedAudios, isAudioPickerExpanded) {
+                                            AudioSoundscapeManager.getRecentAudios(context)
+                                        }
+                                        val recentFiles = remember(recentFileNames, importedAudios) {
+                                            recentFileNames.mapNotNull { name -> importedAudios.find { it.name == name } }
+                                        }
+
+                                        if (recentFiles.isNotEmpty() && audioSearchQuery.isBlank()) {
+                                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                                Text(
+                                                    text = if (language == "de") "Zuletzt verwendet:" else "Recently used:",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = TextSecondary,
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.SemiBold
+                                                )
+                                                LazyRow(
+                                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                                    modifier = Modifier.fillMaxWidth()
+                                                ) {
+                                                    items(recentFiles) { file ->
+                                                        val isSel = selectedAudioFile?.absolutePath == file.absolutePath
+                                                        Surface(
+                                                            onClick = {
+                                                                selectedAudioFile = file
+                                                                AudioSoundscapeManager.setLastSelectedAudio(context, file.name)
+                                                                if (isTimerRunning) {
+                                                                    try {
+                                                                        mediaPlayer?.stop()
+                                                                        mediaPlayer?.release()
+                                                                        mediaPlayer = MediaPlayer().apply {
+                                                                            setDataSource(file.absolutePath)
+                                                                            isLooping = true
+                                                                            prepare()
+                                                                            start()
+                                                                        }
+                                                                    } catch (e: Exception) { e.printStackTrace() }
+                                                                }
+                                                                isAudioPickerExpanded = false
+                                                            },
+                                                            shape = RoundedCornerShape(10.dp),
+                                                            color = if (isSel) PrimaryViolet.copy(alpha = 0.2f) else DarkCard,
+                                                            border = BorderStroke(1.dp, if (isSel) PrimaryViolet else DarkBorder)
+                                                        ) {
+                                                            Row(
+                                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                                                verticalAlignment = Alignment.CenterVertically
+                                                            ) {
+                                                                Icon(Icons.Default.History, contentDescription = null, tint = PrimaryViolet, modifier = Modifier.size(12.dp))
+                                                                Spacer(modifier = Modifier.width(4.dp))
+                                                                Text(
+                                                                    text = file.nameWithoutExtension,
+                                                                    style = MaterialTheme.typography.labelSmall,
+                                                                    color = TextPrimary,
+                                                                    maxLines = 1,
+                                                                    fontSize = 11.sp
+                                                                )
+                                                            }
+                                                        }
+                                                    }
                                                 }
-                                            )
+                                            }
+                                        }
+
+                                        val filteredList = remember(importedAudios, audioSearchQuery) {
+                                            importedAudios.filter { audioSearchQuery.isBlank() || it.name.contains(audioSearchQuery, ignoreCase = true) }
+                                        }
+
+                                        LazyColumn(
+                                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                                            modifier = Modifier.heightIn(max = 160.dp)
+                                        ) {
+                                            // Option: Mute
+                                            item {
+                                                val isNoSound = selectedAudioFile == null
+                                                Surface(
+                                                    onClick = {
+                                                        selectedAudioFile = null
+                                                        AudioSoundscapeManager.setLastSelectedAudio(context, "")
+                                                        if (isTimerRunning) {
+                                                            try {
+                                                                mediaPlayer?.stop()
+                                                                mediaPlayer?.release()
+                                                                mediaPlayer = null
+                                                            } catch (e: Exception) { e.printStackTrace() }
+                                                        }
+                                                        isAudioPickerExpanded = false
+                                                    },
+                                                    shape = RoundedCornerShape(8.dp),
+                                                    color = if (isNoSound) PrimaryViolet.copy(alpha = 0.15f) else DarkCard,
+                                                    border = BorderStroke(1.dp, if (isNoSound) PrimaryViolet else DarkBorder),
+                                                    modifier = Modifier.fillMaxWidth()
+                                                ) {
+                                                    Row(
+                                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.SpaceBetween
+                                                    ) {
+                                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                                            Icon(Icons.Default.VolumeOff, contentDescription = null, tint = if (isNoSound) PrimaryViolet else TextSecondary, modifier = Modifier.size(18.dp))
+                                                            Spacer(modifier = Modifier.width(8.dp))
+                                                            Text(
+                                                                text = if (language == "de") "Kein Sound (Stumm)" else "No Sound (Mute)",
+                                                                style = MaterialTheme.typography.bodySmall,
+                                                                color = TextPrimary,
+                                                                fontWeight = if (isNoSound) FontWeight.Bold else FontWeight.Normal
+                                                            )
+                                                        }
+                                                        RadioButton(
+                                                            selected = isNoSound,
+                                                            onClick = {
+                                                                selectedAudioFile = null
+                                                                AudioSoundscapeManager.setLastSelectedAudio(context, "")
+                                                                if (isTimerRunning) {
+                                                                    try {
+                                                                        mediaPlayer?.stop()
+                                                                        mediaPlayer?.release()
+                                                                        mediaPlayer = null
+                                                                    } catch (e: Exception) { e.printStackTrace() }
+                                                                }
+                                                                isAudioPickerExpanded = false
+                                                            },
+                                                            colors = RadioButtonDefaults.colors(selectedColor = PrimaryViolet),
+                                                            modifier = Modifier.size(20.dp)
+                                                        )
+                                                    }
+                                                }
+                                            }
+
+                                            items(filteredList) { file ->
+                                                val isSel = selectedAudioFile?.absolutePath == file.absolutePath
+                                                Surface(
+                                                    onClick = {
+                                                        selectedAudioFile = file
+                                                        AudioSoundscapeManager.setLastSelectedAudio(context, file.name)
+                                                        if (isTimerRunning) {
+                                                            try {
+                                                                mediaPlayer?.stop()
+                                                                mediaPlayer?.release()
+                                                                mediaPlayer = MediaPlayer().apply {
+                                                                    setDataSource(file.absolutePath)
+                                                                    isLooping = true
+                                                                    prepare()
+                                                                    start()
+                                                                }
+                                                            } catch (e: Exception) { e.printStackTrace() }
+                                                        }
+                                                        isAudioPickerExpanded = false
+                                                    },
+                                                    shape = RoundedCornerShape(8.dp),
+                                                    color = if (isSel) PrimaryViolet.copy(alpha = 0.15f) else DarkCard,
+                                                    border = BorderStroke(1.dp, if (isSel) PrimaryViolet else DarkBorder),
+                                                    modifier = Modifier.fillMaxWidth()
+                                                ) {
+                                                    Row(
+                                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.SpaceBetween
+                                                    ) {
+                                                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                                            Icon(Icons.Default.MusicNote, contentDescription = null, tint = PrimaryViolet, modifier = Modifier.size(18.dp))
+                                                            Spacer(modifier = Modifier.width(8.dp))
+                                                            Text(
+                                                                text = file.nameWithoutExtension,
+                                                                style = MaterialTheme.typography.bodySmall,
+                                                                color = TextPrimary,
+                                                                fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal,
+                                                                maxLines = 1,
+                                                                overflow = TextOverflow.Ellipsis
+                                                            )
+                                                        }
+                                                        RadioButton(
+                                                            selected = isSel,
+                                                            onClick = {
+                                                                selectedAudioFile = file
+                                                                AudioSoundscapeManager.setLastSelectedAudio(context, file.name)
+                                                                if (isTimerRunning) {
+                                                                    try {
+                                                                        mediaPlayer?.stop()
+                                                                        mediaPlayer?.release()
+                                                                        mediaPlayer = MediaPlayer().apply {
+                                                                            setDataSource(file.absolutePath)
+                                                                            isLooping = true
+                                                                            prepare()
+                                                                            start()
+                                                                        }
+                                                                    } catch (e: Exception) { e.printStackTrace() }
+                                                                }
+                                                                isAudioPickerExpanded = false
+                                                            },
+                                                            colors = RadioButtonDefaults.colors(selectedColor = PrimaryViolet),
+                                                            modifier = Modifier.size(20.dp)
+                                                        )
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -3319,6 +4188,43 @@ fun HabitDetailScreen(
             }
         }
 
+        // Description card (direkt unter dem Stärke-Feld)
+        if (habit.description.isNotBlank()) {
+            item(key = "detail_description") {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = DarkCard),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, DarkBorder, RoundedCornerShape(16.dp))
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Description,
+                                contentDescription = "Beschreibung",
+                                tint = PrimaryViolet,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (language == "de") "BESCHREIBUNG" else "DESCRIPTION",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = TextSecondary,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = habit.description,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextPrimary
+                        )
+                    }
+                }
+            }
+        }
+
         // Streaks card
         item(key = "detail_streaks") {
             Card(
@@ -5478,6 +6384,65 @@ fun SettingsScreen(
     var showWipeConfirm by remember { mutableStateOf(false) }
     var showArchivedList by remember { mutableStateOf(false) }
 
+    var importedAudios by remember { mutableStateOf<List<File>>(emptyList()) }
+    var selectedAudioFile by remember { mutableStateOf<File?>(null) }
+    var showAudioDialog by remember { mutableStateOf(false) }
+
+    val refreshAudios = remember(context) {
+        {
+            val dir = File(context.filesDir, "audios")
+            if (!dir.exists()) dir.mkdirs()
+            importedAudios = dir.listFiles()?.filter { 
+                it.isFile && (it.extension.lowercase() in listOf("mp3", "m4a", "wav", "ogg", "aac")) 
+            }?.sortedBy { it.name } ?: emptyList()
+
+            val savedName = AudioSoundscapeManager.getLastSelectedAudio(context)
+            selectedAudioFile = if (savedName.isNotEmpty()) {
+                importedAudios.find { it.name == savedName }
+            } else {
+                null
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        refreshAudios()
+    }
+
+    val audioPickerLauncherSettings = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            try {
+                val contentResolver = context.contentResolver
+                var fileName = "imported_audio_${System.currentTimeMillis()}.mp3"
+                contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                    val nameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                    if (nameIndex != -1 && cursor.moveToFirst()) {
+                        val dispName = cursor.getString(nameIndex)
+                        if (!dispName.isNullOrEmpty()) {
+                            fileName = dispName
+                        }
+                    }
+                }
+                val destDir = File(context.filesDir, "audios")
+                if (!destDir.exists()) destDir.mkdirs()
+                val destFile = File(destDir, fileName)
+                contentResolver.openInputStream(uri)?.use { inputStream ->
+                    destFile.outputStream().use { outputStream ->
+                        inputStream.copyTo(outputStream)
+                    }
+                }
+                refreshAudios()
+                selectedAudioFile = destFile
+                AudioSoundscapeManager.setLastSelectedAudio(context, destFile.name)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Toast.makeText(context, "Import failed", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     if (showArchivedList) {
         val archivedHabits by viewModel.archivedHabits.collectAsStateWithLifecycle()
         var showDeleteConfirmInArchive by remember { mutableStateOf<Habit?>(null) }
@@ -5794,6 +6759,94 @@ fun SettingsScreen(
                                     uncheckedTrackColor = ProgressTrack
                                 )
                             )
+                        }
+                    }
+                }
+            }
+
+            // Fokus-Sounds & Hintergründe Card
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = DarkCard),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, DarkBorder, RoundedCornerShape(16.dp))
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(PrimaryViolet.copy(alpha = 0.2f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.MusicNote,
+                                        contentDescription = null,
+                                        tint = PrimaryViolet,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = if (language == "de") "Fokus-Sounds & Hintergründe" else "Focus Sounds & Soundscapes",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = TextPrimary,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = if (language == "de") {
+                                            val count = importedAudios.size
+                                            val currentName = selectedAudioFile?.nameWithoutExtension ?: "Kein Sound"
+                                            "$count Sounds • Standard: $currentName"
+                                        } else {
+                                            val count = importedAudios.size
+                                            val currentName = selectedAudioFile?.nameWithoutExtension ?: "No Sound"
+                                            "$count sounds • Default: $currentName"
+                                        },
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = TextSecondary
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Button(
+                                onClick = { showAudioDialog = true },
+                                colors = ButtonDefaults.buttonColors(containerColor = PrimaryViolet),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(imageVector = Icons.Default.LibraryMusic, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(if (language == "de") "Bibliothek verwalten" else "Manage Library", fontWeight = FontWeight.Bold)
+                            }
+                            OutlinedButton(
+                                onClick = { audioPickerLauncherSettings.launch("audio/*") },
+                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(1.dp, SuccessGreen)
+                            ) {
+                                Icon(imageVector = Icons.Default.AddCircle, contentDescription = null, tint = SuccessGreen, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(if (language == "de") "Importieren" else "Import", color = SuccessGreen, fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 }
@@ -6273,6 +7326,41 @@ fun SettingsScreen(
         )
     }
 
+    if (showAudioDialog) {
+        AudioSoundscapeDialog(
+            language = language,
+            importedAudios = importedAudios,
+            selectedAudioFile = selectedAudioFile,
+            onSelectAudio = { file ->
+                selectedAudioFile = file
+                AudioSoundscapeManager.setLastSelectedAudio(context, file?.name ?: "")
+                showAudioDialog = false
+            },
+            onImportAudioClick = {
+                try {
+                    audioPickerLauncherSettings.launch("audio/*")
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            },
+            onDeleteAudioClick = { file ->
+                try {
+                    if (file.exists()) {
+                        file.delete()
+                        refreshAudios()
+                        if (selectedAudioFile?.absolutePath == file.absolutePath) {
+                            selectedAudioFile = null
+                            AudioSoundscapeManager.setLastSelectedAudio(context, "")
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            },
+            onDismiss = { showAudioDialog = false }
+        )
+    }
+
         // Floating Header Overlay with vertical gradient fade-out
         Box(
             modifier = Modifier
@@ -6320,12 +7408,13 @@ fun SettingsScreen(
 fun CreateHabitScreen(
     language: String,
     onDismiss: () -> Unit,
-    onSave: (name: String, isNegative: Boolean, category: String, icon: String, color: String, type: String, unit: String, target: Float, freq: String, startMs: Long, specificDays: String, reminderEnabled: Boolean, reminderHour: Int, reminderMinute: Int, customReminders: String) -> Unit,
+    onSave: (name: String, isNegative: Boolean, category: String, icon: String, color: String, type: String, unit: String, target: Float, freq: String, startMs: Long, specificDays: String, reminderEnabled: Boolean, reminderHour: Int, reminderMinute: Int, customReminders: String, description: String) -> Unit,
     editingHabit: Habit? = null
 ) {
     var isNegative by remember(editingHabit?.id) { mutableStateOf(editingHabit?.isNegative ?: false) } // Aufbauen = false, Abgewöhnen = true
     var activeExplanation by remember(editingHabit?.id) { mutableStateOf<Pair<String, String>?>(null) }
     var name by remember(editingHabit?.id) { mutableStateOf(editingHabit?.name ?: "") }
+    var description by remember(editingHabit?.id) { mutableStateOf(editingHabit?.description ?: "") }
     var nameError by remember(editingHabit?.id) { mutableStateOf(false) }
     val scrollState = rememberScrollState()
     val coroutineScope = rememberCoroutineScope()
@@ -6478,6 +7567,36 @@ fun CreateHabitScreen(
                         imageVector = Icons.Default.Edit,
                         contentDescription = null,
                         tint = if (name.isNotBlank()) PrimaryViolet else TextSecondary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            )
+
+            // Description field (optional)
+            OutlinedTextField(
+                value = description,
+                onValueChange = { description = it },
+                label = { Text(if (language == "de") "Beschreibung (optional)" else "Description (optional)") },
+                placeholder = { Text(if (language == "de") "z.B. Notizen, Motivation oder Regeln..." else "e.g. Notes, motivation or rules...") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("habit_description_input"),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = PrimaryViolet,
+                    unfocusedBorderColor = DarkBorder,
+                    focusedLabelColor = PrimaryViolet,
+                    unfocusedLabelColor = TextSecondary,
+                    focusedContainerColor = DarkCard,
+                    unfocusedContainerColor = DarkCard.copy(alpha = 0.6f)
+                ),
+                shape = RoundedCornerShape(16.dp),
+                minLines = 1,
+                maxLines = 4,
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Description,
+                        contentDescription = null,
+                        tint = if (description.isNotBlank()) PrimaryViolet else TextSecondary,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -7234,7 +8353,7 @@ fun CreateHabitScreen(
                                 
                                 onSave(
                                     name, isNegative, category, selectedIcon, selectedColor, type, unit, targetVal, 
-                                    frequency, startDateMillis, specDays, reminderEnabled, firstHour, firstMin, customRemindersStr
+                                    frequency, startDateMillis, specDays, reminderEnabled, firstHour, firstMin, customRemindersStr, description
                                 )
                             } else {
                                 nameError = true
