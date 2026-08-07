@@ -194,15 +194,15 @@ Feedback, bug reports, and pull requests are always welcome! If you would like t
 
 ## 📈 Star History
 
-<div align="center">
-  <a href="https://www.star-history.com/?repos=FrequeNCy144%2FFrequent-Habits&type=date&legend=top-left">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=FrequeNCy144/Frequent-Habits&type=date&theme=dark&legend=top-left&sealed_token=-69sI9C2pr7bJTIKp-HVcR-CK9uePjG-KKap2ncK5jiZqNRcN1-FGZUyzvJ_dvzsDomLWO0y0EmOcDhMRheWiy8H9hhjTyXayCBgr1CfxhyGIYgjnlpWtQ" />
-      <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=FrequeNCy144/Frequent-Habits&type=date&legend=top-left&sealed_token=-69sI9C2pr7bJTIKp-HVcR-CK9uePjG-KKap2ncK5jiZqNRcN1-FGZUyzvJ_dvzsDomLWO0y0EmOcDhMRheWiy8H9hhjTyXayCBgr1CfxhyGIYgjnlpWtQ" />
-      <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=FrequeNCy144/Frequent-Habits&type=date&legend=top-left&sealed_token=-69sI9C2pr7bJTIKp-HVcR-CK9uePjG-KKap2ncK5jiZqNRcN1-FGZUyzvJ_dvzsDomLWO0y0EmOcDhMRheWiy8H9hhjTyXayCBgr1CfxhyGIYgjnlpWtQ" />
-    </picture>
-  </a>
-</div>
+## Star History
+
+<a href="https://www.star-history.com/?repos=FrequeNCy144%2FFrequent-Habits&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=FrequeNCy144/Frequent-Habits&type=date&theme=dark&legend=top-left&sealed_token=B9K_A7bJmwiBWomftsAtYK5wGCYWO9doU1Cn1gMpXzDWbb-SWSREaLb-DYPcfzGIWMCfrlXaIrFOjZU5ldaPy-pjRFZraaERNq2PZYuHp4kc12tufcQufg" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=FrequeNCy144/Frequent-Habits&type=date&legend=top-left&sealed_token=B9K_A7bJmwiBWomftsAtYK5wGCYWO9doU1Cn1gMpXzDWbb-SWSREaLb-DYPcfzGIWMCfrlXaIrFOjZU5ldaPy-pjRFZraaERNq2PZYuHp4kc12tufcQufg" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=FrequeNCy144/Frequent-Habits&type=date&legend=top-left&sealed_token=B9K_A7bJmwiBWomftsAtYK5wGCYWO9doU1Cn1gMpXzDWbb-SWSREaLb-DYPcfzGIWMCfrlXaIrFOjZU5ldaPy-pjRFZraaERNq2PZYuHp4kc12tufcQufg" />
+ </picture>
+</a>
 
 ---
 
