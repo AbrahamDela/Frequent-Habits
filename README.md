@@ -13,6 +13,7 @@
 <br>
 
 [![GitHub Release](https://img.shields.io/github/v/release/FrequeNCy144/Frequent-Habits?style=for-the-badge&logo=github&color=7356FF)](https://github.com/FrequeNCy144/Frequent-Habits/releases)
+[![Downloads](https://img.shields.io/github/downloads/FrequeNCy144/Frequent-Habits/total?style=for-the-badge&logo=github&color=1081c2)](https://github.com/FrequeNCy144/Frequent-Habits/releases)
 [![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge)](LICENSE)
 [![Donate: Liberapay](https://img.shields.io/badge/Donate-Liberapay-f6c915?style=for-the-badge&logo=liberapay&logoColor=black)](https://liberapay.com/FrequeNCy/donate)
 
@@ -90,6 +91,20 @@ You can install and update **Frequent Habits** in three convenient ways:
 ## 🤝 Contributing
 
 Feedback, bug reports, and pull requests are always welcome! If you would like to suggest a new feature or report a bug, simply open a new [Issue](https://github.com/FrequeNCy144/Frequent-Habits/issues).
+
+---
+
+## 📈 Star History
+
+<div align="center">
+  <a href="https://star-history.com/#FrequeNCy144/Frequent-Habits&Date">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=FrequeNCy144/Frequent-Habits&type=Date&theme=dark" />
+      <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=FrequeNCy144/Frequent-Habits&type=Date" />
+      <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=FrequeNCy144/Frequent-Habits&type=Date" />
+    </picture>
+  </a>
+</div>
 
 ---
 
