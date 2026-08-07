@@ -98,11 +98,8 @@ Feedback, bug reports, and pull requests are always welcome! If you would like t
 
 <div align="center">
   <a href="https://star-history.com/#FrequeNCy144/Frequent-Habits&Date">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=FrequeNCy144/Frequent-Habits&type=Date&theme=dark" />
-      <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=FrequeNCy144/Frequent-Habits&type=Date" />
-      <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=FrequeNCy144/Frequent-Habits&type=Date" />
-    </picture>
+    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=FrequeNCy144/Frequent-Habits&type=Date#gh-light-mode-only" />
+    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=FrequeNCy144/Frequent-Habits&type=Date&theme=dark#gh-dark-mode-only" />
   </a>
 </div>
 
