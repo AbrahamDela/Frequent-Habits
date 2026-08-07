@@ -87,6 +87,7 @@ data class HabitStatModel(
     val habit: Habit,
     val strength: Int,
     val past7DaysStatuses: List<String>,
+    val past7DaysDates: List<String> = emptyList(),
     val monthGridData: List<List<CalendarGridCellData?>>,
     val yearGridData: List<List<CalendarGridCellData>>,
     val yearMonthLabels: List<Pair<Int, String>>
@@ -254,6 +255,7 @@ data class HabitDetailUiState(
 data class PerfectDaysStats(
     val totalPerfectDays: Int = 0,
     val perfectDaysStreak: Int = 0,
+    val currentStreak: Int = 0,
     val totalCompletedHabits: Int = 0,
     val totalCompletionRate: Int = 0
 )
@@ -370,7 +372,11 @@ data class HabitUiItem(
     val isCompleted: Boolean,
     val isFailed: Boolean,
     val isPaused: Boolean,
-    val hasLog: Boolean
+    val hasLog: Boolean,
+    val isWeeklyTargetReached: Boolean = false,
+    val weeklyLoggedCount: Int = 0,
+    val weeklyTargetCount: Int = 0,
+    val streak: Int = 0
 )
 
 @Immutable

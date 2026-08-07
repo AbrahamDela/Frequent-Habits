@@ -423,10 +423,9 @@ class HabitWidgetProvider : AppWidgetProvider() {
                     views.setPendingIntentTemplate(R.id.widget_habits_list, clickPIntent)
 
                     appWidgetManager.updateAppWidget(widgetId, views)
-                } else {
-                    appWidgetManager.partiallyUpdateAppWidget(widgetId, views)
                 }
 
+                appWidgetManager.partiallyUpdateAppWidget(widgetId, views)
                 appWidgetManager.notifyAppWidgetViewDataChanged(widgetId, R.id.widget_habits_list)
             }
         }

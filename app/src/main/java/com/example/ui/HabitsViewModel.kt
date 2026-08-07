@@ -37,6 +37,32 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
     private val _pendingWidgetHabitId = MutableStateFlow<Int?>(null)
     val pendingWidgetHabitId: StateFlow<Int?> = _pendingWidgetHabitId.asStateFlow()
 
+    private val initialUserName = sharedPrefs.getString("user_name", "") ?: ""
+    private val _userName = MutableStateFlow(if (initialUserName == "Inlitx") "" else initialUserName)
+    val userName: StateFlow<String> = _userName.asStateFlow()
+
+    private val _profileImageUri = MutableStateFlow(sharedPrefs.getString("profile_image_uri", "") ?: "")
+    val profileImageUri: StateFlow<String> = _profileImageUri.asStateFlow()
+
+    private val _smartInsightDismissedDate = MutableStateFlow(sharedPrefs.getString("smart_insight_dismissed_date", "") ?: "")
+    val smartInsightDismissedDate: StateFlow<String> = _smartInsightDismissedDate.asStateFlow()
+
+    fun dismissSmartInsight(dateStr: String) {
+        _smartInsightDismissedDate.value = dateStr
+        sharedPrefs.edit().putString("smart_insight_dismissed_date", dateStr).apply()
+    }
+
+    fun updateUserName(name: String) {
+        val trimmed = name.trim()
+        _userName.value = trimmed
+        sharedPrefs.edit().putString("user_name", trimmed).apply()
+    }
+
+    fun updateProfileImageUri(uri: String) {
+        _profileImageUri.value = uri
+        sharedPrefs.edit().putString("profile_image_uri", uri).apply()
+    }
+
     fun setPendingWidgetHabitId(id: Int) {
         _pendingWidgetHabitId.value = id
     }
@@ -121,6 +147,27 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
     private val _vibrationEnabled = MutableStateFlow(sharedPrefs.getBoolean("vibration_enabled", true))
     val vibrationEnabled: StateFlow<Boolean> = _vibrationEnabled.asStateFlow()
 
+    private val _infoCardsEnabled = MutableStateFlow(sharedPrefs.getBoolean("info_cards_enabled", true))
+    val infoCardsEnabled: StateFlow<Boolean> = _infoCardsEnabled.asStateFlow()
+
+    private val _reviewNotificationsEnabled = MutableStateFlow(sharedPrefs.getBoolean("notifications_enabled", true))
+    val reviewNotificationsEnabled: StateFlow<Boolean> = _reviewNotificationsEnabled.asStateFlow()
+
+    private val _dismissedReviews = MutableStateFlow(sharedPrefs.getStringSet("dismissed_reviews", emptySet()) ?: emptySet())
+    val dismissedReviews: StateFlow<Set<String>> = _dismissedReviews.asStateFlow()
+
+    private val _monthlyReviewEnabled = MutableStateFlow(sharedPrefs.getBoolean("monthly_review_enabled", true))
+    val monthlyReviewEnabled: StateFlow<Boolean> = _monthlyReviewEnabled.asStateFlow()
+
+    private val _monthlyReviewTime = MutableStateFlow(sharedPrefs.getString("monthly_review_time", "01-09:00") ?: "01-09:00")
+    val monthlyReviewTime: StateFlow<String> = _monthlyReviewTime.asStateFlow()
+
+    private val _yearlyReviewEnabled = MutableStateFlow(sharedPrefs.getBoolean("yearly_review_enabled", true))
+    val yearlyReviewEnabled: StateFlow<Boolean> = _yearlyReviewEnabled.asStateFlow()
+
+    private val _yearlyReviewTime = MutableStateFlow(sharedPrefs.getString("yearly_review_time", "28-10:00") ?: "28-10:00")
+    val yearlyReviewTime: StateFlow<String> = _yearlyReviewTime.asStateFlow()
+
     private val _hasOnboarded = MutableStateFlow(sharedPrefs.getBoolean("has_onboarded", false))
     val hasOnboarded: StateFlow<Boolean> = _hasOnboarded.asStateFlow()
 
@@ -204,14 +251,13 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
 
     val formattedDisplayDate: StateFlow<String> = combine(selectedDate, language) { dateStr, lang ->
         try {
-            val localDate = LocalDate.parse(dateStr)
-            val formatter = DateTimeFormatter.ofPattern("d. MMMM", if (lang == "de") Locale.GERMANY else Locale.US)
-            val displayDate = localDate.format(formatter)
             val todayStr = LocalDate.now().toString()
             if (dateStr == todayStr) {
-                "$displayDate (${if (lang == "de") "Heute" else "Today"})"
+                if (lang == "de") "Heute" else "Today"
             } else {
-                displayDate
+                val localDate = LocalDate.parse(dateStr)
+                val formatter = DateTimeFormatter.ofPattern("d. MMMM", if (lang == "de") Locale.GERMANY else Locale.US)
+                localDate.format(formatter)
             }
         } catch (e: Exception) {
             dateStr
@@ -519,13 +565,37 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
             }
             val isCompleted = status == "SUCCESS"
             val isFailed = status == "FAILED"
+
+            var isWeeklyTargetReached = false
+            var weeklyLoggedCount = 0
+            var weeklyTargetCount = 0
+
+            if (habit.frequency == "TIMES_WEEKLY") {
+                weeklyTargetCount = habit.specificDays.toIntOrNull() ?: 3
+                val curDate = try { java.time.LocalDate.parse(date) } catch (e: Exception) { java.time.LocalDate.now() }
+                val startOf7Days = curDate.minusDays(6).toString()
+                val endOf7Days = curDate.toString()
+                
+                weeklyLoggedCount = logs.filter { l ->
+                    l.habitId == habit.id && l.date >= startOf7Days && l.date <= endOf7Days && isLogCompleted(habit, l)
+                }.size
+
+                isWeeklyTargetReached = weeklyLoggedCount >= weeklyTargetCount
+            }
+
+            val (streakVal, _) = calculateStreak(habit, logs)
+
             HabitUiItem(
                 habit = habit,
                 currentValue = currentValue,
                 isCompleted = isCompleted,
                 isFailed = isFailed,
                 isPaused = isPaused,
-                hasLog = hasLog
+                hasLog = hasLog,
+                isWeeklyTargetReached = isWeeklyTargetReached,
+                weeklyLoggedCount = weeklyLoggedCount,
+                weeklyTargetCount = weeklyTargetCount,
+                streak = streakVal
             )
         }
     }.flowOn(kotlinx.coroutines.Dispatchers.Default).stateIn(
@@ -1192,6 +1262,7 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
                 habit = habit,
                 strength = strength,
                 past7DaysStatuses = past7DaysStatuses,
+                past7DaysDates = daysList,
                 monthGridData = monthGridList,
                 yearGridData = yearWeeksList,
                 yearMonthLabels = yearMonthLabels
@@ -1557,6 +1628,43 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
         sharedPrefs.edit().putBoolean("vibration_enabled", enabled).apply()
     }
 
+    fun setInfoCardsEnabled(enabled: Boolean) {
+        _infoCardsEnabled.value = enabled
+        sharedPrefs.edit().putBoolean("info_cards_enabled", enabled).apply()
+    }
+
+    fun setReviewNotificationsEnabled(enabled: Boolean) {
+        _reviewNotificationsEnabled.value = enabled
+        sharedPrefs.edit().putBoolean("notifications_enabled", enabled).apply()
+    }
+
+    fun dismissReview(reviewKey: String) {
+        val updated = _dismissedReviews.value.toMutableSet()
+        updated.add(reviewKey)
+        _dismissedReviews.value = updated
+        sharedPrefs.edit().putStringSet("dismissed_reviews", updated).apply()
+    }
+
+    fun setMonthlyReviewEnabled(enabled: Boolean) {
+        _monthlyReviewEnabled.value = enabled
+        sharedPrefs.edit().putBoolean("monthly_review_enabled", enabled).apply()
+    }
+
+    fun setMonthlyReviewTime(time: String) {
+        _monthlyReviewTime.value = time
+        sharedPrefs.edit().putString("monthly_review_time", time).apply()
+    }
+
+    fun setYearlyReviewEnabled(enabled: Boolean) {
+        _yearlyReviewEnabled.value = enabled
+        sharedPrefs.edit().putBoolean("yearly_review_enabled", enabled).apply()
+    }
+
+    fun setYearlyReviewTime(time: String) {
+        _yearlyReviewTime.value = time
+        sharedPrefs.edit().putString("yearly_review_time", time).apply()
+    }
+
     fun setOnboarded(completed: Boolean) {
         _hasOnboarded.value = completed
         sharedPrefs.edit().putBoolean("has_onboarded", completed).apply()
@@ -1755,6 +1863,19 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
                 }
                 HabitWidgetProvider.triggerUpdate(getApplication())
             }
+        }
+    }
+
+    fun revertHabitOrders(savedOrders: Map<Int, Int>) {
+        viewModelScope.launch {
+            val list = allHabits.value
+            list.forEach { h ->
+                val oldOrder = savedOrders[h.id]
+                if (oldOrder != null && h.sortOrder != oldOrder) {
+                    repository.updateHabit(h.copy(sortOrder = oldOrder))
+                }
+            }
+            HabitWidgetProvider.triggerUpdate(getApplication())
         }
     }
 
@@ -2485,6 +2606,7 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
         return PerfectDaysStats(
             totalPerfectDays = totalPerfectDays,
             perfectDaysStreak = perfectDaysStreak,
+            currentStreak = currentPerfectStreak,
             totalCompletedHabits = totalCompletedCompletions,
             totalCompletionRate = completionRate
         )

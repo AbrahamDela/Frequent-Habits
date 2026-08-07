@@ -24,6 +24,7 @@ class HabitWidgetFactory(private val context: Context, intent: Intent) : RemoteV
     private val widgetId = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
     private var activeHabits = listOf<Habit>()
     private var logsMap = mapOf<Int, HabitLog>()
+    private var allLogsList = listOf<HabitLog>()
     private var selectedDate = ""
 
     override fun onCreate() {
@@ -35,6 +36,7 @@ class HabitWidgetFactory(private val context: Context, intent: Intent) : RemoteV
             try {
                 val db = AppDatabase.getDatabase(context)
                 val allHabits = db.habitDao().getAllHabitsRaw()
+                allLogsList = db.habitDao().getAllLogsRaw()
 
                 val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.US)
                 val todayStr = sdf.format(Date())
@@ -95,19 +97,36 @@ class HabitWidgetFactory(private val context: Context, intent: Intent) : RemoteV
                 else -> log.value
             }
 
+            var isWeeklyTargetReached = false
+            var weeklyCount = 0
+            var weeklyTarget = 0
+            if (habit.frequency == "TIMES_WEEKLY") {
+                weeklyTarget = habit.specificDays.toIntOrNull() ?: 3
+                val curDate = try { java.time.LocalDate.parse(selectedDate) } catch (e: Exception) { java.time.LocalDate.now() }
+                val startOf7Days = curDate.minusDays(6).toString()
+                val endOf7Days = curDate.toString()
+                weeklyCount = allLogsList.filter { l ->
+                    l.habitId == habit.id && l.date >= startOf7Days && l.date <= endOf7Days && com.example.data.isLogCompleted(habit, l)
+                }.size
+                isWeeklyTargetReached = weeklyCount >= weeklyTarget
+            }
+
             val nameText = if (habit.type == "NUMBER" || habit.type == "NUMERICAL") {
                 val formattedCurrent = if (currentVal % 1f == 0f) currentVal.toInt().toString() else String.format(Locale.US, "%.1f", currentVal)
                 val formattedTarget = if (habit.targetValue % 1f == 0f) habit.targetValue.toInt().toString() else String.format(Locale.US, "%.1f", habit.targetValue)
                 "${habit.name} ($formattedCurrent/$formattedTarget)"
+            } else if (habit.frequency == "TIMES_WEEKLY") {
+                "${habit.name} ($weeklyCount/$weeklyTarget" + (if (isWeeklyTargetReached || status == "SUCCESS") " ✓" else "") + ")"
             } else {
                 habit.name
             }
             views.setTextViewText(R.id.widget_habit_name, nameText)
 
-            val checkIcon = when (status) {
-                "SUCCESS" -> R.drawable.ic_widget_circle_checked
-                "FAILED" -> R.drawable.ic_widget_failed_cross
-                "PAUSED" -> R.drawable.ic_widget_circle_paused
+            val checkIcon = when {
+                status == "SUCCESS" -> R.drawable.ic_widget_circle_checked
+                status == "FAILED" -> R.drawable.ic_widget_failed_cross
+                status == "PAUSED" -> R.drawable.ic_widget_circle_paused
+                habit.frequency == "TIMES_WEEKLY" && isWeeklyTargetReached -> R.drawable.ic_widget_circle_weekly_done
                 else -> R.drawable.ic_widget_circle_unchecked
             }
             views.setImageViewResource(R.id.widget_habit_check, checkIcon)

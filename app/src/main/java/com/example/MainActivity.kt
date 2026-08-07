@@ -1,8 +1,10 @@
 package com.example
 
+import kotlin.math.roundToInt
 import com.frequent.habits.R
 import android.app.Activity
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
@@ -22,6 +24,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -33,22 +36,32 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import com.example.ui.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -56,6 +69,8 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -64,6 +79,9 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
+import coil.compose.rememberAsyncImagePainter
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -110,6 +128,8 @@ import java.io.File
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+val LocalInfoCardsEnabled = androidx.compose.runtime.compositionLocalOf { true }
+
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -141,6 +161,32 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun ClearFocusOnKeyboardDismiss() {
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val isImeVisible = WindowInsets.isImeVisible
+    var wasImeVisible by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isImeVisible) {
+        if (isImeVisible) {
+            wasImeVisible = true
+        } else if (wasImeVisible) {
+            focusManager.clearFocus(force = true)
+            wasImeVisible = false
+        }
+    }
+
+    if (wasImeVisible || isImeVisible) {
+        BackHandler {
+            focusManager.clearFocus(force = true)
+            keyboardController?.hide()
+            wasImeVisible = false
+        }
+    }
+}
+
 @Composable
 fun rememberResumeAnimationTrigger(): Int {
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -164,10 +210,14 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
     val context = LocalContext.current
     val activity = context as? Activity
     
+    ClearFocusOnKeyboardDismiss()
+
     var selectedTab by remember { mutableStateOf("TODAY") }
     val navController = rememberNavController()
     val language by viewModel.language.collectAsStateWithLifecycle()
+    val infoCardsEnabled by viewModel.infoCardsEnabled.collectAsStateWithLifecycle()
 
+    CompositionLocalProvider(LocalInfoCardsEnabled provides infoCardsEnabled) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
@@ -196,6 +246,46 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
 
     var editingHabit by remember { mutableStateOf<Habit?>(null) }
 
+    val allHabitsForPopup by viewModel.allHabits.collectAsStateWithLifecycle()
+    val allLogsForPopup by viewModel.allLogs.collectAsStateWithLifecycle()
+
+    val nyPrefs = context.getSharedPreferences("habits_settings", Context.MODE_PRIVATE)
+    val isNYPopupWindow = remember { isNewYearPopupPeriod() }
+    val currentYearVal = remember { java.time.LocalDate.now().year }
+    val reviewYearVal = remember { if (java.time.LocalDate.now().monthValue == 1) currentYearVal - 1 else currentYearVal }
+    val nyPopupKey = "has_seen_ny_popup_$reviewYearVal"
+
+    var showNewYearPopup by remember {
+        mutableStateOf(isNYPopupWindow && !nyPrefs.getBoolean(nyPopupKey, false))
+    }
+    var popupReviewYearState by remember { mutableStateOf<Int?>(null) }
+
+    if (showNewYearPopup) {
+        NewYearReviewPopupDialog(
+            reviewYear = reviewYearVal,
+            language = language,
+            onStartReview = {
+                showNewYearPopup = false
+                nyPrefs.edit().putBoolean(nyPopupKey, true).apply()
+                popupReviewYearState = reviewYearVal
+            },
+            onDismiss = {
+                showNewYearPopup = false
+                nyPrefs.edit().putBoolean(nyPopupKey, true).apply()
+            }
+        )
+    }
+
+    if (popupReviewYearState != null) {
+        YearlyReviewDialog(
+            year = popupReviewYearState!!,
+            allHabits = allHabitsForPopup,
+            allLogs = allLogsForPopup,
+            language = language,
+            onDismiss = { popupReviewYearState = null }
+        )
+    }
+
     // Keep tab selected state in synchronization if user navigates
     LaunchedEffect(currentRoute) {
         if (currentRoute != null && !currentRoute.startsWith("DETAIL") && selectedTab != currentRoute) {
@@ -212,7 +302,13 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
                 HabitBottomNavigation(
                     selectedTab = selectedTab,
                     onTabSelected = { tab ->
-                        if (selectedTab != tab) {
+                        if (tab == "STATS" && allHabitsForPopup.none { !it.isArchived }) {
+                            Toast.makeText(
+                                context,
+                                if (language == "de") "Erstelle zuerst eine Gewohnheit, um Statistiken zu sehen." else "Create a habit first to view statistics.",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        } else if (selectedTab != tab) {
                             selectedTab = tab
                             navController.navigate(tab) {
                                 popUpTo(navController.graph.findStartDestination().id) {
@@ -251,7 +347,7 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
                     val initialRoute = initialState.destination.route
                     val targetRoute = targetState.destination.route
                     if (isMainTabRoute(initialRoute) && isMainTabRoute(targetRoute)) {
-                        fadeIn(animationSpec = tween(0))
+                        fadeIn(animationSpec = tween(150, easing = LinearOutSlowInEasing))
                     } else {
                         slideInHorizontally(
                             initialOffsetX = { fullWidth -> fullWidth },
@@ -263,7 +359,7 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
                     val initialRoute = initialState.destination.route
                     val targetRoute = targetState.destination.route
                     if (isMainTabRoute(initialRoute) && isMainTabRoute(targetRoute)) {
-                        fadeOut(animationSpec = tween(0))
+                        fadeOut(animationSpec = tween(120, easing = FastOutLinearInEasing))
                     } else {
                         slideOutHorizontally(
                             targetOffsetX = { fullWidth -> -fullWidth },
@@ -275,7 +371,7 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
                     val initialRoute = initialState.destination.route
                     val targetRoute = targetState.destination.route
                     if (isMainTabRoute(initialRoute) && isMainTabRoute(targetRoute)) {
-                        fadeIn(animationSpec = tween(0))
+                        fadeIn(animationSpec = tween(150, easing = LinearOutSlowInEasing))
                     } else {
                         slideInHorizontally(
                             initialOffsetX = { fullWidth -> -fullWidth },
@@ -287,7 +383,7 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
                     val initialRoute = initialState.destination.route
                     val targetRoute = targetState.destination.route
                     if (isMainTabRoute(initialRoute) && isMainTabRoute(targetRoute)) {
-                        fadeOut(animationSpec = tween(0))
+                        fadeOut(animationSpec = tween(120, easing = FastOutLinearInEasing))
                     } else {
                         slideOutHorizontally(
                             targetOffsetX = { fullWidth -> fullWidth },
@@ -544,6 +640,7 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
             }
         )
     }
+    }
 }
 
 // AUDIO SOUNDSCAPE MANAGER & PERSISTENCE
@@ -624,11 +721,23 @@ fun AudioSoundscapeDialog(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    ClearFocusOnKeyboardDismiss()
+
     var searchQuery by remember { mutableStateOf("") }
+    var isSearchFocused by remember { mutableStateOf(false) }
     var selectedCategory by remember { mutableStateOf("Alle") }
     var previewFile by remember { mutableStateOf<File?>(null) }
     var previewPlayer by remember { mutableStateOf<android.media.MediaPlayer?>(null) }
     var editingCategoryForFile by remember { mutableStateOf<File?>(null) }
+
+    if (isSearchFocused) {
+        BackHandler {
+            focusManager.clearFocus()
+            keyboardController?.hide()
+        }
+    }
 
     DisposableEffect(Unit) {
         onDispose {
@@ -712,33 +821,46 @@ fun AudioSoundscapeDialog(
             }
         },
         text = {
+            ClearFocusOnKeyboardDismiss()
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 480.dp),
+                    .heightIn(max = 480.dp)
+                    .pointerInput(Unit) {
+                        detectTapGestures(onTap = {
+                            focusManager.clearFocus(force = true)
+                            keyboardController?.hide()
+                        })
+                    },
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 // Search Field
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    placeholder = { Text(if (language == "de") "Sound suchen..." else "Search sound...", color = TextSecondary) },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextSecondary) },
+                    placeholder = { Text(if (language == "de") "Sound suchen..." else "Search sound...", color = TextSecondary, fontSize = 15.sp) },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(22.dp)) },
                     trailingIcon = {
                         if (searchQuery.isNotEmpty()) {
                             IconButton(onClick = { searchQuery = "" }) {
-                                Icon(Icons.Default.Close, contentDescription = "Clear", tint = TextSecondary)
+                                Icon(Icons.Default.Close, contentDescription = "Clear", tint = TextSecondary, modifier = Modifier.size(20.dp))
                             }
                         }
                     },
-                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = TextStyle(color = TextPrimary, fontSize = 15.sp),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus(force = true); keyboardController?.hide() }),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 54.dp)
+                        .onFocusChanged { isSearchFocused = it.isFocused },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = PrimaryViolet,
                         unfocusedBorderColor = DarkBorder,
                         focusedContainerColor = DarkBg,
                         unfocusedContainerColor = DarkBg
                     ),
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(16.dp),
                     singleLine = true
                 )
 
@@ -1057,6 +1179,10 @@ fun WidgetAddValueDialog(
     language: String,
     onDismiss: () -> Unit
 ) {
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    ClearFocusOnKeyboardDismiss()
+
     val selectedDate by viewModel.selectedDate.collectAsStateWithLifecycle()
     val logs by viewModel.allLogs.collectAsStateWithLifecycle()
 
@@ -1262,6 +1388,9 @@ fun WidgetAddValueDialog(
             }
         }
 
+        val focusManager = LocalFocusManager.current
+        val keyboardController = LocalSoftwareKeyboardController.current
+
         AlertDialog(
             onDismissRequest = onDismiss,
             containerColor = DarkCard,
@@ -1290,8 +1419,17 @@ fun WidgetAddValueDialog(
                 }
             },
             text = {
+                ClearFocusOnKeyboardDismiss()
                 Column(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .pointerInput(Unit) {
+                            detectTapGestures {
+                                focusManager.clearFocus(force = true)
+                                keyboardController?.hide()
+                                isAudioPickerExpanded = false
+                            }
+                        },
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     if (hasTimer) {
@@ -1638,31 +1776,14 @@ fun WidgetAddValueDialog(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = if (language == "de") "Hintergrund-Audio" else "Background Audio",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = TextSecondary,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
+                                Text(
+                                    text = if (language == "de") "Hintergrund-Audio" else "Background Audio",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = TextSecondary,
+                                    fontWeight = FontWeight.SemiBold
+                                )
 
-                                    if (selectedAudioFile != null) {
-                                        Text(
-                                            text = selectedAudioFile?.nameWithoutExtension ?: "",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = PrimaryViolet,
-                                            fontWeight = FontWeight.Bold,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
-                                }
-
-                                // 1. TOP ROW: 3 RECENT SOUNDS BUTTONS
+                                // 1. TOP ROW: 3 RECENT SOUNDS BUTTONS WITH LABEL
                                 val recentFileNames = remember(importedAudios, selectedAudioFile) {
                                     AudioSoundscapeManager.getRecentAudios(context)
                                 }
@@ -1673,103 +1794,130 @@ fun WidgetAddValueDialog(
                                 }
 
                                 if (recentFiles.isNotEmpty()) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                    ) {
-                                        recentFiles.forEach { file ->
-                                            val isSel = selectedAudioFile?.absolutePath == file.absolutePath
-                                            Surface(
-                                                onClick = {
-                                                    selectedAudioFile = file
-                                                    AudioSoundscapeManager.setLastSelectedAudio(context, file.name)
-                                                    if (isTimerRunning) {
-                                                        try {
-                                                            mediaPlayer?.stop()
-                                                            mediaPlayer?.release()
-                                                            mediaPlayer = MediaPlayer().apply {
-                                                                setDataSource(file.absolutePath)
-                                                                isLooping = true
-                                                                prepare()
-                                                                start()
-                                                            }
-                                                        } catch (e: Exception) { e.printStackTrace() }
-                                                    }
-                                                },
-                                                shape = RoundedCornerShape(8.dp),
-                                                color = if (isSel) PrimaryViolet.copy(alpha = 0.25f) else DarkCard,
-                                                border = BorderStroke(1.dp, if (isSel) PrimaryViolet else DarkBorder),
-                                                modifier = Modifier.weight(1f).height(38.dp)
-                                            ) {
-                                                Row(
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.Center,
-                                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
+                                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        Text(
+                                            text = if (language == "de") "Zuletzt genutzt:" else "Recent:",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = TextSecondary,
+                                            fontSize = 11.sp
+                                        )
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            recentFiles.forEach { file ->
+                                                val isSel = selectedAudioFile?.absolutePath == file.absolutePath
+                                                Surface(
+                                                    onClick = {
+                                                        selectedAudioFile = file
+                                                        AudioSoundscapeManager.setLastSelectedAudio(context, file.name)
+                                                        if (isTimerRunning) {
+                                                            try {
+                                                                mediaPlayer?.stop()
+                                                                mediaPlayer?.release()
+                                                                mediaPlayer = MediaPlayer().apply {
+                                                                    setDataSource(file.absolutePath)
+                                                                    isLooping = true
+                                                                    prepare()
+                                                                    start()
+                                                                }
+                                                            } catch (e: Exception) { e.printStackTrace() }
+                                                        }
+                                                    },
+                                                    shape = RoundedCornerShape(8.dp),
+                                                    color = if (isSel) PrimaryViolet.copy(alpha = 0.25f) else DarkCard,
+                                                    border = BorderStroke(1.dp, if (isSel) PrimaryViolet else DarkBorder),
+                                                    modifier = Modifier.weight(1f).height(36.dp)
                                                 ) {
-                                                    Icon(
-                                                        imageVector = Icons.Default.MusicNote,
-                                                        contentDescription = null,
-                                                        tint = if (isSel) PrimaryViolet else TextSecondary,
-                                                        modifier = Modifier.size(13.dp)
-                                                    )
-                                                    Spacer(modifier = Modifier.width(4.dp))
-                                                    Text(
-                                                        text = file.nameWithoutExtension,
-                                                        style = MaterialTheme.typography.labelSmall,
-                                                        color = if (isSel) TextPrimary else TextSecondary,
-                                                        fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium,
-                                                        maxLines = 1,
-                                                        overflow = TextOverflow.Ellipsis,
-                                                        fontSize = 11.sp
-                                                    )
+                                                    Row(
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.Center,
+                                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = Icons.Default.MusicNote,
+                                                            contentDescription = null,
+                                                            tint = if (isSel) PrimaryViolet else TextSecondary,
+                                                            modifier = Modifier.size(13.dp)
+                                                        )
+                                                        Spacer(modifier = Modifier.width(4.dp))
+                                                        Text(
+                                                            text = file.nameWithoutExtension,
+                                                            style = MaterialTheme.typography.labelSmall,
+                                                            color = if (isSel) TextPrimary else TextSecondary,
+                                                            fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium,
+                                                            maxLines = 1,
+                                                            overflow = TextOverflow.Ellipsis,
+                                                            fontSize = 11.sp
+                                                        )
+                                                    }
                                                 }
                                             }
                                         }
                                     }
-                                }
-
-                                // 2. SEARCH BAR & CLEAR BUTTON
+                                }                                 // 2. SEARCH BAR, CLEAR & UPLOAD BUTTONS
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
-                                    OutlinedTextField(
+                                    BasicTextField(
                                         value = audioSearchQuery,
                                         onValueChange = { 
                                             audioSearchQuery = it
-                                            if (it.isNotEmpty()) isAudioPickerExpanded = true
+                                            isAudioPickerExpanded = true
                                         },
-                                        placeholder = { Text(if (language == "de") "Sound suchen..." else "Search sound...", color = TextSecondary, fontSize = 12.sp) },
-                                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(16.dp)) },
-                                        trailingIcon = {
-                                            if (audioSearchQuery.isNotEmpty()) {
-                                                IconButton(onClick = { audioSearchQuery = "" }, modifier = Modifier.size(20.dp)) {
-                                                    Icon(Icons.Default.Close, contentDescription = "Clear", tint = TextSecondary, modifier = Modifier.size(14.dp))
+                                        textStyle = TextStyle(color = TextPrimary, fontSize = 14.sp),
+                                        singleLine = true,
+                                        cursorBrush = SolidColor(PrimaryViolet),
+                                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                                        keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus(force = true); keyboardController?.hide() }),
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .onFocusChanged { isAudioPickerExpanded = it.isFocused },
+                                        decorationBox = { innerTextField ->
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .background(DarkCard, RoundedCornerShape(14.dp))
+                                                    .border(1.dp, DarkBorder, RoundedCornerShape(14.dp))
+                                                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Icon(Icons.Default.Search, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(18.dp))
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+                                                    if (audioSearchQuery.isEmpty()) {
+                                                        Text(
+                                                            if (language == "de") "Sound suchen..." else "Search sound...",
+                                                            color = TextSecondary,
+                                                            fontSize = 14.sp
+                                                        )
+                                                    }
+                                                    innerTextField()
                                                 }
-                                            } else {
-                                                IconButton(onClick = { isAudioPickerExpanded = !isAudioPickerExpanded }, modifier = Modifier.size(24.dp)) {
-                                                    Icon(
-                                                        imageVector = if (isAudioPickerExpanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
-                                                        contentDescription = null,
-                                                        tint = TextSecondary,
-                                                        modifier = Modifier.size(20.dp)
-                                                    )
+                                                if (audioSearchQuery.isNotEmpty()) {
+                                                    IconButton(onClick = { audioSearchQuery = "" }, modifier = Modifier.size(22.dp)) {
+                                                        Icon(Icons.Default.Close, contentDescription = "Clear", tint = TextSecondary, modifier = Modifier.size(16.dp))
+                                                    }
                                                 }
                                             }
-                                        },
-                                        modifier = Modifier.weight(1f).height(42.dp),
-                                        colors = OutlinedTextFieldDefaults.colors(
-                                            focusedBorderColor = PrimaryViolet,
-                                            unfocusedBorderColor = DarkBorder,
-                                            focusedContainerColor = DarkCard,
-                                            unfocusedContainerColor = DarkCard,
-                                            focusedTextColor = TextPrimary,
-                                            unfocusedTextColor = TextPrimary
-                                        ),
-                                        shape = RoundedCornerShape(10.dp),
-                                        singleLine = true
+                                        }
                                     )
+
+                                    IconButton(
+                                        onClick = { audioPickerLauncher.launch("audio/*") },
+                                        modifier = Modifier
+                                            .size(44.dp)
+                                            .background(PrimaryViolet, RoundedCornerShape(14.dp))
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Add,
+                                            contentDescription = if (language == "de") "Sound hochladen" else "Upload sound",
+                                            tint = TextPrimary,
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                    }
 
                                     if (selectedAudioFile != null) {
                                         IconButton(
@@ -1785,9 +1933,9 @@ fun WidgetAddValueDialog(
                                                 }
                                             },
                                             modifier = Modifier
-                                                .size(42.dp)
-                                                .background(DarkCard, RoundedCornerShape(10.dp))
-                                                .border(1.dp, Color(0xFFEF4444).copy(alpha = 0.5f), RoundedCornerShape(10.dp))
+                                                .size(44.dp)
+                                                .background(DarkCard, RoundedCornerShape(14.dp))
+                                                .border(1.dp, Color(0xFFEF4444).copy(alpha = 0.5f), RoundedCornerShape(14.dp))
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Default.Close,
@@ -1809,12 +1957,49 @@ fun WidgetAddValueDialog(
                                     Column(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .background(DarkBg, RoundedCornerShape(12.dp))
+                                            .background(ProgressTrack, RoundedCornerShape(12.dp))
                                             .border(1.dp, DarkBorder, RoundedCornerShape(12.dp))
                                             .padding(6.dp),
                                         verticalArrangement = Arrangement.spacedBy(4.dp)
                                     ) {
-                                        if (filteredList.isEmpty()) {
+                                        if (importedAudios.isEmpty()) {
+                                            Column(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(12.dp),
+                                                horizontalAlignment = Alignment.CenterHorizontally,
+                                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                Text(
+                                                    text = if (language == "de") "Noch keine eigenen Sounds hinzugefügt." else "No custom sounds added yet.",
+                                                    color = TextPrimary,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    fontSize = 13.sp,
+                                                    textAlign = TextAlign.Center
+                                                )
+                                                Text(
+                                                    text = if (language == "de") "Du kannst eigene MP3, WAV oder M4A Dateien hochladen oder in den Einstellungen verwalten." else "You can upload MP3, WAV or M4A files or manage them in Settings.",
+                                                    color = TextSecondary,
+                                                    fontSize = 11.sp,
+                                                    textAlign = TextAlign.Center
+                                                )
+                                                Button(
+                                                    onClick = { audioPickerLauncher.launch("audio/*") },
+                                                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryViolet),
+                                                    shape = RoundedCornerShape(10.dp),
+                                                    modifier = Modifier.fillMaxWidth().height(36.dp)
+                                                ) {
+                                                    Icon(Icons.Default.Add, contentDescription = null, tint = TextPrimary, modifier = Modifier.size(16.dp))
+                                                    Spacer(modifier = Modifier.width(6.dp))
+                                                    Text(
+                                                        text = if (language == "de") "Sound hochladen" else "Upload sound",
+                                                        color = TextPrimary,
+                                                        fontWeight = FontWeight.Bold,
+                                                        fontSize = 12.sp
+                                                    )
+                                                }
+                                            }
+                                        } else if (filteredList.isEmpty()) {
                                             Text(
                                                 text = if (language == "de") "Kein passender Sound gefunden" else "No matching sounds found",
                                                 color = TextSecondary,
@@ -1824,8 +2009,33 @@ fun WidgetAddValueDialog(
                                         } else {
                                             LazyColumn(
                                                 verticalArrangement = Arrangement.spacedBy(4.dp),
-                                                modifier = Modifier.heightIn(max = 140.dp)
+                                                modifier = Modifier.heightIn(max = 160.dp)
                                             ) {
+                                                item {
+                                                    Surface(
+                                                        onClick = { audioPickerLauncher.launch("audio/*") },
+                                                        shape = RoundedCornerShape(8.dp),
+                                                        color = PrimaryViolet.copy(alpha = 0.15f),
+                                                        border = BorderStroke(1.dp, PrimaryViolet.copy(alpha = 0.4f)),
+                                                        modifier = Modifier.fillMaxWidth().padding(bottom = 2.dp)
+                                                    ) {
+                                                        Row(
+                                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                                            verticalAlignment = Alignment.CenterVertically,
+                                                            horizontalArrangement = Arrangement.Center
+                                                        ) {
+                                                            Icon(Icons.Default.Add, contentDescription = null, tint = PrimaryViolet, modifier = Modifier.size(16.dp))
+                                                            Spacer(modifier = Modifier.width(6.dp))
+                                                            Text(
+                                                                text = if (language == "de") "+ Sound hochladen" else "+ Upload sound",
+                                                                style = MaterialTheme.typography.bodySmall,
+                                                                color = PrimaryViolet,
+                                                                fontWeight = FontWeight.Bold,
+                                                                fontSize = 11.sp
+                                                            )
+                                                        }
+                                                    }
+                                                }
                                                 items(filteredList) { file ->
                                                     val isSel = selectedAudioFile?.absolutePath == file.absolutePath
                                                     Surface(
@@ -1904,47 +2114,14 @@ fun WidgetAddValueDialog(
                         }
                     }
 
-                    // MANUAL INPUT & SUGGESTIONS SECTION (Combined)
-                    Text(
-                        text = if (language == "de") {
-                            "Wert eintragen (Einheit: ${habitToLog!!.unit}):"
-                        } else {
-                            "Enter value (Unit: ${habitToLog!!.unit}):"
-                        },
-                        color = TextSecondary,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-
-                    OutlinedTextField(
-                        value = inputVal,
-                        onValueChange = { inputVal = it },
-                        placeholder = { Text("Z.B. 1.5", color = TextSecondary) },
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = PrimaryViolet,
-                            unfocusedBorderColor = DarkBorder,
-                            focusedTextColor = TextPrimary,
-                            unfocusedTextColor = TextPrimary
-                        ),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth().testTag("manual_value_input")
-                    )
-
-                    // Value suggestions (Presets replacing timer presets when hasTimer is true, or standard numeric selection)
-                    Text(
-                        text = if (language == "de") "Schnellauswahl" else "Suggestions",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary,
-                        fontWeight = FontWeight.SemiBold
-                    )
-
+                    // COMPACT MANUAL INPUT & SUGGESTIONS SECTION
                     val suggestions = remember(habitToLog) {
                         val target = habitToLog?.targetValue ?: 0f
                         when {
-                            habitToLog?.unit?.lowercase() in listOf("l", "liter", "liters") -> listOf(0.5f, 1.0f, 1.5f, 2.0f, target)
-                            habitToLog?.unit?.lowercase() in listOf("ml") -> listOf(250f, 500f, 750f, target)
-                            habitToLog?.unit?.lowercase() in listOf("min", "minutes", "minuten") -> listOf(15f, 30f, 45f, 60f, target)
-                            habitToLog?.unit?.lowercase() in listOf("h", "stunden", "hours") -> listOf(1f, 2f, 3f, target)
+                            habitToLog?.unit?.lowercase() in listOf("l", "liter", "liters") -> listOf(0.5f, 1.0f, 1.5f, 2.0f)
+                            habitToLog?.unit?.lowercase() in listOf("ml") -> listOf(250f, 500f, 750f, 1000f)
+                            habitToLog?.unit?.lowercase() in listOf("min", "minutes", "minuten") -> listOf(1f, 15f, 30f, 60f)
+                            habitToLog?.unit?.lowercase() in listOf("h", "stunden", "hours") -> listOf(1f, 2f, 3f, 4f)
                             else -> {
                                 if (target > 1f) {
                                     val half = target / 2f
@@ -1955,85 +2132,129 @@ fun WidgetAddValueDialog(
                                         target
                                     ).distinct()
                                 } else {
-                                    listOf(1f, 2f, 5f, target)
+                                    listOf(1f, 2f, 5f)
                                 }
                             }
-                        }.distinct().sorted()
+                        }.distinct().filter { it > 0f }.take(4).sorted()
                     }
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        suggestions.forEach { value ->
-                            val label = if (value % 1f == 0f) value.toInt().toString() else value.toString()
-                            val isSelected = inputVal == label
-                            Box(
-                                modifier = Modifier
-                                    .background(
-                                        if (isSelected) PrimaryViolet else DarkBorder,
-                                        RoundedCornerShape(8.dp)
-                                    )
-                                    .border(
-                                        1.dp,
-                                        if (isSelected) PrimaryViolet else PrimaryViolet.copy(alpha = 0.2f),
-                                        RoundedCornerShape(8.dp)
-                                    )
-                                    .clickable {
-                                        inputVal = label
-                                    }
-                                    .padding(horizontal = 12.dp, vertical = 6.dp)
-                            ) {
-                                Text(
-                                    text = label,
-                                    color = if (isSelected) TextPrimary else TextSecondary,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
 
                     Column(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = if (language == "de") "Manuell eintragen (${habitToLog!!.unit}):" else "Manual log (${habitToLog!!.unit}):",
+                            color = TextSecondary,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            BasicTextField(
+                                value = inputVal,
+                                onValueChange = { inputVal = it },
+                                textStyle = TextStyle(color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Bold),
+                                singleLine = true,
+                                cursorBrush = SolidColor(PrimaryViolet),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus(); keyboardController?.hide() }),
+                                modifier = Modifier
+                                    .width(72.dp)
+                                    .testTag("manual_value_input"),
+                                decorationBox = { innerTextField ->
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(PrimaryViolet.copy(alpha = 0.18f), RoundedCornerShape(8.dp))
+                                            .border(1.5.dp, PrimaryViolet, RoundedCornerShape(8.dp))
+                                            .padding(horizontal = 8.dp, vertical = 7.dp),
+                                        contentAlignment = Alignment.CenterStart
+                                    ) {
+                                        if (inputVal.isEmpty()) {
+                                            Text("0.0", color = TextSecondary.copy(alpha = 0.7f), fontSize = 13.sp)
+                                        }
+                                        innerTextField()
+                                    }
+                                }
+                            )
+
+                            Row(
+                                modifier = Modifier.weight(1f),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                suggestions.forEach { value ->
+                                    val label = if (value % 1f == 0f) value.toInt().toString() else value.toString()
+                                    val isSelected = inputVal == label
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .background(
+                                                if (isSelected) PrimaryViolet else DarkCard,
+                                                RoundedCornerShape(8.dp)
+                                            )
+                                            .border(
+                                                1.dp,
+                                                if (isSelected) PrimaryViolet else DarkBorder,
+                                                RoundedCornerShape(8.dp)
+                                            )
+                                            .clickable {
+                                                inputVal = label
+                                            }
+                                            .padding(vertical = 7.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = label,
+                                            color = if (isSelected) TextPrimary else TextSecondary,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                            fontSize = 12.sp,
+                                            maxLines = 1
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            if (currentValue > 0f || existingLog != null) {
-                                TextButton(
-                                    onClick = {
-                                        viewModel.logNumericalHabit(habitToLog!!.id, selectedDate, 0f)
-                                        onDismiss()
-                                    },
-                                    modifier = Modifier.testTag("dialog_reset_button")
-                                ) {
-                                    Text(if (language == "de") "Reset" else "Reset", color = HabitOrange)
-                                }
-                            } else {
-                                Spacer(modifier = Modifier.width(1.dp))
-                            }
-
-                            TextButton(
-                                onClick = onDismiss,
-                                modifier = Modifier.testTag("dialog_cancel_button")
+                            OutlinedButton(
+                                onClick = {
+                                    viewModel.logNumericalHabit(habitToLog!!.id, selectedDate, 0f)
+                                    onDismiss()
+                                },
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = HabitOrange),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, HabitOrange.copy(alpha = 0.5f)),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(42.dp)
+                                    .testTag("dialog_reset_button")
                             ) {
-                                Text(if (language == "de") "Abbrechen" else "Cancel", color = TextSecondary)
+                                Text(
+                                    text = if (language == "de") "Reset" else "Reset",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
                             }
-                        }
 
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
                             OutlinedButton(
                                 onClick = {
                                     viewModel.logNumericalHabit(habitToLog!!.id, selectedDate, -1f)
@@ -2043,43 +2264,45 @@ fun WidgetAddValueDialog(
                                 border = androidx.compose.foundation.BorderStroke(1.dp, FailedRed.copy(alpha = 0.5f)),
                                 shape = RoundedCornerShape(12.dp),
                                 modifier = Modifier
-                                    .weight(1.5f)
-                                    .height(46.dp)
+                                    .weight(1f)
+                                    .height(42.dp)
                                     .testTag("dialog_fail_button")
                             ) {
                                 Text(
                                     text = if (language == "de") "Fehlgeschlagen" else "Failed",
                                     fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
                             }
+                        }
 
-                            Button(
-                                colors = ButtonDefaults.buttonColors(containerColor = PrimaryViolet),
-                                onClick = {
-                                    val fValue = inputVal.toFloatOrNull() ?: 0f
-                                    if (fValue <= 0f) {
-                                        viewModel.logNumericalHabit(habitToLog!!.id, selectedDate, -1f)
-                                    } else {
-                                        viewModel.logNumericalHabit(habitToLog!!.id, selectedDate, fValue)
-                                    }
-                                    onDismiss()
-                                },
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier
-                                    .weight(2f)
-                                    .height(46.dp)
-                                    .testTag("dialog_save_button")
-                            ) {
-                                Text(
-                                    text = if (language == "de") "Speichern" else "Save",
-                                    color = TextPrimary,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
+                        Button(
+                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryViolet),
+                            onClick = {
+                                val fValue = inputVal.toFloatOrNull() ?: 0f
+                                if (fValue <= 0f) {
+                                    viewModel.logNumericalHabit(habitToLog!!.id, selectedDate, -1f)
+                                } else {
+                                    viewModel.logNumericalHabit(habitToLog!!.id, selectedDate, fValue)
+                                }
+                                onDismiss()
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(44.dp)
+                                .testTag("dialog_save_button")
+                        ) {
+                            Text(
+                                text = if (language == "de") "Speichern" else "Save",
+                                color = TextPrimary,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
                     }
                 }
@@ -2102,74 +2325,72 @@ fun HabitBottomNavigation(
     onAddClick: () -> Unit,
     language: String
 ) {
-    NavigationBar(
-        containerColor = DarkCard,
-        tonalElevation = 0.dp,
-        windowInsets = WindowInsets(0, 0, 0, 0),
+    val items = listOf(
+        Triple("TODAY", if (language == "de") "Heute" else "Today", Icons.Default.CalendarToday),
+        Triple("STATS", if (language == "de") "Statistik" else "Stats", Icons.Default.BarChart),
+        Triple("PROFILE", if (language == "de") "Profil" else "Profile", Icons.Default.Person)
+    )
+
+    Box(
         modifier = Modifier
-            .padding(start = 24.dp, end = 24.dp, bottom = 28.dp, top = 12.dp)
-            .border(width = 1.dp, color = DarkBorder, shape = RoundedCornerShape(28.dp))
-            .clip(RoundedCornerShape(28.dp))
+            .fillMaxWidth()
+            .padding(start = 18.dp, end = 18.dp, bottom = 32.dp, top = 10.dp),
+        contentAlignment = Alignment.Center
     ) {
-        NavigationBarItem(
-            selected = selectedTab == "TODAY",
-            onClick = { onTabSelected("TODAY") },
-            icon = { Icon(Icons.Default.CalendarToday, contentDescription = "Today") },
-            label = { 
-                Text(
-                    text = if (language == "de") "Heute" else "Today",
-                    style = MaterialTheme.typography.labelLarge
-                ) 
-            },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = TextPrimary,
-                unselectedIconColor = TextSecondary,
-                selectedTextColor = PrimaryViolet,
-                unselectedTextColor = TextSecondary,
-                indicatorColor = PrimaryViolet
-            ),
-            modifier = Modifier.testTag("nav_today")
-        )
+        Surface(
+            color = DarkCard,
+            shape = CircleShape,
+            border = BorderStroke(1.dp, DarkBorder),
+            shadowElevation = 8.dp,
+            tonalElevation = 0.dp
+        ) {
+            Row(
+                modifier = Modifier
+                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                items.forEach { (tabKey, label, icon) ->
+                    val isSelected = selectedTab == tabKey
+                    val navBgColor by animateColorAsState(
+                        targetValue = if (isSelected) PrimaryViolet else Color.Transparent,
+                        animationSpec = tween(220),
+                        label = "navBg"
+                    )
+                    val navContentColor by animateColorAsState(
+                        targetValue = if (isSelected) TextPrimary else TextSecondary,
+                        animationSpec = tween(220),
+                        label = "navContent"
+                    )
 
-        NavigationBarItem(
-            selected = selectedTab == "STATS",
-            onClick = { onTabSelected("STATS") },
-            icon = { Icon(Icons.Default.BarChart, contentDescription = "Stats") },
-            label = { 
-                Text(
-                    text = if (language == "de") "Statistik" else "Stats",
-                    style = MaterialTheme.typography.labelLarge
-                ) 
-            },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = TextPrimary,
-                unselectedIconColor = TextSecondary,
-                selectedTextColor = PrimaryViolet,
-                unselectedTextColor = TextSecondary,
-                indicatorColor = PrimaryViolet
-            ),
-            modifier = Modifier.testTag("nav_stats")
-        )
-
-        NavigationBarItem(
-            selected = selectedTab == "PROFILE",
-            onClick = { onTabSelected("PROFILE") },
-            icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
-            label = { 
-                Text(
-                    text = if (language == "de") "Profil" else "Profile",
-                    style = MaterialTheme.typography.labelLarge
-                ) 
-            },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = TextPrimary,
-                unselectedIconColor = TextSecondary,
-                selectedTextColor = PrimaryViolet,
-                unselectedTextColor = TextSecondary,
-                indicatorColor = PrimaryViolet
-            ),
-            modifier = Modifier.testTag("nav_profile")
-        )
+                    Row(
+                        modifier = Modifier
+                            .testTag("nav_${tabKey.lowercase()}")
+                            .clip(CircleShape)
+                            .background(navBgColor)
+                            .clickable { onTabSelected(tabKey) }
+                            .padding(horizontal = 18.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = label,
+                            tint = navContentColor,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Text(
+                            text = label,
+                            color = navContentColor,
+                            style = MaterialTheme.typography.labelLarge.copy(
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                fontSize = 14.sp
+                            )
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -2303,6 +2524,180 @@ fun getDayCombinedStatus(dateStr: String, habits: List<Habit>, logs: List<HabitL
     }
 }
 
+@Composable
+fun SmartInsightCard(
+    language: String,
+    userName: String,
+    todayDateString: String,
+    smartInsightDismissedDate: String,
+    onDismiss: (String) -> Unit,
+    perfectDaysStats: com.example.data.PerfectDaysStats,
+    habitsWithStats: List<com.example.data.HabitStatModel>
+) {
+    if (smartInsightDismissedDate == todayDateString) return
+    
+    // Only show if the user has a bit of history (e.g. at least 7 completed check-ins overall)
+    if (perfectDaysStats.totalCompletedHabits < 7) return
+    
+    val currentStreak = perfectDaysStats.currentStreak
+    val completionRate = perfectDaysStats.totalCompletionRate
+    val totalPerfectDays = perfectDaysStats.totalPerfectDays
+    
+    val greeting = if (userName.isNotBlank()) {
+        if (language == "de") "Hey $userName, " else "Hey $userName, "
+    } else ""
+
+    class InsightOption(val text: String, val icon: androidx.compose.ui.graphics.vector.ImageVector, val color: Color)
+    val options = mutableListOf<InsightOption>()
+    
+    if (currentStreak >= 3) {
+        options.add(InsightOption(
+            text = if (language == "de") "${greeting}du bist on fire! 🔥 Schon $currentStreak perfekte Tage in Folge. Bleib dran!" else "${greeting}you are on fire! 🔥 $currentStreak perfect days in a row. Keep it up!",
+            icon = Icons.Default.LocalFireDepartment,
+            color = HabitOrange
+        ))
+    }
+    if (completionRate >= 80 && perfectDaysStats.totalCompletedHabits > 20) {
+        options.add(InsightOption(
+            text = if (language == "de") "${greeting}deine Erfolgsquote liegt bei extrem starken $completionRate%! Mach weiter so." else "${greeting}your success rate is an extremely strong $completionRate%! Keep going.",
+            icon = Icons.Default.AutoAwesome,
+            color = PrimaryViolet
+        ))
+    }
+    val highMomentum = habitsWithStats.maxByOrNull { it.strength }
+    if (highMomentum != null && highMomentum.strength >= 80) {
+        options.add(InsightOption(
+            text = if (language == "de") "${greeting}dein Habit '${highMomentum.habit.name}' ist mit einer Stärke von ${highMomentum.strength} ein echtes Highlight. 🟢" else "${greeting}your habit '${highMomentum.habit.name}' is a real highlight with a strength of ${highMomentum.strength}. 🟢",
+            icon = Icons.Default.TrendingUp,
+            color = SuccessGreen
+        ))
+    }
+    if (totalPerfectDays >= 5) {
+        options.add(InsightOption(
+            text = if (language == "de") "${greeting}du hast schon $totalPerfectDays perfekte Tage gesammelt. Konstanz zahlt sich aus!" else "${greeting}you've already collected $totalPerfectDays perfect days. Consistency pays off!",
+            icon = Icons.Default.EmojiEvents,
+            color = HabitYellow
+        ))
+    }
+    
+    // Always add fallbacks to ensure variety
+    options.add(InsightOption(
+        text = if (language == "de") "${greeting}jeder Check-in heute bringt dich deinem Ziel einen Schritt näher. ⚡" else "${greeting}every check-in today brings you one step closer to your goal. ⚡",
+        icon = Icons.Default.Bolt,
+        color = PrimaryViolet
+    ))
+    options.add(InsightOption(
+        text = if (language == "de") "${greeting}ein neuer Tag, eine neue Chance! Lass uns loslegen. 🚀" else "${greeting}a new day, a new chance! Let's get started. 🚀",
+        icon = Icons.Default.AutoAwesome,
+        color = SuccessGreen
+    ))
+    options.add(InsightOption(
+        text = if (language == "de") "${greeting}Konstanz ist der Schlüssel zum Erfolg. Bleib fokussiert! 🎯" else "${greeting}Consistency is the key to success. Stay focused! 🎯",
+        icon = Icons.Default.TrackChanges,
+        color = HabitOrange
+    ))
+    options.add(InsightOption(
+        text = if (language == "de") "${greeting}mach diesen Tag zu einem perfekten Tag. Du schaffst das! 🌟" else "${greeting}make this day a perfect day. You got this! 🌟",
+        icon = Icons.Default.Star,
+        color = HabitYellow
+    ))
+    
+    val hash = Math.abs(todayDateString.hashCode())
+    val selectedOption = options[hash % options.size]
+    
+    val insightText = selectedOption.text
+    val insightIcon = selectedOption.icon
+    val iconColor = selectedOption.color
+
+    var visible by remember { mutableStateOf(true) }
+
+    AnimatedVisibility(
+        visible = visible,
+        enter = expandVertically(animationSpec = tween(500, easing = LinearOutSlowInEasing)) + fadeIn(animationSpec = tween(500)),
+        exit = shrinkVertically(animationSpec = tween(500, easing = LinearOutSlowInEasing)) + fadeOut(animationSpec = tween(300))
+    ) {
+        Card(
+            colors = CardDefaults.cardColors(containerColor = iconColor.copy(alpha = 0.08f)),
+            border = BorderStroke(1.dp, iconColor.copy(alpha = 0.3f)),
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp)
+                .shadow(
+                    elevation = 16.dp,
+                    shape = RoundedCornerShape(16.dp),
+                    spotColor = iconColor.copy(alpha = 0.6f),
+                    ambientColor = iconColor.copy(alpha = 0.6f)
+                )
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Icon Box
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(iconColor.copy(alpha = 0.15f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = insightIcon,
+                        contentDescription = "Insight Icon",
+                        tint = iconColor,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                
+                Spacer(modifier = Modifier.width(16.dp))
+                
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (language == "de") "Smart Insight" else "Smart Insight",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = iconColor,
+                            fontWeight = FontWeight.Bold
+                        )
+                        
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clickable {
+                                    visible = false
+                                    onDismiss(todayDateString)
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Dismiss",
+                                tint = TextSecondary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(4.dp))
+                    
+                    Text(
+                        text = insightText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextPrimary,
+                        lineHeight = 20.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
 // TODAY SCREEN
 @Composable
 fun TodayScreen(
@@ -2325,6 +2720,10 @@ fun TodayScreen(
     val hasOnboarded by viewModel.hasOnboarded.collectAsStateWithLifecycle()
 
     val todayDateString by viewModel.todayDateString.collectAsStateWithLifecycle()
+    val perfectDaysStats by viewModel.perfectDaysStats.collectAsStateWithLifecycle()
+    val smartInsightDismissedDate by viewModel.smartInsightDismissedDate.collectAsStateWithLifecycle()
+    val habitsWithStats by viewModel.statsScreenData.collectAsStateWithLifecycle()
+    val userName by viewModel.userName.collectAsStateWithLifecycle()
     val canPrevWeek by viewModel.canPrevWeek.collectAsStateWithLifecycle()
     val canNextWeek by viewModel.canNextWeek.collectAsStateWithLifecycle()
 
@@ -2335,6 +2734,8 @@ fun TodayScreen(
     var showDeleteConfirmHabit by remember { mutableStateOf<Habit?>(null) }
     var showArchiveConfirmHabit by remember { mutableStateOf<Habit?>(null) }
     var manualAddValueHabitId by remember { mutableStateOf<Int?>(null) }
+    var isReorderMode by remember { mutableStateOf(false) }
+    var originalSortOrders by remember { mutableStateOf<Map<Int, Int>?>(null) }
 
     val onToggleRemembered = remember(viewModel, selectedDate) {
         { habitId: Int, currentlyHasLog: Boolean ->
@@ -2362,7 +2763,19 @@ fun TodayScreen(
     }
     var showDailyNoteDialog by remember { mutableStateOf(false) }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+    val keyboardController = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(Unit) {
+                detectTapGestures(onTap = {
+                    focusManager.clearFocus()
+                    keyboardController?.hide()
+                })
+            }
+    ) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -2372,67 +2785,69 @@ fun TodayScreen(
             contentPadding = PaddingValues(bottom = 140.dp, top = 16.dp)
         ) {
         item(key = "today_top_row") {
-            Row(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(vertical = 12.dp)
+                    .defaultMinSize(minHeight = 44.dp)
             ) {
+                // Top Left: Daily Note Button (Notizbuch)
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .border(1.dp, DarkBorder, RoundedCornerShape(12.dp))
+                        .background(DarkCard, RoundedCornerShape(12.dp))
+                        .clickable { showDailyNoteDialog = true }
+                        .align(Alignment.CenterStart)
+                        .testTag("btn_daily_note"),
+                    contentAlignment = Alignment.Center
+                ) {
+                    ZettelMitStiftIcon(
+                        modifier = Modifier.size(22.dp),
+                        color = TextPrimary
+                    )
+                    if (currentNote.isNotEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(top = 6.dp, end = 6.dp)
+                                .size(6.dp)
+                                .background(PrimaryViolet, CircleShape)
+                        )
+                    }
+                }
+
                 Text(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .padding(horizontal = 48.dp),
                     text = formattedDisplayDate,
                     style = MaterialTheme.typography.displayLarge,
                     color = TextPrimary,
                     fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Start,
-                    modifier = Modifier.weight(1f)
+                    textAlign = TextAlign.Center
                 )
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .border(1.dp, DarkBorder, RoundedCornerShape(12.dp))
-                            .background(DarkCard, RoundedCornerShape(12.dp))
-                            .clickable { showDailyNoteDialog = true }
-                            .testTag("btn_daily_note"),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        ZettelMitStiftIcon(
-                            modifier = Modifier.size(22.dp),
-                            color = TextPrimary
-                        )
-                        if (currentNote.isNotEmpty()) {
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.TopEnd)
-                                    .padding(top = 6.dp, end = 6.dp)
-                                    .size(6.dp)
-                                    .background(PrimaryViolet, CircleShape)
-                            )
+
+                // Top Right Action Button: Add Habit (Balanced symmetrical layout)
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .border(1.dp, DarkBorder, RoundedCornerShape(12.dp))
+                        .background(DarkCard, RoundedCornerShape(12.dp))
+                        .clickable {
+                            onDismissFirstHabitHint()
+                            onAddClick()
                         }
-                    }
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .border(1.dp, DarkBorder, RoundedCornerShape(12.dp))
-                            .background(DarkCard, RoundedCornerShape(12.dp))
-                            .clickable {
-                                onDismissFirstHabitHint()
-                                onAddClick()
-                            }
-                            .testTag("btn_add_habit"),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "Add Habit",
-                            tint = TextPrimary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
+                        .align(Alignment.CenterEnd)
+                        .testTag("btn_add_habit"),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Add Habit",
+                        tint = TextPrimary,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
         }
@@ -2643,9 +3058,6 @@ fun TodayScreen(
                 if (total > 0) completed.toFloat() / total else 0f
             }
             val progressText = remember(completed, total) { "$completed/$total" }
-            val encouragementText = remember(completed, total, language) {
-                getEncouragementText(completed, total, language)
-            }
 
             var hasAnimatedTodayProgress by rememberSaveable { mutableStateOf(false) }
             val animFraction = remember { Animatable(if (hasAnimatedTodayProgress) fraction else 0f) }
@@ -2665,73 +3077,239 @@ fun TodayScreen(
                     )
                 }
             }
-            val animatedFraction = animFraction.value
+                val animatedFraction = animFraction.value
+                val streakScale = remember { Animatable(1f) }
+                var displayedStreak by remember { mutableStateOf(perfectDaysStats.currentStreak) }
+                var hasAnimatedStreak by rememberSaveable(selectedDate) { mutableStateOf(fraction >= 1f) }
+                
+                LaunchedEffect(perfectDaysStats.currentStreak) {
+                    if (fraction < 1.0f) {
+                        displayedStreak = perfectDaysStats.currentStreak
+                    }
+                }
+                
+                LaunchedEffect(fraction) {
+                    if (fraction < 1.0f) {
+                        hasAnimatedStreak = false
+                    }
+                }
+                
+                LaunchedEffect(animatedFraction) {
+                    if (animatedFraction >= 1.0f && fraction >= 1.0f && total > 0 && !hasAnimatedStreak) {
+                        hasAnimatedStreak = true
+                        displayedStreak = perfectDaysStats.currentStreak
+                        streakScale.animateTo(
+                            targetValue = 1.4f,
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                stiffness = Spring.StiffnessMedium
+                            )
+                        )
+                        streakScale.animateTo(
+                            targetValue = 1f,
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                stiffness = Spring.StiffnessLow
+                            )
+                        )
+                    }
+                }
 
-            Card(
-                colors = CardDefaults.cardColors(containerColor = DarkCard),
-                shape = RoundedCornerShape(20.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp)
-                    .border(width = 1.dp, color = DarkBorder, shape = RoundedCornerShape(20.dp))
-            ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp)
+                        .padding(vertical = 6.dp)
                 ) {
-                    Box(
+                    Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(32.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(ProgressTrack)
+                            .padding(vertical = 6.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF141026)),
+                        shape = RoundedCornerShape(22.dp),
+                        border = BorderStroke(2.dp, PrimaryViolet)
                     ) {
-                        if (animatedFraction > 0f) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxHeight()
-                                    .fillMaxWidth(animatedFraction.coerceIn(0f, 1f))
-                                    .background(if (animatedFraction >= 1.0f) SuccessGreen else PrimaryViolet)
-                            )
-                        }
-
                         Row(
                             modifier = Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = 12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = if (language == "de") "Tagesfortschritt" else "Daily Progress",
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White.copy(alpha = 0.85f)
-                            )
-                            Text(
-                                text = "${(animatedFraction * 100).toInt()}% ($progressText)",
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
+                            Surface(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(36.dp),
+                                color = DarkCard,
+                                shape = RoundedCornerShape(18.dp),
+                                border = BorderStroke(1.dp, DarkBorder)
+                            ) {
+                                Box(modifier = Modifier.fillMaxSize()) {
+                                    if (animatedFraction > 0f) {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxHeight()
+                                                .fillMaxWidth(animatedFraction.coerceIn(0f, 1f))
+                                                .background(if (animatedFraction >= 1.0f) SuccessGreen else PrimaryViolet)
+                                        )
+                                    }
+
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(horizontal = 14.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = if (language == "de") "Tagesfortschritt" else "Daily Progress",
+                                            style = MaterialTheme.typography.labelLarge,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White.copy(alpha = 0.85f)
+                                        )
+                                        Text(
+                                            text = progressText,
+                                            style = MaterialTheme.typography.labelLarge,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White
+                                        )
+                                    }
+                                }
+                            }
+                            
+                            Spacer(modifier = Modifier.width(12.dp))
+                            
+                            Surface(
+                                color = DarkCard,
+                                shape = RoundedCornerShape(18.dp),
+                                border = BorderStroke(1.dp, if (fraction >= 1f) HabitOrange.copy(alpha = 0.5f) else DarkBorder),
+                                modifier = Modifier
+                                    .height(36.dp)
+                                    .scale(streakScale.value)
+                                    .testTag("perfect_day_streak_badge")
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Text(
+                                        text = "🔥",
+                                        fontSize = 14.sp
+                                    )
+                                    Text(
+                                        text = "${displayedStreak}",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (fraction >= 1f) HabitOrange else TextSecondary
+                                    )
+                                }
+                            }
                         }
                     }
+                
+                SmartInsightCard(
+                    language = language,
+                    userName = userName,
+                    todayDateString = todayDateString,
+                    smartInsightDismissedDate = smartInsightDismissedDate,
+                    onDismiss = { viewModel.dismissSmartInsight(it) },
+                    perfectDaysStats = perfectDaysStats,
+                    habitsWithStats = habitsWithStats
+                )
+            }
+        }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+        if (isReorderMode) {
+            item(key = "today_reorder_banner") {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = PrimaryViolet.copy(alpha = 0.15f)),
+                    border = BorderStroke(1.dp, PrimaryViolet.copy(alpha = 0.5f)),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.SwapVert,
+                                contentDescription = null,
+                                tint = PrimaryViolet,
+                                modifier = Modifier.size(22.dp)
+                            )
+                            Text(
+                                text = if (language == "de") "Reihenfolge anpassen" else "Reorder Habits",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                        
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Cancel Button
+                            OutlinedButton(
+                                onClick = {
+                                    originalSortOrders?.let { savedOrders ->
+                                        viewModel.revertHabitOrders(savedOrders)
+                                    }
+                                    isReorderMode = false
+                                },
+                                shape = RoundedCornerShape(10.dp),
+                                border = BorderStroke(1.dp, FailedRed),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = FailedRed),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Cancel",
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = if (language == "de") "Abbrechen" else "Cancel",
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
 
-                    Text(
-                        text = if (isPastDay) " " else encouragementText,
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
-                        ),
-                        color = TextSecondary,
-                        fontWeight = FontWeight.Medium,
-                        textAlign = TextAlign.Center,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                            // Done Button
+                            Button(
+                                onClick = { isReorderMode = false },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = PrimaryViolet,
+                                    contentColor = TextPrimary
+                                ),
+                                shape = RoundedCornerShape(10.dp),
+                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Done",
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = if (language == "de") "Fertig" else "Done",
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -2809,7 +3387,14 @@ fun TodayScreen(
                     onLongClick = onLongClickRemembered,
                     language = language,
                     vibrationEnabled = vibrationEnabled,
-                    selectedDate = selectedDate
+                    selectedDate = selectedDate,
+                    isWeeklyTargetReached = uiItem.isWeeklyTargetReached,
+                    weeklyLoggedCount = uiItem.weeklyLoggedCount,
+                    weeklyTargetCount = uiItem.weeklyTargetCount,
+                    streak = uiItem.streak,
+                    isReorderMode = isReorderMode,
+                    onMoveUp = { habitId -> viewModel.moveHabitUp(habitId) },
+                    onMoveDown = { habitId -> viewModel.moveHabitDown(habitId) }
                 )
             }
         }
@@ -2836,11 +3421,31 @@ fun TodayScreen(
             onDismissRequest = { longPressedHabit = null },
             containerColor = DarkCard,
             title = {
-                Text(
-                    text = habit.name,
-                    color = TextPrimary,
-                    style = MaterialTheme.typography.titleLarge
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = habit.name,
+                        color = TextPrimary,
+                        style = MaterialTheme.typography.titleLarge,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    IconButton(
+                        onClick = { longPressedHabit = null },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = TextSecondary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
             },
             text = {
                 Column(
@@ -2879,9 +3484,9 @@ fun TodayScreen(
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = if (isPausedOnSelectedDate) {
-                                if (language == "de") "Pausierung beenden" else "Resume Habit"
+                                if (language == "de") "Skippen beenden" else "Resume Habit"
                             } else {
-                                if (language == "de") "Heute pausieren" else "Pause today"
+                                if (language == "de") "Heute skippen" else "Skip today"
                             },
                             fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.bodyLarge
@@ -2915,60 +3520,32 @@ fun TodayScreen(
                         )
                     }
 
-                    // Reorder Actions
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    // Reorder Action
+                    Button(
+                        onClick = {
+                            longPressedHabit = null
+                            val habitsList = activeHabitUiItemsForSelectedDate.map { it.habit }
+                            originalSortOrders = habitsList.associate { it.id to it.sortOrder }
+                            isReorderMode = true
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = DarkBorder,
+                            contentColor = TextPrimary
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth().height(48.dp)
                     ) {
-                        Button(
-                            onClick = {
-                                viewModel.moveHabitUp(habit.id)
-                                longPressedHabit = null
-                            },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = DarkBorder,
-                                contentColor = TextPrimary
-                            ),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.weight(1f).height(48.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.ArrowUpward,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = if (language == "de") "Nach oben" else "Move Up",
-                                fontWeight = FontWeight.Bold,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-
-                        Button(
-                            onClick = {
-                                viewModel.moveHabitDown(habit.id)
-                                longPressedHabit = null
-                            },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = DarkBorder,
-                                contentColor = TextPrimary
-                            ),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.weight(1f).height(48.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.ArrowDownward,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = if (language == "de") "Nach unten" else "Move Down",
-                                fontWeight = FontWeight.Bold,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Default.SwapVert,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (language == "de") "Reihenfolge ändern" else "Reorder habits",
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.bodyLarge
+                        )
                     }
 
                     // Archivieren Action
@@ -3026,18 +3603,7 @@ fun TodayScreen(
                     }
                 }
             },
-            confirmButton = {},
-            dismissButton = {
-                TextButton(
-                    onClick = { longPressedHabit = null }
-                ) {
-                    Text(
-                        text = if (language == "de") "Abbrechen" else "Cancel",
-                        color = TextSecondary,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
+            confirmButton = {}
         )
     }
 
@@ -3220,6 +3786,7 @@ object FeedbackHelper {
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HabitItemRow(
+    modifier: Modifier = Modifier,
     habit: Habit,
     currentValue: Float,
     isCompleted: Boolean,
@@ -3231,7 +3798,14 @@ fun HabitItemRow(
     onLongClick: (Habit) -> Unit,
     language: String,
     vibrationEnabled: Boolean = true,
-    selectedDate: String = ""
+    selectedDate: String = "",
+    isWeeklyTargetReached: Boolean = false,
+    weeklyLoggedCount: Int = 0,
+    weeklyTargetCount: Int = 0,
+    streak: Int = 0,
+    isReorderMode: Boolean = false,
+    onMoveUp: ((Int) -> Unit)? = null,
+    onMoveDown: ((Int) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val habitColor = HabitIconMapping.getColor(habit.color)
@@ -3263,27 +3837,35 @@ fun HabitItemRow(
         label = "checkboxScale"
     )
 
+    val isNumerical = habit.type == "NUMBER" || habit.type == "NUMERICAL" || (habit.targetValue > 1f && habit.type != "BINARY")
+    val targetVal = if (habit.targetValue > 0f) habit.targetValue else 1f
+    val progressRatio = if (isNumerical) (currentValue / targetVal).coerceIn(0f, 1f) else if (isCompleted) 1f else 0f
+    val animatedProgressRatio by animateFloatAsState(
+        targetValue = progressRatio,
+        animationSpec = tween(durationMillis = 350, easing = FastOutSlowInEasing),
+        label = "progressRatio"
+    )
+
     var lastDate by remember(habit.id) { mutableStateOf(selectedDate) }
     var wasCompleted by remember(habit.id) { mutableStateOf(isCompleted) }
     val completionAnim = remember { Animatable(0f) }
     val coroutineScope = rememberCoroutineScope()
-
-    val triggerInAppCompletion = {
-        coroutineScope.launch {
-            completionAnim.snapTo(0f)
-            FeedbackHelper.playCompletionFeedback(context, vibrationEnabled)
-            completionAnim.animateTo(
-                targetValue = 1f,
-                animationSpec = tween(durationMillis = 650, easing = FastOutSlowInEasing)
-            )
-        }
-    }
+    var accumulatedDrag by remember { mutableStateOf(0f) }
+    val dragThreshold = 55f
 
     LaunchedEffect(isCompleted, selectedDate) {
         if (selectedDate != lastDate) {
             lastDate = selectedDate
             wasCompleted = isCompleted
         } else {
+            if (isCompleted && !wasCompleted) {
+                completionAnim.snapTo(0f)
+                FeedbackHelper.playCompletionFeedback(context, vibrationEnabled)
+                completionAnim.animateTo(
+                    targetValue = 1f,
+                    animationSpec = tween(durationMillis = 650, easing = FastOutSlowInEasing)
+                )
+            }
             wasCompleted = isCompleted
         }
     }
@@ -3303,7 +3885,7 @@ fun HabitItemRow(
     Card(
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         shape = RoundedCornerShape(16.dp),
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .graphicsLayer {
                 scaleX = cardScale
@@ -3376,15 +3958,33 @@ fun HabitItemRow(
                     style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWidth)
                 )
             }
-            .combinedClickable(
-                onClick = {
-                    if (!isCompleted && !isPaused) {
-                        triggerInAppCompletion()
+            .let { m ->
+                if (isReorderMode) {
+                    m.pointerInput(habit.id) {
+                        detectVerticalDragGestures(
+                            onDragStart = { accumulatedDrag = 0f },
+                            onDragEnd = { accumulatedDrag = 0f },
+                            onDragCancel = { accumulatedDrag = 0f },
+                            onVerticalDrag = { change, dragAmount ->
+                                change.consume()
+                                accumulatedDrag += dragAmount
+                                if (accumulatedDrag < -dragThreshold) {
+                                    onMoveUp?.invoke(habit.id)
+                                    accumulatedDrag = 0f
+                                } else if (accumulatedDrag > dragThreshold) {
+                                    onMoveDown?.invoke(habit.id)
+                                    accumulatedDrag = 0f
+                                }
+                            }
+                        )
                     }
-                    onToggle(habit.id, hasLog)
-                },
-                onLongClick = { onLongClick(habit) }
-            )
+                } else {
+                    m.combinedClickable(
+                        onClick = { onToggle(habit.id, hasLog) },
+                        onLongClick = { onLongClick(habit) }
+                    )
+                }
+            }
             .testTag("habit_card_${habit.id}")
     ) {
         Row(
@@ -3419,7 +4019,7 @@ fun HabitItemRow(
 
                 Spacer(modifier = Modifier.width(16.dp))
 
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = habit.name,
                         style = MaterialTheme.typography.titleMedium,
@@ -3428,36 +4028,71 @@ fun HabitItemRow(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = if (isPaused) {
-                            if (language == "de") "Pausiert" else "Paused"
-                        } else if (habit.type == "BINARY") {
-                            when {
-                                isCompleted -> if (language == "de") "Erledigt" else "Done"
-                                isFailed -> if (language == "de") "Fehlgeschlagen" else "Failed"
-                                else -> if (language == "de") "Tippen zum Abhaken" else "Tap to check off"
-                            }
+
+                    val subtitleText = if (isPaused) {
+                        if (language == "de") "Skipped" else "Skipped"
+                    } else if (habit.frequency == "TIMES_WEEKLY") {
+                        "$weeklyLoggedCount/$weeklyTargetCount " + (if (language == "de") "in 7 Tagen" else "in 7 days")
+                    } else if (isNumerical) {
+                        val displayValue = if (isFailed) 0f else currentValue
+                        val formattedVal = if (displayValue % 1f == 0f) displayValue.toInt().toString() else displayValue.toString()
+                        val formattedTarget = if (habit.targetValue % 1f == 0f) habit.targetValue.toInt().toString() else habit.targetValue.toString()
+                        val unitStr = if (habit.unit.isNotBlank()) " ${habit.unit}" else ""
+                        "$formattedVal / $formattedTarget$unitStr"
+                    } else {
+                        if (isCompleted) {
+                            if (language == "de") "Erledigt" else "Completed"
+                        } else if (isFailed) {
+                            if (language == "de") "Fehlgeschlagen" else "Failed"
                         } else {
-                            val displayValue = if (isFailed) 0f else currentValue
-                            val formattedVal = if (displayValue % 1f == 0f) displayValue.toInt().toString() else displayValue.toString()
-                            val formattedTarget = if (habit.targetValue % 1f == 0f) habit.targetValue.toInt().toString() else habit.targetValue.toString()
-                            if (isFailed) {
-                                val failText = if (language == "de") "Fehlgeschlagen" else "Failed"
-                                "$failText • $formattedVal / $formattedTarget ${habit.unit}"
-                            } else {
-                                "$formattedVal / $formattedTarget ${habit.unit}"
-                            }
-                        },
-                        style = if (habit.type == "NUMBER" && !isPaused) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyMedium,
-                        fontWeight = if (habit.type == "NUMBER" && !isPaused) FontWeight.Bold else FontWeight.Normal,
-                        color = when {
-                            isPaused -> HabitOrange
-                            isCompleted -> SuccessGreen
-                            isFailed -> FailedRed
-                            else -> if (habit.type == "NUMBER") habitColor else TextSecondary
+                            ""
                         }
-                    )
+                    }
+
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        // Streak always first on second line
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Text(
+                                text = "🔥",
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                            Text(
+                                text = "$streak",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = HabitOrange
+                            )
+                        }
+
+                        if (subtitleText.isNotBlank()) {
+                            Text(
+                                text = "•",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = TextSecondary.copy(alpha = 0.5f)
+                            )
+                            Text(
+                                text = subtitleText,
+                                style = if (isNumerical && !isPaused) MaterialTheme.typography.labelSmall else MaterialTheme.typography.bodySmall,
+                                fontWeight = if (isNumerical && !isPaused) FontWeight.Bold else FontWeight.Medium,
+                                color = when {
+                                    isPaused -> HabitOrange
+                                    isCompleted -> SuccessGreen
+                                    isFailed -> FailedRed
+                                    habit.frequency == "TIMES_WEEKLY" && isWeeklyTargetReached -> SuccessGreen
+                                    else -> if (isNumerical) habitColor else TextSecondary
+                                },
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
                 }
             }
 
@@ -3465,10 +4100,20 @@ fun HabitItemRow(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // Status Checkbox (zum schnellen Abhaken/Zurücksetzen bzw. um 1 Erhöhen für Zahlenbasiert)
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
+                if (isReorderMode) {
+                    Icon(
+                        imageVector = Icons.Default.DragHandle,
+                        contentDescription = "Drag Handle",
+                        tint = TextSecondary,
+                        modifier = Modifier
+                            .size(24.dp)
+                            .padding(end = 4.dp)
+                    )
+                } else {
+                    // Status Checkbox (zum schnellen Abhaken/Zurücksetzen bzw. um 1 Erhöhen für Zahlenbasiert)
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
                         .graphicsLayer {
                             scaleX = checkboxScale + extraPopScale
                             scaleY = checkboxScale + extraPopScale
@@ -3505,12 +4150,48 @@ fun HabitItemRow(
                                     )
                                 }
                             }
+
+                            // 3. Circular Progress Ring for numerical / quantity habits
+                            if (isNumerical && !isCompleted && !isPaused && !isFailed) {
+                                val strokeWidthPx = 3.dp.toPx()
+                                val inset = strokeWidthPx / 2f
+                                val arcSize = androidx.compose.ui.geometry.Size(size.width - strokeWidthPx, size.height - strokeWidthPx)
+
+                                // Base track ring
+                                drawArc(
+                                    color = habitColor.copy(alpha = 0.25f),
+                                    startAngle = 0f,
+                                    sweepAngle = 360f,
+                                    useCenter = false,
+                                    topLeft = androidx.compose.ui.geometry.Offset(inset, inset),
+                                    size = arcSize,
+                                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWidthPx)
+                                )
+
+                                // Active progress arc closing up to goal
+                                if (animatedProgressRatio > 0f) {
+                                    drawArc(
+                                        color = habitColor,
+                                        startAngle = -90f,
+                                        sweepAngle = 360f * animatedProgressRatio,
+                                        useCenter = false,
+                                        topLeft = androidx.compose.ui.geometry.Offset(inset, inset),
+                                        size = arcSize,
+                                        style = androidx.compose.ui.graphics.drawscope.Stroke(
+                                            width = strokeWidthPx,
+                                            cap = androidx.compose.ui.graphics.StrokeCap.Round
+                                        )
+                                    )
+                                }
+                            }
                         }
                         .background(
                             when {
                                 isPaused -> HabitOrange
                                 isCompleted -> SuccessGreen
                                 isFailed -> FailedRed
+                                habit.frequency == "TIMES_WEEKLY" && isWeeklyTargetReached -> SuccessGreen.copy(alpha = 0.15f)
+                                isNumerical -> habitColor.copy(alpha = 0.12f)
                                 else -> Color.Transparent
                             }, 
                             CircleShape
@@ -3521,20 +4202,16 @@ fun HabitItemRow(
                                 isPaused -> HabitOrange
                                 isCompleted -> SuccessGreen
                                 isFailed -> FailedRed
+                                habit.frequency == "TIMES_WEEKLY" && isWeeklyTargetReached -> SuccessGreen
+                                isNumerical -> Color.Transparent
                                 else -> TextSecondary.copy(alpha = 0.5f)
                             },
                             shape = CircleShape
                         )
                         .clickable(enabled = !isPaused) {
-                            if (habit.type == "NUMBER") {
-                                if (!isCompleted && (currentValue + 1f) >= habit.targetValue) {
-                                    triggerInAppCompletion()
-                                }
+                            if (isNumerical) {
                                 onAddQuantity(habit.id, currentValue, 1f)
                             } else {
-                                if (!isCompleted) {
-                                    triggerInAppCompletion()
-                                }
                                 onToggle(habit.id, hasLog)
                             }
                         },
@@ -3545,16 +4222,28 @@ fun HabitItemRow(
                             Icon(Icons.Default.Pause, contentDescription = "Paused", tint = TextPrimary, modifier = Modifier.size(16.dp))
                         }
                         isCompleted -> {
-                            Icon(Icons.Default.Check, contentDescription = "Completed", tint = TextPrimary, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.Check, contentDescription = "Completed", tint = TextPrimary, modifier = Modifier.size(18.dp))
                         }
                         isFailed -> {
                             Icon(Icons.Default.Close, contentDescription = "Failed", tint = TextPrimary, modifier = Modifier.size(16.dp))
+                        }
+                        habit.frequency == "TIMES_WEEKLY" && isWeeklyTargetReached -> {
+                            Icon(Icons.Default.Check, contentDescription = "Weekly Target Reached", tint = SuccessGreen, modifier = Modifier.size(18.dp))
+                        }
+                        isNumerical -> {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "Increment",
+                                tint = habitColor,
+                                modifier = Modifier.size(18.dp)
+                            )
                         }
                     }
                 }
             }
         }
     }
+}
 }
 
 // STATS SCREEN
@@ -3626,26 +4315,37 @@ fun StatsScreen(
             contentPadding = PaddingValues(bottom = 140.dp, top = 16.dp)
         ) {
             item(key = "stats_top_row") {
-                Row(
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(vertical = 12.dp)
+                        .defaultMinSize(minHeight = 44.dp),
+                    contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = if (language == "de") "Statistiken" else "Statistics",
                         style = MaterialTheme.typography.displayLarge,
                         color = TextPrimary,
                         fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Start,
-                        modifier = Modifier.weight(1f)
+                        textAlign = TextAlign.Center
                     )
-                    Spacer(modifier = Modifier.size(44.dp))
                 }
             }
 
-            // Beautifully designed, compact Overall Strength Card
+            // Subheading: Overall Statistiken
+            item {
+                Text(
+                    text = if (language == "de") "Overall Statistiken" else "Overall Statistics",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = TextPrimary,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp, bottom = 4.dp)
+                )
+            }
+
+            // Beautifully designed Overall Statistics Card with enlarged semi-circle gauge
             item {
                 var hasAnimatedTodayStrength by rememberSaveable { mutableStateOf(false) }
                 val animStrength = remember { Animatable(if (hasAnimatedTodayStrength) strength.toFloat() else 0f) }
@@ -3691,113 +4391,146 @@ fun StatsScreen(
 
                 Card(
                     colors = CardDefaults.cardColors(containerColor = DarkCard),
-                    shape = RoundedCornerShape(20.dp),
+                    shape = RoundedCornerShape(22.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .border(width = 1.dp, color = DarkBorder, shape = RoundedCornerShape(20.dp))
+                        .border(width = 1.dp, color = DarkBorder, shape = RoundedCornerShape(22.dp))
                         .clickable(
                             interactionSource = overallInteractionSource,
                             indication = ripple(),
                             onClick = onOverallClick
                         )
                 ) {
-                        Row(
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(18.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.KeyboardArrowRight,
+                            contentDescription = "Details",
+                            tint = if (overallIsPressed) PrimaryViolet else TextSecondary,
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .offset(x = overallArrowOffsetX)
+                                .scale(overallArrowScale)
+                                .size(24.dp)
+                        )
+
+                        Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 14.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                                .height(150.dp)
+                                .padding(top = 8.dp),
+                            contentAlignment = Alignment.BottomCenter
                         ) {
-                            // Left: Custom Progress Ring showing Score out of 100 with animated fill
-                            Box(
-                                contentAlignment = Alignment.Center,
+                            val sweepHalfVal = (animatedStrength / 100f) * 180f
+                            Canvas(
                                 modifier = Modifier
-                                    .size(64.dp)
-                                    .drawWithCache {
-                                        val strokeWidth = 6.dp.toPx()
-                                        val stroke = Stroke(width = strokeWidth, cap = StrokeCap.Round)
-                                        onDrawBehind {
-                                            drawArc(
-                                                color = ProgressTrack,
-                                                startAngle = -90f,
-                                                sweepAngle = 360f,
-                                                useCenter = false,
-                                                style = stroke
-                                            )
-                                            drawArc(
-                                                color = ringColor,
-                                                startAngle = -90f,
-                                                sweepAngle = sweepAngleVal,
-                                                useCenter = false,
-                                                style = stroke
-                                            )
-                                        }
-                                    }
+                                    .width(290.dp)
+                                    .height(150.dp)
                             ) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    Text(
-                                        text = "${animatedStrength.toInt()}",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = TextPrimary,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Text(
-                                        text = "/100",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = TextSecondary,
-                                        fontWeight = FontWeight.Medium
+                                val strokeWidth = 18.dp.toPx()
+                                val stroke = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                                val topLeft = Offset(strokeWidth / 2, strokeWidth / 2)
+                                val arcSize = Size(size.width - strokeWidth, (size.height * 2) - strokeWidth)
+
+                                drawArc(
+                                    color = ProgressTrack,
+                                    startAngle = 180f,
+                                    sweepAngle = 180f,
+                                    useCenter = false,
+                                    topLeft = topLeft,
+                                    size = arcSize,
+                                    style = stroke
+                                )
+
+                                if (sweepHalfVal > 0f) {
+                                    drawArc(
+                                        color = ringColor,
+                                        startAngle = 180f,
+                                        sweepAngle = sweepHalfVal,
+                                        useCenter = false,
+                                        topLeft = topLeft,
+                                        size = arcSize,
+                                        style = stroke
                                     )
                                 }
                             }
 
-                            Spacer(modifier = Modifier.width(16.dp))
-
-                            // Middle: Motivation Quote centered vertically alongside arrow and ring
-                            Text(
-                                text = strengthLabel,
-                                style = MaterialTheme.typography.titleMedium,
-                                color = ringColor,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f)
-                            )
-
-                            Spacer(modifier = Modifier.width(8.dp))
-
-                            // Right: Interactive Chevron pointing right
-                            Icon(
-                                imageVector = Icons.Default.KeyboardArrowRight,
-                                contentDescription = "Details",
-                                tint = if (overallIsPressed) PrimaryViolet else TextSecondary,
-                                modifier = Modifier
-                                    .offset(x = overallArrowOffsetX)
-                                    .scale(overallArrowScale)
-                                    .size(24.dp)
-                            )
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.padding(bottom = 12.dp)
+                            ) {
+                                Text(
+                                    text = "${animatedStrength.toInt()}",
+                                    style = MaterialTheme.typography.displayLarge,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = TextPrimary
+                                )
+                                if (strengthLabel.isNotBlank()) {
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = strengthLabel,
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = ringColor
+                                    )
+                                }
+                            }
                         }
                     }
+                }
             }
 
-            // Individual Habits Header
+            // Subheading 2: Habits im Detail
             item {
                 Text(
-                    text = if (language == "de") "GEWOHNHEITEN IM DETAIL" else "HABITS IN DETAIL",
+                    text = if (language == "de") "Habits im Detail" else "Habits in Detail",
                     style = MaterialTheme.typography.titleMedium,
                     color = TextPrimary,
+                    fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Start,
-                    modifier = Modifier.fillMaxWidth().padding(top = 10.dp)
+                    modifier = Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 2.dp)
                 )
             }
 
             if (habitsWithStats.isEmpty()) {
                 item {
-                    Text(
-                        text = if (language == "de") "Keine Gewohnheiten vorhanden." else "No habits configured yet.",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = TextSecondary
-                    )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = if (language == "de") "Keine Gewohnheiten verfügbar" else "No habits available",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = TextSecondary,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Button(
+                            onClick = onAddClick,
+                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryViolet),
+                            shape = RoundedCornerShape(12.dp),
+                            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (language == "de") "Gewohnheit erstellen" else "Create Habit",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
                 }
             } else {
                 items(
@@ -3810,7 +4543,10 @@ fun StatsScreen(
                         shortDayNames = shortDayNames,
                         dayNumbers = dayNumbers,
                         language = language,
-                        onClick = onStatItemClick
+                        onClick = onStatItemClick,
+                        onToggleDay = { habitId, dateStr ->
+                            viewModel.toggleBinaryHabit(habitId, dateStr, false)
+                        }
                     )
                 }
             }
@@ -3844,7 +4580,8 @@ fun HabitStatItem(
     shortDayNames: List<String>,
     dayNumbers: List<String>,
     language: String,
-    onClick: (Int) -> Unit
+    onClick: (Int) -> Unit,
+    onToggleDay: ((Int, String) -> Unit)? = null
 ) {
     val habit = model.habit
     val strength = model.strength
@@ -3906,7 +4643,7 @@ fun HabitStatItem(
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = if (language == "de") "Stärke: $strength/100" else "Strength: $strength/100",
+                            text = if (language == "de") "Stärke: $strength" else "Strength: $strength",
                             style = MaterialTheme.typography.bodyMedium,
                             color = TextSecondary
                         )
@@ -3934,6 +4671,7 @@ fun HabitStatItem(
                     val dayName = shortDayNames.getOrElse(i) { "" }
                     val dayNum = dayNumbers.getOrElse(i) { "" }
                     val status = model.past7DaysStatuses.getOrElse(i) { "INACTIVE" }
+                    val dateStr = model.past7DaysDates.getOrNull(i)
                     val cellColor = when (status) {
                         "SUCCESS" -> SuccessGreen
                         "FAILED" -> ErrorRed
@@ -3942,7 +4680,16 @@ fun HabitStatItem(
                         else -> PrimaryViolet.copy(alpha = 0.15f)
                     }
 
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.then(
+                            if (dateStr != null && onToggleDay != null) {
+                                Modifier.clickable {
+                                    onToggleDay(habit.id, dateStr)
+                                }
+                            } else Modifier
+                        )
+                    ) {
                         Text(
                             text = dayName,
                             style = MaterialTheme.typography.labelSmall,
@@ -3982,6 +4729,7 @@ fun HabitDetailScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
+    ClearFocusOnKeyboardDismiss()
     val currentStreak = state?.currentStreak ?: 0
     val longestStreak = state?.longestStreak ?: 0
     val strength = state?.strength ?: 0
@@ -4027,81 +4775,93 @@ fun HabitDetailScreen(
             }
             val animatedStrength = animStrength.value
             val sweepAngleVal = (animatedStrength / 100f) * 360f
-            val strengthText = "${animatedStrength.toInt()}/100"
+            val strengthText = "${animatedStrength.toInt()}"
             val strengthLabel = remember(strength, language) { getStrengthLabel(strength, language) }
 
             Card(
                 colors = CardDefaults.cardColors(containerColor = DarkCard),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(20.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .border(width = 1.dp, color = DarkBorder, shape = RoundedCornerShape(16.dp))
+                    .border(width = 1.dp, color = habitColor.copy(alpha = 0.5f), shape = RoundedCornerShape(20.dp))
             ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp)
                 ) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .size(64.dp)
-                            .drawWithCache {
-                                val strokeWidth = 6.dp.toPx()
-                                val stroke = Stroke(width = strokeWidth, cap = StrokeCap.Round)
-                                onDrawBehind {
-                                    drawArc(
-                                        color = ProgressTrack,
-                                        startAngle = -90f,
-                                        sweepAngle = 360f,
-                                        useCenter = false,
-                                        style = stroke
-                                    )
-                                    drawArc(
-                                        color = SuccessGreen,
-                                        startAngle = -90f,
-                                        sweepAngle = sweepAngleVal,
-                                        useCenter = false,
-                                        style = stroke
-                                    )
-                                }
-                            }
-                    ) {
-                        Text(
-                            text = strengthText,
-                            style = MaterialTheme.typography.titleSmall,
-                            color = TextPrimary,
-                            fontWeight = FontWeight.Bold
+                    Box(modifier = Modifier.align(Alignment.TopEnd)) {
+                        InfoIconButton(
+                            title = if (language == "de") "Stärke-Wert" else "Strength Score",
+                            explanation = if (language == "de") {
+                                "Die gewichtete Stärke dieser Gewohnheit. Neuere Einträge haben ein deutlich höheres Gewicht, sodass sich dein Score schnell auf 100/100 erholen kann, wenn du am Ball bleibst."
+                            } else {
+                                "The weighted strength score of this habit. Recent entries carry significantly more weight, allowing your score to recover to 100/100 quickly if you stay consistent."
+                            },
+                            onClick = { t, e -> activeExplanation = t to e }
                         )
                     }
 
-                    Spacer(modifier = Modifier.width(16.dp))
-
-                    Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        // Circular Gauge
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .size(84.dp)
+                                .drawWithCache {
+                                    val strokeWidth = 8.dp.toPx()
+                                    val stroke = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                                    onDrawBehind {
+                                        drawArc(
+                                            color = ProgressTrack,
+                                            startAngle = -90f,
+                                            sweepAngle = 360f,
+                                            useCenter = false,
+                                            style = stroke
+                                        )
+                                        drawArc(
+                                            color = habitColor,
+                                            startAngle = -90f,
+                                            sweepAngle = sweepAngleVal,
+                                            useCenter = false,
+                                            style = stroke
+                                        )
+                                    }
+                                }
+                        ) {
                             Text(
-                                text = if (language == "de") "STÄRKE" else "STRENGTH",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = TextSecondary,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            InfoIconButton(
-                                title = if (language == "de") "Stärke-Wert" else "Strength Score",
-                                explanation = if (language == "de") {
-                                    "Die gewichtete Stärke dieser Gewohnheit. Neuere Einträge haben ein deutlich höheres Gewicht, sodass sich dein Score schnell auf 100/100 erholen kann, wenn du am Ball bleibst."
-                                } else {
-                                    "The weighted strength score of this habit. Recent entries carry significantly more weight, allowing your score to recover to 100/100 quickly if you stay consistent."
-                                },
-                                onClick = { t, e -> activeExplanation = t to e }
+                                text = strengthText,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontSize = 24.sp,
+                                color = TextPrimary,
+                                fontWeight = FontWeight.ExtraBold
                             )
                         }
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = strengthLabel,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = ProgressEndText,
-                            fontWeight = FontWeight.Medium
-                        )
+
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Text(
+                                text = if (language == "de") "GEWOHNHEITS-STÄRKE" else "HABIT STRENGTH",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = TextSecondary,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.5.sp
+                            )
+                            Text(
+                                text = strengthLabel,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = habitColor,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                        }
                     }
                 }
             }
@@ -4144,196 +4904,147 @@ fun HabitDetailScreen(
             }
         }
 
-        // Streaks card
+        // Streaks cards (Two separate individual cards)
         item(key = "detail_streaks") {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = DarkCard),
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, DarkBorder, RoundedCornerShape(16.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(bottom = 10.dp)
+                // Current streak card
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = DarkCard),
+                    shape = RoundedCornerShape(20.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .border(1.dp, if (currentStreak > 0) HabitRed.copy(alpha = 0.5f) else DarkBorder, RoundedCornerShape(20.dp))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.LocalFireDepartment,
-                            contentDescription = "Streak",
-                            tint = PrimaryViolet,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = if (language == "de") "ERFOLGSSTRÄHNE & STATUS" else "STREAK & STATS",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = TextSecondary,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center
-                            ) {
-                                Text(
-                                    text = if (language == "de") "AKTUELL" else "CURRENT",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = TextSecondary,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 10.sp
-                                )
-                                Spacer(modifier = Modifier.width(2.dp))
-                                InfoIconButton(
-                                    title = if (language == "de") "Aktueller Streak" else "Current Streak",
-                                    explanation = if (language == "de") {
-                                        "Die Anzahl der aufeinanderfolgenden Tage, an denen du diese Gewohnheit bis heute erfolgreich abgeschlossen hast."
-                                    } else {
-                                        "The number of consecutive days you have completed this habit up to today."
-                                    },
-                                    onClick = { t, e -> activeExplanation = t to e }
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = if (language == "de") "$currentStreak Tage" else "$currentStreak Days",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = TextPrimary,
-                                fontWeight = FontWeight.Bold,
-                                textAlign = TextAlign.Center
+                        // Info icon placed in the top right corner
+                        Box(modifier = Modifier.align(Alignment.TopEnd)) {
+                            InfoIconButton(
+                                title = if (language == "de") "Aktueller Streak" else "Current Streak",
+                                explanation = if (language == "de") {
+                                    "Die Anzahl der aufeinanderfolgenden Tage, an denen du diese Gewohnheit bis heute erfolgreich abgeschlossen hast."
+                                } else {
+                                    "The number of consecutive days you have completed this habit up to today."
+                                },
+                                onClick = { t, e -> activeExplanation = t to e }
                             )
                         }
+
                         Column(
-                            modifier = Modifier.weight(1f),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 10.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .background(HabitRed.copy(alpha = 0.15f), CircleShape),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Text(
-                                    text = if (language == "de") "LÄNGSTER" else "LONGEST",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = TextSecondary,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 10.sp
-                                )
-                                Spacer(modifier = Modifier.width(2.dp))
-                                InfoIconButton(
-                                    title = if (language == "de") "Längster Streak" else "Longest Streak",
-                                    explanation = if (language == "de") {
-                                        "Deine historische Bestleistung an aufeinanderfolgenden Tagen, an denen du diese Gewohnheit abgeschlossen hast."
-                                    } else {
-                                        "Your highest historical record of consecutive days completing this habit."
-                                    },
-                                    onClick = { t, e -> activeExplanation = t to e }
+                                Icon(
+                                    imageVector = Icons.Default.Whatshot,
+                                    contentDescription = "Current streak",
+                                    tint = HabitRed,
+                                    modifier = Modifier.size(24.dp)
                                 )
                             }
-                            Spacer(modifier = Modifier.height(2.dp))
+                            
                             Text(
-                                text = if (language == "de") "$longestStreak Tage" else "$longestStreak Days",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = TextPrimary,
+                                text = if (language == "de") "Aktuelle Serie" else "Current streak",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = TextSecondary,
                                 fontWeight = FontWeight.Bold,
-                                textAlign = TextAlign.Center
+                                textAlign = TextAlign.Center,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
-                        }
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center
-                            ) {
-                                Text(
-                                    text = if (language == "de") "QUOTE" else "RATE",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = TextSecondary,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 10.sp
-                                )
-                                Spacer(modifier = Modifier.width(2.dp))
-                                InfoIconButton(
-                                    title = if (language == "de") "Erfolgsquote" else "Completion Rate",
-                                    explanation = if (language == "de") {
-                                        "Der ungewichtete historische Prozentsatz der Tage, an denen du diese Gewohnheit seit ihrer Erstellung abgeschlossen hast."
-                                    } else {
-                                        "The unweighted historical percentage of days you have successfully completed this habit since starting it."
-                                    },
-                                    onClick = { t, e -> activeExplanation = t to e }
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(2.dp))
-                            val completionRate = state?.completionRate ?: 0
+                            
                             Text(
-                                text = "$completionRate%",
-                                style = MaterialTheme.typography.bodyMedium,
+                                text = if (language == "de") "$currentStreak ${if (currentStreak == 1) "Tag" else "Tage"}" else "$currentStreak ${if (currentStreak == 1) "Day" else "Days"}",
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontSize = 22.sp,
                                 color = TextPrimary,
-                                fontWeight = FontWeight.Bold,
+                                fontWeight = FontWeight.ExtraBold,
                                 textAlign = TextAlign.Center
                             )
                         }
                     }
                 }
-            }
-        }
 
-        // Achievements counters
-        item(key = "detail_achievements") {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = DarkCard),
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, DarkBorder, RoundedCornerShape(16.dp))
-            ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(bottom = 10.dp)
+                // Best streak card
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = DarkCard),
+                    shape = RoundedCornerShape(20.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .border(1.dp, if (longestStreak > 0) Color(0xFFFFD700).copy(alpha = 0.5f) else DarkBorder, RoundedCornerShape(20.dp))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = "Achieved",
-                            tint = PrimaryViolet,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = if (language == "de") "ERREICHT" else "ACHIEVED",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = TextSecondary,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        InfoIconButton(
-                            title = if (language == "de") "Erledigungs-Verlauf" else "Completion History",
-                            explanation = if (language == "de") {
-                                "Verfolgt die absolute Anzahl der abgeschlossenen Einträge für diese spezifische Gewohnheit über verschiedene Zeiträume (Diese Woche, Diesen Monat, Dieses Jahr, Gesamt)."
-                            } else {
-                                "Tracks the absolute count of completed logs for this specific habit over different time periods (This Week, This Month, This Year, Total)."
-                            },
-                            onClick = { t, e -> activeExplanation = t to e }
-                        )
-                    }
+                        // Info icon placed in the top right corner
+                        Box(modifier = Modifier.align(Alignment.TopEnd)) {
+                            InfoIconButton(
+                                title = if (language == "de") "Längster Streak" else "Longest Streak",
+                                explanation = if (language == "de") {
+                                    "Deine historische Bestleistung an aufeinanderfolgenden Tagen, an denen du diese Gewohnheit abgeschlossen hast."
+                                } else {
+                                    "Your highest historical record of consecutive days completing this habit."
+                                },
+                                onClick = { t, e -> activeExplanation = t to e }
+                            )
+                        }
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        AchievementCounterCol(label = if (language == "de") "Diese Woche" else "This Week", count = thisWeekCount)
-                        AchievementCounterCol(label = if (language == "de") "Diesen Monat" else "This Month", count = thisMonthCount)
-                        AchievementCounterCol(label = if (language == "de") "Dieses Jahr" else "This Year", count = thisYearCount)
-                        AchievementCounterCol(label = if (language == "de") "Gesamt" else "Total", count = totalCount)
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 10.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .background(Color(0xFFFFD700).copy(alpha = 0.15f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.EmojiEvents,
+                                    contentDescription = "Longest streak",
+                                    tint = Color(0xFFFFD700),
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                            
+                            Text(
+                                text = if (language == "de") "Beste Serie" else "Best streak",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = TextSecondary,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            
+                            Text(
+                                text = if (language == "de") "$longestStreak ${if (longestStreak == 1) "Tag" else "Tage"}" else "$longestStreak ${if (longestStreak == 1) "Day" else "Days"}",
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontSize = 22.sp,
+                                color = TextPrimary,
+                                fontWeight = FontWeight.ExtraBold,
+                                textAlign = TextAlign.Center
+                            )
+                        }
                     }
                 }
             }
@@ -4363,12 +5074,19 @@ fun HabitDetailScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(bottom = 10.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.DateRange,
-                            contentDescription = "Calendar",
-                            tint = PrimaryViolet,
-                            modifier = Modifier.size(20.dp)
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(26.dp)
+                                .background(Color(0xFF06B6D4).copy(alpha = 0.18f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.DateRange,
+                                contentDescription = "Calendar",
+                                tint = Color(0xFF06B6D4),
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = if (language == "de") "KALENDER" else "CALENDAR",
@@ -4389,8 +5107,6 @@ fun HabitDetailScreen(
                     }
 
                     val habitColor = HabitIconMapping.getColor(habit.color)
-                    // HIER IST DAS PERFORMANCE-UPGRADE: Wir übergeben nur dumme Primitiven an den Kalender!
-                    // Calendar Month navigation and display grid
                     CalendarMonthGrid(
                         gridRows = state?.calendarGridRows ?: emptyList(),
                         monthName = state?.monthName ?: "",
@@ -4399,10 +5115,68 @@ fun HabitDetailScreen(
                         canPrevMonth = state?.canPrevMonth ?: true,
                         canNextMonth = state?.canNextMonth ?: true,
                         onPrevMonth = { viewModel.navigateCalendarMonth(-1) },
-                        onNextMonth = { viewModel.navigateCalendarMonth(1) }
+                        onNextMonth = { viewModel.navigateCalendarMonth(1) },
+                        onDayClick = { dateStr ->
+                            viewModel.toggleBinaryHabit(habit.id, dateStr, false)
+                        }
                     )
                 }
             }
+        }
+
+        // Overall Success Rate Card (Donut Chart)
+        item(key = "detail_success_rate") {
+            var selectedTimeframeIndex by rememberSaveable(habit.id) { mutableIntStateOf(0) }
+            val allLogs by viewModel.allLogs.collectAsStateWithLifecycle()
+
+            val stats = remember(habit, allLogs, selectedTimeframeIndex) {
+                calculateHabitSuccessStatsForPeriod(
+                    habit = habit,
+                    logs = allLogs,
+                    periodIndex = selectedTimeframeIndex
+                )
+            }
+
+            SuccessRateCard(
+                title = if (language == "de") "Erfolgsquote" else "Success Rate",
+                doneCount = stats.doneCount,
+                missedCount = stats.missedCount,
+                skippedCount = stats.skippedCount,
+                pendingCount = stats.pendingCount,
+                language = language,
+                infoTitle = if (language == "de") "Erfolgsquote" else "Success Rate",
+                infoExplanation = if (language == "de") {
+                    "Aufschlüsselung aller aktiven Tage im gewählten Zeitraum nach Status: Erreicht, Gescheitert, Skipped und Ausstehend."
+                } else {
+                    "Breakdown of all scheduled days in the selected period by status: Done, Missed, Skipped, and Pending."
+                },
+                onInfoClick = { t, e -> activeExplanation = t to e },
+                showTimeframeSelector = true,
+                selectedTimeframeIndex = selectedTimeframeIndex,
+                onTimeframeSelected = { selectedTimeframeIndex = it }
+            )
+        }
+
+        // 6. Habit Score Trend Card (Line Chart)
+        item(key = "detail_score_trend") {
+            val allLogs by viewModel.allLogs.collectAsStateWithLifecycle()
+            HabitScoreTrendCard(
+                habit = habit,
+                logs = allLogs,
+                language = language,
+                onInfoClick = { t, e -> activeExplanation = t to e }
+            )
+        }
+
+        // 7. Completion Volume Progression Card (Bar Chart)
+        item(key = "detail_volume_progression") {
+            val allLogs by viewModel.allLogs.collectAsStateWithLifecycle()
+            HabitVolumeProgressionCard(
+                habit = habit,
+                logs = allLogs,
+                language = language,
+                onInfoClick = { t, e -> activeExplanation = t to e }
+            )
         }
 
         // Weekday Frequency Section (For ALL habits!)
@@ -4524,12 +5298,19 @@ fun WeekdayFrequencySection(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(
-                    imageVector = Icons.Default.DateRange,
-                    contentDescription = "Frequency",
-                    tint = PrimaryViolet,
-                    modifier = Modifier.size(20.dp)
-                )
+                Box(
+                    modifier = Modifier
+                        .size(26.dp)
+                        .background(Color(0xFFF59E0B).copy(alpha = 0.18f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Equalizer,
+                        contentDescription = "Frequency",
+                        tint = Color(0xFFF59E0B),
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = if (language == "de") "WOCHENTAGS-FREQUENZ" else "WEEKDAY FREQUENCY",
@@ -4755,12 +5536,19 @@ fun HabitTargetSection(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(bottom = 16.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Adjust,
-                    contentDescription = "Target",
-                    tint = PrimaryViolet,
-                    modifier = Modifier.size(20.dp)
-                )
+                Box(
+                    modifier = Modifier
+                        .size(26.dp)
+                        .background(Color(0xFF8B5CF6).copy(alpha = 0.18f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Adjust,
+                        contentDescription = "Target",
+                        tint = Color(0xFF8B5CF6),
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = if (language == "de") "ZIERLEISTUNG (ZIEL)" else "TARGET PERFORMANCE",
@@ -4770,18 +5558,17 @@ fun HabitTargetSection(
                 )
             }
 
-            // Today, Week, Month, Quarter, Year rows
+            // Today, Week, Month, Year rows (omit Quarter)
             val periodLabels = if (language == "de") {
-                listOf("Heute", "Woche", "Monat", "Quartal", "Jahr")
+                listOf("Heute", "Woche", "Monat", "Jahr")
             } else {
-                listOf("Today", "Week", "Month", "Quarter", "Year")
+                listOf("Today", "Week", "Month", "Year")
             }
 
             val periodStatsList = listOf(
                 stats.today,
                 stats.week,
                 stats.month,
-                stats.quarter,
                 stats.year
             )
 
@@ -4937,6 +5724,720 @@ fun TargetProgressRow(
     }
 }
 
+// Data model and helpers for Trends & Progression
+data class TrendPoint(
+    val label: String,
+    val score: Float,
+    val completions: Int
+)
+
+fun calculateHabitTrendPoints(
+    habit: Habit,
+    logs: List<HabitLog>,
+    timeframeIndex: Int
+): List<TrendPoint> {
+    val today = java.time.LocalDate.now()
+    val points = mutableListOf<TrendPoint>()
+    val formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd")
+    val habitLogs = logs.filter { it.habitId == habit.id && it.value > 0f && !it.isPaused }
+
+    when (timeframeIndex) {
+        1 -> { // Week (7 days: Mon-Sun of current week)
+            val weekStart = today.with(java.time.DayOfWeek.MONDAY)
+            for (i in 0..6) {
+                val dayDate = weekStart.plusDays(i.toLong())
+                val dayStr = dayDate.format(formatter)
+                val count = habitLogs.count { it.date == dayStr }
+                val score = if (count > 0) 100f else 0f
+                val dayLabel = dayDate.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.getDefault())
+                points.add(TrendPoint(dayLabel, score, count))
+            }
+        }
+        2 -> { // Month (Last 8 weeks)
+            for (i in 7 downTo 0) {
+                val weekStart = today.minusWeeks(i.toLong()).with(java.time.DayOfWeek.MONDAY)
+                val weekEnd = weekStart.plusDays(6)
+
+                val count = habitLogs.count {
+                    try {
+                        val date = java.time.LocalDate.parse(it.date, formatter)
+                        !date.isBefore(weekStart) && !date.isAfter(weekEnd)
+                    } catch (e: Exception) { false }
+                }
+
+                val score = (count.toFloat() / 7f * 100f).coerceIn(0f, 100f)
+                val weekNum = weekStart.get(java.time.temporal.IsoFields.WEEK_OF_WEEK_BASED_YEAR)
+                val label = "KW$weekNum"
+                points.add(TrendPoint(label, score, count))
+            }
+        }
+        3 -> { // Year (12 months)
+            for (i in 11 downTo 0) {
+                val monthDate = today.minusMonths(i.toLong())
+                val monthStart = monthDate.withDayOfMonth(1)
+                val monthEnd = monthDate.withDayOfMonth(monthDate.lengthOfMonth())
+
+                val count = habitLogs.count {
+                    try {
+                        val date = java.time.LocalDate.parse(it.date, formatter)
+                        !date.isBefore(monthStart) && !date.isAfter(monthEnd)
+                    } catch (e: Exception) { false }
+                }
+
+                val totalDays = monthDate.lengthOfMonth()
+                val score = (count.toFloat() / (totalDays * 0.5f) * 100f).coerceIn(0f, 100f)
+                val monthName = monthDate.month.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.getDefault())
+                points.add(TrendPoint(monthName, score, count))
+            }
+        }
+        else -> { // Total (0 = Total / default: Last 12 months)
+            for (i in 11 downTo 0) {
+                val monthDate = today.minusMonths(i.toLong())
+                val monthStart = monthDate.withDayOfMonth(1)
+                val monthEnd = monthDate.withDayOfMonth(monthDate.lengthOfMonth())
+
+                val count = habitLogs.count {
+                    try {
+                        val date = java.time.LocalDate.parse(it.date, formatter)
+                        !date.isBefore(monthStart) && !date.isAfter(monthEnd)
+                    } catch (e: Exception) { false }
+                }
+
+                val totalDays = monthDate.lengthOfMonth()
+                val score = (count.toFloat() / (totalDays * 0.5f) * 100f).coerceIn(0f, 100f)
+                val monthName = monthDate.month.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.getDefault())
+                points.add(TrendPoint(monthName, score, count))
+            }
+        }
+    }
+    return points
+}
+
+fun calculateOverallTrendPoints(
+    allHabits: List<Habit>,
+    allLogs: List<HabitLog>,
+    timeframeIndex: Int
+): List<TrendPoint> {
+    val today = java.time.LocalDate.now()
+    val points = mutableListOf<TrendPoint>()
+    val formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd")
+    val successLogs = allLogs.filter { it.value > 0f && !it.isPaused }
+    val habitCount = allHabits.size.coerceAtLeast(1)
+
+    when (timeframeIndex) {
+        1 -> { // Week (7 days: Mon-Sun of current week)
+            val weekStart = today.with(java.time.DayOfWeek.MONDAY)
+            for (i in 0..6) {
+                val dayDate = weekStart.plusDays(i.toLong())
+                val dayStr = dayDate.format(formatter)
+                val count = successLogs.count { it.date == dayStr }
+                val score = (count.toFloat() / habitCount.toFloat() * 100f).coerceIn(0f, 100f)
+                val dayLabel = dayDate.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.getDefault())
+                points.add(TrendPoint(dayLabel, score, count))
+            }
+        }
+        2 -> { // Month (Last 8 weeks)
+            for (i in 7 downTo 0) {
+                val weekStart = today.minusWeeks(i.toLong()).with(java.time.DayOfWeek.MONDAY)
+                val weekEnd = weekStart.plusDays(6)
+
+                val count = successLogs.count {
+                    try {
+                        val date = java.time.LocalDate.parse(it.date, formatter)
+                        !date.isBefore(weekStart) && !date.isAfter(weekEnd)
+                    } catch (e: Exception) { false }
+                }
+
+                val score = (count.toFloat() / (7f * habitCount) * 100f).coerceIn(0f, 100f)
+                val weekNum = weekStart.get(java.time.temporal.IsoFields.WEEK_OF_WEEK_BASED_YEAR)
+                val label = "KW$weekNum"
+                points.add(TrendPoint(label, score, count))
+            }
+        }
+        3 -> { // Year (12 months)
+            for (i in 11 downTo 0) {
+                val monthDate = today.minusMonths(i.toLong())
+                val monthStart = monthDate.withDayOfMonth(1)
+                val monthEnd = monthDate.withDayOfMonth(monthDate.lengthOfMonth())
+
+                val count = successLogs.count {
+                    try {
+                        val date = java.time.LocalDate.parse(it.date, formatter)
+                        !date.isBefore(monthStart) && !date.isAfter(monthEnd)
+                    } catch (e: Exception) { false }
+                }
+
+                val totalDays = monthDate.lengthOfMonth()
+                val score = (count.toFloat() / (totalDays * habitCount * 0.5f) * 100f).coerceIn(0f, 100f)
+                val monthName = monthDate.month.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.getDefault())
+                points.add(TrendPoint(monthName, score, count))
+            }
+        }
+        else -> { // Total (0 = Total / default: Last 12 months)
+            for (i in 11 downTo 0) {
+                val monthDate = today.minusMonths(i.toLong())
+                val monthStart = monthDate.withDayOfMonth(1)
+                val monthEnd = monthDate.withDayOfMonth(monthDate.lengthOfMonth())
+
+                val count = successLogs.count {
+                    try {
+                        val date = java.time.LocalDate.parse(it.date, formatter)
+                        !date.isBefore(monthStart) && !date.isAfter(monthEnd)
+                    } catch (e: Exception) { false }
+                }
+
+                val totalDays = monthDate.lengthOfMonth()
+                val score = (count.toFloat() / (totalDays * habitCount * 0.5f) * 100f).coerceIn(0f, 100f)
+                val monthName = monthDate.month.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.getDefault())
+                points.add(TrendPoint(monthName, score, count))
+            }
+        }
+    }
+    return points
+}
+
+@Composable
+fun TimeframeSelectorPills(
+    selectedTimeframeIndex: Int,
+    onTimeframeSelected: (Int) -> Unit,
+    language: String,
+    modifier: Modifier = Modifier
+) {
+    val labels = if (language == "de") {
+        listOf("Gesamt", "Diese Woche", "Diesen Monat", "Dieses Jahr")
+    } else {
+        listOf("Total", "This Week", "This Month", "This Year")
+    }
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color.White.copy(alpha = 0.05f))
+            .border(1.dp, DarkBorder.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+            .padding(3.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        labels.forEachIndexed { index, label ->
+            val isSelected = selectedTimeframeIndex == index
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(if (isSelected) PrimaryViolet else Color.Transparent)
+                    .clickable { onTimeframeSelected(index) }
+                    .padding(vertical = 8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                    color = if (isSelected) TextPrimary else TextSecondary,
+                    fontSize = 10.5.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun HabitScoreTrendCard(
+    habit: Habit,
+    logs: List<HabitLog>,
+    language: String,
+    onInfoClick: (String, String) -> Unit
+) {
+    var selectedTimeframeIndex by rememberSaveable(habit.id) { mutableIntStateOf(0) }
+
+    val trendPoints = remember(habit, logs, selectedTimeframeIndex) {
+        calculateHabitTrendPoints(habit, logs, selectedTimeframeIndex)
+    }
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = DarkCard),
+        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, DarkBorder, RoundedCornerShape(20.dp))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .background(PrimaryViolet.copy(alpha = 0.18f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ShowChart,
+                        contentDescription = "Score Trend",
+                        tint = PrimaryViolet,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = if (language == "de") "HABIT SCORE TREND" else "HABIT SCORE TREND",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = TextSecondary,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                InfoIconButton(
+                    title = if (language == "de") "Habit Score Trend" else "Habit Score Trend",
+                    explanation = if (language == "de") {
+                        "Zeigt die historische Entwicklung deines Gewohnheits-Scores (0–100) im gewählten Zeitraum."
+                    } else {
+                        "Shows the historical progression of your habit strength score (0–100) over time."
+                    },
+                    onClick = onInfoClick
+                )
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            TimeframeSelectorPills(
+                selectedTimeframeIndex = selectedTimeframeIndex,
+                onTimeframeSelected = { selectedTimeframeIndex = it },
+                language = language
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            ScoreTrendLineChart(points = trendPoints)
+        }
+    }
+}
+
+@Composable
+fun HabitVolumeProgressionCard(
+    habit: Habit,
+    logs: List<HabitLog>,
+    language: String,
+    onInfoClick: (String, String) -> Unit
+) {
+    var selectedTimeframeIndex by rememberSaveable(habit.id) { mutableIntStateOf(0) }
+
+    val trendPoints = remember(habit, logs, selectedTimeframeIndex) {
+        calculateHabitTrendPoints(habit, logs, selectedTimeframeIndex)
+    }
+
+    val habitColor = remember(habit.color) { HabitIconMapping.getColor(habit.color) }
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = DarkCard),
+        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, DarkBorder, RoundedCornerShape(20.dp))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .background(SuccessGreen.copy(alpha = 0.18f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.BarChart,
+                        contentDescription = "Volume",
+                        tint = SuccessGreen,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = if (language == "de") "ABSCHLUSS-VOLUMEN" else "COMPLETION VOLUME",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = TextSecondary,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                InfoIconButton(
+                    title = if (language == "de") "Abschluss-Volumen" else "Completion Volume",
+                    explanation = if (language == "de") {
+                        "Zeigt die absoluten erfolgreichen Gewohnheitsabschlüsse pro Periode."
+                    } else {
+                        "Shows absolute completed check-ins per selected period."
+                    },
+                    onClick = onInfoClick
+                )
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            TimeframeSelectorPills(
+                selectedTimeframeIndex = selectedTimeframeIndex,
+                onTimeframeSelected = { selectedTimeframeIndex = it },
+                language = language
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            CompletionsBarChart(points = trendPoints, habitColor = habitColor)
+        }
+    }
+}
+
+@Composable
+fun ScoreTrendLineChart(
+    points: List<TrendPoint>,
+    modifier: Modifier = Modifier
+) {
+    if (points.isEmpty()) return
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(180.dp)
+                .padding(vertical = 8.dp)
+        ) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val width = size.width
+                val height = size.height
+                val paddingLeft = 32.dp.toPx()
+                val paddingBottom = 24.dp.toPx()
+                val graphWidth = width - paddingLeft
+                val graphHeight = height - paddingBottom
+
+                val gridStep = graphHeight / 4f
+                for (i in 0..4) {
+                    val y = graphHeight - (i * gridStep)
+                    drawLine(
+                        color = DarkBorder.copy(alpha = 0.5f),
+                        start = Offset(paddingLeft, y),
+                        end = Offset(width, y),
+                        strokeWidth = 1.dp.toPx(),
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+                    )
+                }
+
+                val stepX = if (points.size > 1) graphWidth / (points.size - 1) else graphWidth
+                val pathPoints = points.mapIndexed { idx, pt ->
+                    val x = paddingLeft + (idx * stepX)
+                    val y = graphHeight - (pt.score.coerceIn(0f, 100f) / 100f * graphHeight)
+                    Offset(x, y)
+                }
+
+                if (pathPoints.size > 1) {
+                    val linePath = Path().apply {
+                        moveTo(pathPoints[0].x, pathPoints[0].y)
+                        for (i in 1 until pathPoints.size) {
+                            val prev = pathPoints[i - 1]
+                            val curr = pathPoints[i]
+                            val controlX1 = prev.x + (curr.x - prev.x) / 2f
+                            val controlY1 = prev.y
+                            val controlX2 = prev.x + (curr.x - prev.x) / 2f
+                            val controlY2 = curr.y
+                            cubicTo(controlX1, controlY1, controlX2, controlY2, curr.x, curr.y)
+                        }
+                    }
+
+                    val fillPath = Path().apply {
+                        addPath(linePath)
+                        lineTo(pathPoints.last().x, graphHeight)
+                        lineTo(pathPoints.first().x, graphHeight)
+                        close()
+                    }
+
+                    drawPath(
+                        path = fillPath,
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                PrimaryViolet.copy(alpha = 0.35f),
+                                PrimaryViolet.copy(alpha = 0.02f)
+                            ),
+                            startY = 0f,
+                            endY = graphHeight
+                        )
+                    )
+
+                    drawPath(
+                        path = linePath,
+                        color = PrimaryViolet,
+                        style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round)
+                    )
+                }
+
+                pathPoints.forEachIndexed { _, pt ->
+                    drawCircle(
+                        color = DarkBg,
+                        radius = 5.dp.toPx(),
+                        center = pt
+                    )
+                    drawCircle(
+                        color = PrimaryViolet,
+                        radius = 3.5.dp.toPx(),
+                        center = pt
+                    )
+                }
+            }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .padding(bottom = 24.dp),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                listOf("100%", "75%", "50%", "25%", "0%").forEach { pct ->
+                    Text(
+                        text = pct,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextSecondary.copy(alpha = 0.7f),
+                        fontSize = 9.sp
+                    )
+                }
+            }
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 32.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            points.forEach { pt ->
+                Text(
+                    text = pt.label,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = TextSecondary,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Medium,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun CompletionsBarChart(
+    points: List<TrendPoint>,
+    habitColor: Color,
+    modifier: Modifier = Modifier
+) {
+    if (points.isEmpty()) return
+    val maxCount = remember(points) { (points.maxOfOrNull { it.completions } ?: 1).coerceAtLeast(1) }
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(160.dp)
+                .padding(top = 10.dp, bottom = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.Bottom
+        ) {
+            points.forEach { pt ->
+                val ratio = pt.completions.toFloat() / maxCount.toFloat()
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Bottom
+                ) {
+                    if (pt.completions > 0) {
+                        Text(
+                            text = "${pt.completions}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = TextPrimary,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                    }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(0.55f)
+                            .fillMaxHeight(ratio.coerceAtLeast(0.05f))
+                            .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
+                            .background(
+                                if (pt.completions > 0) habitColor else Color.White.copy(alpha = 0.06f)
+                            )
+                    )
+                }
+            }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            points.forEach { pt ->
+                Text(
+                    text = pt.label,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = TextSecondary,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Medium,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun OverallScoreTrendCard(
+    allHabits: List<Habit>,
+    allLogs: List<HabitLog>,
+    language: String,
+    onInfoClick: (String, String) -> Unit
+) {
+    var selectedTimeframeIndex by rememberSaveable { mutableIntStateOf(0) }
+
+    val trendPoints = remember(allHabits, allLogs, selectedTimeframeIndex) {
+        calculateOverallTrendPoints(allHabits, allLogs, selectedTimeframeIndex)
+    }
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = DarkCard),
+        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, DarkBorder, RoundedCornerShape(20.dp))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .background(PrimaryViolet.copy(alpha = 0.18f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ShowChart,
+                        contentDescription = "Score Trend",
+                        tint = PrimaryViolet,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = if (language == "de") "GESAMT SCORE TREND" else "OVERALL SCORE TREND",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = TextSecondary,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                InfoIconButton(
+                    title = if (language == "de") "Gesamt Score Trend" else "Overall Score Trend",
+                    explanation = if (language == "de") {
+                        "Zeigt die historische Entwicklung deines Gesamt-Konto-Scores (0–100) über alle Gewohnheiten."
+                    } else {
+                        "Shows the historical progression of your overall account strength score (0–100) across all habits."
+                    },
+                    onClick = onInfoClick
+                )
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            TimeframeSelectorPills(
+                selectedTimeframeIndex = selectedTimeframeIndex,
+                onTimeframeSelected = { selectedTimeframeIndex = it },
+                language = language
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            ScoreTrendLineChart(points = trendPoints)
+        }
+    }
+}
+
+@Composable
+fun OverallVolumeProgressionCard(
+    allHabits: List<Habit>,
+    allLogs: List<HabitLog>,
+    language: String,
+    onInfoClick: (String, String) -> Unit
+) {
+    var selectedTimeframeIndex by rememberSaveable { mutableIntStateOf(0) }
+
+    val volumePoints = remember(allHabits, allLogs, selectedTimeframeIndex) {
+        calculateOverallTrendPoints(allHabits, allLogs, selectedTimeframeIndex)
+    }
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = DarkCard),
+        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, DarkBorder, RoundedCornerShape(20.dp))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .background(SuccessGreen.copy(alpha = 0.18f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.BarChart,
+                        contentDescription = "Volume",
+                        tint = SuccessGreen,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = if (language == "de") "GESAMT-VOLUMEN" else "TOTAL VOLUME PROGRESSION",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = TextSecondary,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                InfoIconButton(
+                    title = if (language == "de") "Gesamt-Volumen" else "Total Volume Progression",
+                    explanation = if (language == "de") {
+                        "Zeigt die absolute Anzahl aller erfolgreich absolvierten Check-Ins im ausgewählten Zeitraum."
+                    } else {
+                        "Shows total completed check-ins recorded across all habits per selected period."
+                    },
+                    onClick = onInfoClick
+                )
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            TimeframeSelectorPills(
+                selectedTimeframeIndex = selectedTimeframeIndex,
+                onTimeframeSelected = { selectedTimeframeIndex = it },
+                language = language
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            CompletionsBarChart(
+                points = volumePoints,
+                habitColor = SuccessGreen
+            )
+        }
+    }
+}
+
 @Composable
 fun OverallStatsScreen(
     viewModel: HabitsViewModel,
@@ -4968,6 +6469,42 @@ fun OverallStatsScreen(
     val formattedDate by viewModel.formattedActiveCellDate.collectAsStateWithLifecycle()
 
     var activeExplanation by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var selectedReviewYear by remember { mutableStateOf<Int?>(null) }
+    var selectedReviewMonth by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    val isNYReviewWindow = remember { isNewYearReviewPeriod() }
+
+    val currentYear = remember { Calendar.getInstance().get(Calendar.YEAR) }
+    val availableYears = remember(allLogs, currentYear, isNYReviewWindow) {
+        val logYears = allLogs.mapNotNull {
+            if (it.date.length >= 4) it.date.substring(0, 4).toIntOrNull() else null
+        }
+        logYears.filter { y -> y < currentYear || (y == currentYear && isNYReviewWindow) }
+            .distinct()
+            .sortedDescending()
+    }
+
+    val currentYearMonth = remember {
+        val cal = Calendar.getInstance()
+        val y = cal.get(Calendar.YEAR)
+        val m = cal.get(Calendar.MONTH) + 1 // 1-indexed
+        y to m
+    }
+    val availableMonths = remember(allLogs, currentYearMonth) {
+        val logMonths = allLogs.mapNotNull { log ->
+            if (log.date.length >= 7) {
+                val parts = log.date.split("-")
+                if (parts.size >= 2) {
+                    val y = parts[0].toIntOrNull()
+                    val m = parts[1].toIntOrNull()
+                    if (y != null && m != null) {
+                        y to m
+                    } else null
+                } else null
+            } else null
+        }
+        logMonths.distinct()
+            .sortedWith(compareByDescending<Pair<Int, Int>> { it.first }.thenByDescending { it.second })
+    }
 
     Box(modifier = Modifier.fillMaxSize().background(DarkBg)) {
         LazyColumn(
@@ -4977,7 +6514,99 @@ fun OverallStatsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
             contentPadding = PaddingValues(bottom = 140.dp, top = 84.dp)
         ) {
-                // Overall Strength / Progress centered view
+            // Yearly Review Banner (Shown strictly during New Year period)
+            if (isNYReviewWindow) {
+                item(key = "yearly_review_banner") {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    color = Color.Transparent
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                Brush.horizontalGradient(
+                                    colors = listOf(
+                                        PrimaryViolet,
+                                        Color(0xFF8B5CF6),
+                                        Color(0xFF6D28D9)
+                                    )
+                                ),
+                                shape = RoundedCornerShape(20.dp)
+                            )
+                            .border(1.dp, Color.White.copy(alpha = 0.25f), RoundedCornerShape(20.dp))
+                            .padding(18.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Surface(
+                                        color = Color.White.copy(alpha = 0.2f),
+                                        shape = CircleShape
+                                    ) {
+                                        Text(
+                                            text = "✨ " + (if (language == "de") "RÜCKBLICK $currentYear" else "$currentYear REVIEW"),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = if (language == "de") "Dein Jahresrückblick $currentYear" else "Your $currentYear Story",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = Color.White,
+                                    fontWeight = FontWeight.ExtraBold
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = if (language == "de")
+                                        "Highlights, Statistiken & Star-Gewohnheiten entdecken"
+                                    else
+                                        "Discover your highlights, stats & star habits",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color.White.copy(alpha = 0.85f)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.width(12.dp))
+
+                            Button(
+                                onClick = { selectedReviewYear = currentYear },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color.White,
+                                    contentColor = PrimaryViolet
+                                ),
+                                shape = RoundedCornerShape(12.dp),
+                                elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.PlayArrow,
+                                    contentDescription = "Play",
+                                    tint = PrimaryViolet,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = if (language == "de") "Starten" else "Play",
+                                    fontWeight = FontWeight.Bold,
+                                    color = PrimaryViolet
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            }
+
+            // 1. Overall Account Strength Gauge
             item(key = "overall_strength") {
                 var hasAnimatedStatsStrength by rememberSaveable { mutableStateOf(false) }
                 val animStrength = remember { Animatable(if (hasAnimatedStatsStrength) strength.toFloat() else 0f) }
@@ -5010,79 +6639,265 @@ fun OverallStatsScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 12.dp),
+                        .padding(vertical = 8.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
+                    // Title and info button above the semi-circle gauge
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 6.dp, start = 16.dp, end = 16.dp)
                     ) {
                         Text(
                             text = if (language == "de") "GESAMT-STÄRKE" else "OVERALL STRENGTH",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = TextPrimary,
-                            fontWeight = FontWeight.Bold
+                            style = MaterialTheme.typography.labelSmall,
+                            color = TextSecondary,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp,
+                            modifier = Modifier.align(Alignment.Center)
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        InfoIconButton(
-                            title = if (language == "de") "Gesamt-Stärke Score" else "Overall Strength Score",
-                            explanation = if (language == "de") {
-                                "Gesamt-Stärke aller aktiven Gewohnheiten. Die durchschnittliche gewichtete Stärke aller deiner Gewohnheiten zusammen."
-                            } else {
-                                "Your overall strength score across all active habits. The average weighted strength score of all of your active habits combined."
-                            },
-                            onClick = { t, e -> activeExplanation = t to e }
-                        )
+                        Box(
+                            modifier = Modifier.align(Alignment.CenterEnd)
+                        ) {
+                            InfoIconButton(
+                                title = if (language == "de") "Gesamt-Stärke Score" else "Overall Strength Score",
+                                explanation = if (language == "de") {
+                                    "Gesamt-Stärke aller aktiven Gewohnheiten. Die durchschnittliche gewichtete Stärke aller deiner Gewohnheiten zusammen."
+                                } else {
+                                    "Your overall strength score across all active habits. The average weighted strength score of all of your active habits combined."
+                                },
+                                onClick = { t, e -> activeExplanation = t to e }
+                            )
+                        }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
-
                     Box(
-                        contentAlignment = Alignment.Center,
                         modifier = Modifier
-                            .size(130.dp)
-                            .drawWithCache {
-                                val strokeWidth = 10.dp.toPx()
-                                val stroke = Stroke(width = strokeWidth, cap = StrokeCap.Round)
-                                onDrawBehind {
-                                    drawArc(
-                                        color = ProgressTrack,
-                                        startAngle = -90f,
-                                        sweepAngle = 360f,
-                                        useCenter = false,
-                                        style = stroke
-                                    )
-                                    drawArc(
-                                        color = ringColor,
-                                        startAngle = -90f,
-                                        sweepAngle = sweepAngleVal,
-                                        useCenter = false,
-                                        style = stroke
-                                    )
-                                }
-                            }
+                            .fillMaxWidth()
+                            .height(155.dp)
+                            .padding(top = 4.dp),
+                        contentAlignment = Alignment.BottomCenter
                     ) {
+                        val sweepHalfVal = (animatedStrength / 100f) * 180f
+                        Canvas(
+                            modifier = Modifier
+                                .width(290.dp)
+                                .height(150.dp)
+                        ) {
+                            val strokeWidth = 18.dp.toPx()
+                            val stroke = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                            val topLeft = Offset(strokeWidth / 2, strokeWidth / 2)
+                            val arcSize = Size(size.width - strokeWidth, (size.height * 2) - strokeWidth)
+
+                            drawArc(
+                                color = ProgressTrack,
+                                startAngle = 180f,
+                                sweepAngle = 180f,
+                                useCenter = false,
+                                topLeft = topLeft,
+                                size = arcSize,
+                                style = stroke
+                            )
+
+                            if (sweepHalfVal > 0f) {
+                                drawArc(
+                                    color = ringColor,
+                                    startAngle = 180f,
+                                    sweepAngle = sweepHalfVal,
+                                    useCenter = false,
+                                    topLeft = topLeft,
+                                    size = arcSize,
+                                    style = stroke
+                                )
+                            }
+                        }
+
                         Column(
-                            horizontalAlignment = Alignment.CenterHorizontally
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.padding(bottom = 8.dp)
                         ) {
                             Text(
                                 text = "${animatedStrength.toInt()}",
                                 style = MaterialTheme.typography.headlineLarge,
-                                color = TextPrimary,
-                                fontWeight = FontWeight.ExtraBold
+                                fontSize = 32.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = TextPrimary
                             )
-                            Text(
-                                text = "Score / 100",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = TextSecondary,
-                                fontWeight = FontWeight.Bold
-                            )
+                            val strLabel = getStrengthLabel(strength, language)
+                            if (strLabel.isNotBlank()) {
+                                Text(
+                                    text = strLabel,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = ringColor
+                                )
+                            }
                         }
                     }
                 }
             }
 
-            // Activity Heatmap Card (GitHub-style, with Month/Year Switcher!)
+            // 2. Account Streaks (Current Streak & Best Streak)
+            item(key = "overall_account_streaks_grid") {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    // Row 1: Current Streak & Best Streak
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(IntrinsicSize.Max),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        // Current Streak Card
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = DarkCard),
+                            shape = RoundedCornerShape(20.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .border(
+                                    1.dp,
+                                    if (perfectDaysStats.currentStreak > 0) HabitRed.copy(alpha = 0.5f) else DarkBorder,
+                                    RoundedCornerShape(20.dp)
+                                )
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp)
+                            ) {
+                                Box(modifier = Modifier.align(Alignment.TopEnd)) {
+                                    InfoIconButton(
+                                        title = if (language == "de") "Aktuelle Serie (Perfekte Tage)" else "Current streak (Perfect Days)",
+                                        explanation = if (language == "de") {
+                                            "Deine derzeitige Serie an aufeinanderfolgenden Tagen, an denen du ALLE aktiven Gewohnheiten vollständig abgeschlossen hast."
+                                        } else {
+                                            "Your current streak of consecutive days where you fully completed ALL active habits."
+                                        },
+                                        onClick = { t, e -> activeExplanation = t to e }
+                                    )
+                                }
+
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 10.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(44.dp)
+                                            .background(HabitRed.copy(alpha = 0.15f), CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Whatshot,
+                                            contentDescription = "Current streak",
+                                            tint = HabitRed,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
+
+                                    Text(
+                                        text = if (language == "de") "Perfekte Tage (Serie)" else "Perfect Days (Streak)",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = TextSecondary,
+                                        fontWeight = FontWeight.Bold,
+                                        textAlign = TextAlign.Center,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+
+                                    Text(
+                                        text = if (language == "de") "${perfectDaysStats.currentStreak} ${if (perfectDaysStats.currentStreak == 1) "Tag" else "Tage"}" else "${perfectDaysStats.currentStreak} ${if (perfectDaysStats.currentStreak == 1) "Day" else "Days"}",
+                                        style = MaterialTheme.typography.headlineMedium,
+                                        fontSize = 20.sp,
+                                        color = TextPrimary,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                            }
+                        }
+
+                        // Best Streak Card
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = DarkCard),
+                            shape = RoundedCornerShape(20.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .border(
+                                    1.dp,
+                                    if (perfectDaysStats.perfectDaysStreak > 0) Color(0xFFFFD700).copy(alpha = 0.5f) else DarkBorder,
+                                    RoundedCornerShape(20.dp)
+                                )
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp)
+                            ) {
+                                Box(modifier = Modifier.align(Alignment.TopEnd)) {
+                                    InfoIconButton(
+                                        title = if (language == "de") "Beste Serie (Perfekte Tage)" else "Best Streak (Perfect Days)",
+                                        explanation = if (language == "de") {
+                                            "Deine historische Bestleistung an aufeinanderfolgenden perfekten Tagen (alle Gewohnheiten abgeschlossen)."
+                                        } else {
+                                            "Your highest historical record of consecutive perfect days (all active habits completed)."
+                                        },
+                                        onClick = { t, e -> activeExplanation = t to e }
+                                    )
+                                }
+
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 10.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(44.dp)
+                                            .background(Color(0xFFFFD700).copy(alpha = 0.15f), CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.EmojiEvents,
+                                            contentDescription = "Best streak",
+                                            tint = Color(0xFFFFD700),
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
+
+                                    Text(
+                                        text = if (language == "de") "Beste Serie (Perfekt)" else "Best Streak (Perfect)",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = TextSecondary,
+                                        fontWeight = FontWeight.Bold,
+                                        textAlign = TextAlign.Center,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+
+                                    Text(
+                                        text = if (language == "de") "${perfectDaysStats.perfectDaysStreak} ${if (perfectDaysStats.perfectDaysStreak == 1) "Tag" else "Tage"}" else "${perfectDaysStats.perfectDaysStreak} ${if (perfectDaysStats.perfectDaysStreak == 1) "Day" else "Days"}",
+                                        style = MaterialTheme.typography.headlineMedium,
+                                        fontSize = 20.sp,
+                                        color = TextPrimary,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 3. Activity Heatmap Card (GitHub-style, with date check-in navigation!)
             item(key = "overall_calendar") {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = DarkCard),
@@ -5105,12 +6920,19 @@ fun OverallStatsScreen(
                             horizontalArrangement = Arrangement.Start
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.DateRange,
-                                    contentDescription = "Calendar",
-                                    tint = PrimaryViolet,
-                                    modifier = Modifier.size(20.dp)
-                                )
+                                Box(
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .background(Color(0xFF06B6D4).copy(alpha = 0.18f), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.DateRange,
+                                        contentDescription = "Calendar",
+                                        tint = Color(0xFF06B6D4),
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = if (language == "de") "AKTIVITÄTS-HEATMAP" else "ACTIVITY HEATMAP",
@@ -5388,17 +7210,30 @@ fun OverallStatsScreen(
                 }
             }
 
-            // 1. Overall stats - Top & bottom habits "Läuft super" & "Braucht Fokus"
+            // 3. Focus Highlights (Row with 2 Cards: "Läuft super" & "Braucht Fokus")
             item(key = "overall_focus_habits") {
-                val topHabits = remember(habitsWithStats) {
-                    habitsWithStats.sortedByDescending { it.strength }.take(2)
-                }
                 val bottomHabits = remember(habitsWithStats) {
-                    habitsWithStats.sortedBy { it.strength }.take(2)
+                    val lowStrength = habitsWithStats.filter { it.strength < 60 }.sortedBy { it.strength }
+                    if (lowStrength.isNotEmpty()) {
+                        lowStrength.take(2)
+                    } else if (habitsWithStats.size > 2) {
+                        habitsWithStats.filter { it.strength < 100 }.sortedBy { it.strength }.take(2)
+                    } else {
+                        emptyList()
+                    }
+                }
+                val topHabits = remember(habitsWithStats, bottomHabits) {
+                    val bottomIds = bottomHabits.map { it.habit.id }.toSet()
+                    habitsWithStats
+                        .filter { it.habit.id !in bottomIds }
+                        .sortedByDescending { it.strength }
+                        .take(2)
                 }
 
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(IntrinsicSize.Max),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     // "Läuft super" card
@@ -5407,6 +7242,7 @@ fun OverallStatsScreen(
                         shape = RoundedCornerShape(16.dp),
                         modifier = Modifier
                             .weight(1f)
+                            .fillMaxHeight()
                             .border(1.dp, SuccessGreen.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
                     ) {
                         Column(modifier = Modifier.padding(14.dp)) {
@@ -5416,16 +7252,24 @@ fun OverallStatsScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                                    Icon(
-                                        imageVector = Icons.Default.TrendingUp,
-                                        contentDescription = "Great performance",
-                                        tint = SuccessGreen,
-                                        modifier = Modifier.size(16.dp)
-                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .size(28.dp)
+                                            .background(SuccessGreen.copy(alpha = 0.18f), CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.TrendingUp,
+                                            contentDescription = "Great performance",
+                                            tint = SuccessGreen,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
                                         text = if (language == "de") "Läuft super" else "Doing great",
                                         style = MaterialTheme.typography.labelSmall,
+                                        fontSize = 11.sp,
                                         color = TextSecondary,
                                         fontWeight = FontWeight.Bold,
                                         maxLines = 1,
@@ -5442,7 +7286,7 @@ fun OverallStatsScreen(
                                     onClick = { t, e -> activeExplanation = t to e }
                                 )
                             }
-                            Spacer(modifier = Modifier.height(10.dp))
+                            Spacer(modifier = Modifier.height(12.dp))
                             if (topHabits.isEmpty()) {
                                 Text(
                                     text = if (language == "de") "Keine Daten" else "No data",
@@ -5450,7 +7294,7 @@ fun OverallStatsScreen(
                                     color = TextSecondary
                                 )
                             } else {
-                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                                     topHabits.forEach { stat ->
                                         val habitColor = remember(stat.habit.color) { HabitIconMapping.getColor(stat.habit.color) }
                                         Row(
@@ -5501,6 +7345,7 @@ fun OverallStatsScreen(
                         shape = RoundedCornerShape(16.dp),
                         modifier = Modifier
                             .weight(1f)
+                            .fillMaxHeight()
                             .border(1.dp, ErrorRed.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
                     ) {
                         Column(modifier = Modifier.padding(14.dp)) {
@@ -5510,16 +7355,24 @@ fun OverallStatsScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                                    Icon(
-                                        imageVector = Icons.Default.TrendingDown,
-                                        contentDescription = "Needs focus",
-                                        tint = ErrorRed,
-                                        modifier = Modifier.size(16.dp)
-                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .size(28.dp)
+                                            .background(ErrorRed.copy(alpha = 0.18f), CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.TrendingDown,
+                                            contentDescription = "Needs focus",
+                                            tint = ErrorRed,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
                                         text = if (language == "de") "Braucht Fokus" else "Needs focus",
                                         style = MaterialTheme.typography.labelSmall,
+                                        fontSize = 11.sp,
                                         color = TextSecondary,
                                         fontWeight = FontWeight.Bold,
                                         maxLines = 1,
@@ -5529,22 +7382,22 @@ fun OverallStatsScreen(
                                 InfoIconButton(
                                     title = if (language == "de") "Braucht Fokus" else "Needs focus",
                                     explanation = if (language == "de") {
-                                        "Deine 2 Gewohnheiten mit der niedrigsten historischen Erfolgsquote (Stärke)."
+                                        "Deine Gewohnheiten unter 100%, die noch Aufmerksamkeit benötigen."
                                     } else {
-                                        "Your 2 habits with the lowest historical completion strength."
+                                        "Your habits below 100% completion that need attention."
                                     },
                                     onClick = { t, e -> activeExplanation = t to e }
                                 )
                             }
-                            Spacer(modifier = Modifier.height(10.dp))
+                            Spacer(modifier = Modifier.height(12.dp))
                             if (bottomHabits.isEmpty()) {
                                 Text(
-                                    text = if (language == "de") "Keine Daten" else "No data",
+                                    text = if (language == "de") "Alles im grünen Bereich! 🎉" else "All on track! 🎉",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = TextSecondary
                                 )
                             } else {
-                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                                     bottomHabits.forEach { stat ->
                                         val habitColor = remember(stat.habit.color) { HabitIconMapping.getColor(stat.habit.color) }
                                         Row(
@@ -5591,231 +7444,273 @@ fun OverallStatsScreen(
                 }
             }
 
-            // 4 fully spelled-out Metric Cards inside overall screen in a beautifully balanced 2x2 grid
-            item(key = "overall_metrics") {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // Row 1
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+            // 4. Overall Success Rate Card (Donut Chart + Timeframe Switcher Tabs)
+            item(key = "overall_success_rate") {
+                var selectedTimeframeIndex by rememberSaveable { mutableIntStateOf(0) }
+                val overallStats = remember(allHabits, allLogs, selectedTimeframeIndex) {
+                    calculateOverallSuccessStats(allHabits, allLogs, selectedTimeframeIndex)
+                }
+
+                SuccessRateCard(
+                    title = if (language == "de") "Gesamt-Erfolgsquote" else "Overall Success Rate",
+                    doneCount = overallStats.doneCount,
+                    missedCount = overallStats.missedCount,
+                    skippedCount = overallStats.skippedCount,
+                    pendingCount = overallStats.pendingCount,
+                    language = language,
+                    infoTitle = if (language == "de") "Gesamt-Erfolgsquote" else "Overall Success Rate",
+                    infoExplanation = if (language == "de") {
+                        "Gesamte Aufschlüsselung aller absolvierten Gewohnheitstage nach Status: Erreicht, Gescheitert, Skipped und Ausstehend."
+                    } else {
+                        "Overall breakdown of all scheduled habit days by status: Done, Missed, Skipped, and Pending."
+                    },
+                    onInfoClick = { t, e -> activeExplanation = t to e },
+                    showTimeframeSelector = true,
+                    selectedTimeframeIndex = selectedTimeframeIndex,
+                    onTimeframeSelected = { selectedTimeframeIndex = it }
+                )
+            }
+
+            // 6. Overall Score Trend Card (Line Chart)
+            item(key = "overall_score_trend") {
+                OverallScoreTrendCard(
+                    allHabits = allHabits,
+                    allLogs = allLogs,
+                    language = language,
+                    onInfoClick = { t, e -> activeExplanation = t to e }
+                )
+            }
+
+            // 7. Overall Volume Progression Card (Bar Chart)
+            item(key = "overall_volume_progression") {
+                OverallVolumeProgressionCard(
+                    allHabits = allHabits,
+                    allLogs = allLogs,
+                    language = language,
+                    onInfoClick = { t, e -> activeExplanation = t to e }
+                )
+            }
+
+            // Archive of Monthly Reviews (shown only if past completed review months exist)
+            if (availableMonths.isNotEmpty()) {
+                item(key = "monthly_reviews_archive") {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 12.dp)
                     ) {
-                        // Perfect Days Card
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = DarkCard),
-                            shape = RoundedCornerShape(16.dp),
-                            modifier = Modifier
-                                .weight(1f)
-                                .border(1.dp, DarkBorder, RoundedCornerShape(16.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            Column(modifier = Modifier.padding(14.dp)) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                                        Icon(
-                                            imageVector = Icons.Default.DateRange,
-                                            contentDescription = "Perfect Days",
-                                            tint = PrimaryViolet,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text(
-                                            text = if (language == "de") "Perfekte Tage" else "Perfect Days",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = TextSecondary,
-                                            fontWeight = FontWeight.Bold,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
-                                    InfoIconButton(
-                                        title = if (language == "de") "Perfekte Tage insgesamt" else "Total Perfect Days",
-                                        explanation = if (language == "de") {
-                                            "Die Gesamtzahl der Tage, an denen du 100% deiner aktiven Gewohnheiten erfolgreich abgeschlossen hast."
-                                        } else {
-                                            "The total number of days in your history where you completed 100% of your active habits."
-                                        },
-                                        onClick = { t, e -> activeExplanation = t to e }
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(
-                                    text = perfectDaysStats.totalPerfectDays.toString(),
-                                    style = MaterialTheme.typography.titleLarge,
-                                    color = TextPrimary,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
+                            Icon(
+                                imageVector = Icons.Default.CalendarToday,
+                                contentDescription = "Archive",
+                                tint = SuccessGreen,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (language == "de") "MONATSRÜCKBLICKE ARCHIV" else "MONTHLY REVIEWS ARCHIVE",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = TextPrimary,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
 
-                        // Total Completed Logs Card
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = DarkCard),
-                            shape = RoundedCornerShape(16.dp),
-                            modifier = Modifier
-                                .weight(1f)
-                                .border(1.dp, DarkBorder, RoundedCornerShape(16.dp))
-                        ) {
-                            Column(modifier = Modifier.padding(14.dp)) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                                        Icon(
-                                            imageVector = Icons.Default.CheckCircle,
-                                            contentDescription = "Logs",
-                                            tint = PrimaryViolet,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text(
-                                            text = if (language == "de") "Einträge" else "Logs/Entries",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = TextSecondary,
-                                            fontWeight = FontWeight.Bold,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
-                                    InfoIconButton(
-                                        title = if (language == "de") "Erledigte Gewohnheiten" else "Total Logs/Completed",
-                                        explanation = if (language == "de") {
-                                            "Die Gesamtzahl aller Erledigungen und Einträge über alle Gewohnheiten hinweg."
-                                        } else {
-                                            "The total number of completions and logs across all of your habits combined."
-                                        },
-                                        onClick = { t, e -> activeExplanation = t to e }
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(
-                                    text = profileStats.totalGlobalCompletions.toString(),
-                                    style = MaterialTheme.typography.titleLarge,
-                                    color = TextPrimary,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-                    }
+                        Spacer(modifier = Modifier.height(4.dp))
 
-                    // Row 2
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        // Perfect Days Streak Card
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = DarkCard),
-                            shape = RoundedCornerShape(16.dp),
-                            modifier = Modifier
-                                .weight(1f)
-                                .border(1.dp, DarkBorder, RoundedCornerShape(16.dp))
-                        ) {
-                            Column(modifier = Modifier.padding(14.dp)) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                                        Icon(
-                                            imageVector = Icons.Default.LocalFireDepartment,
-                                            contentDescription = "Streak",
-                                            tint = PrimaryViolet,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text(
-                                            text = if (language == "de") "Beste Serie" else "Best Streak",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = TextSecondary,
-                                            fontWeight = FontWeight.Bold,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
-                                    InfoIconButton(
-                                        title = if (language == "de") "Längste Perfect Streak" else "Longest Perfect Streak",
-                                        explanation = if (language == "de") {
-                                            "Die längste aufeinanderfolgende Serie an Tagen, an denen du 100% deiner aktiven Gewohnheiten erledigt hast."
-                                        } else {
-                                            "The longest consecutive streak of days where you completed 100% of your active habits."
-                                        },
-                                        onClick = { t, e -> activeExplanation = t to e }
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(
-                                    text = perfectDaysStats.perfectDaysStreak.toString() + if (language == "de") " Tage" else " Days",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = TextPrimary,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
+                        Text(
+                            text = if (language == "de")
+                                "Rufe deine früheren Monatsrückblicke ab, um deine monatliche Beständigkeit zu überprüfen."
+                            else
+                                "Retrieve your past monthly reviews to analyze your monthly consistency.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary
+                        )
 
-                        // Total Completion Rate Card
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = DarkCard),
-                            shape = RoundedCornerShape(16.dp),
-                            modifier = Modifier
-                                .weight(1f)
-                                .border(1.dp, DarkBorder, RoundedCornerShape(16.dp))
-                        ) {
-                            Column(modifier = Modifier.padding(14.dp)) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            for ((y, m) in availableMonths) {
+                                val monthLogsCount = remember(y, m, allLogs) {
+                                    val prefix = String.format(java.util.Locale.US, "%04d-%02d-", y, m)
+                                    allLogs.count { it.date.startsWith(prefix) && it.value > 0f }
+                                }
+                                val mName = when (m) {
+                                    1 -> if (language == "de") "Januar" else "January"
+                                    2 -> if (language == "de") "Februar" else "February"
+                                    3 -> if (language == "de") "März" else "March"
+                                    4 -> if (language == "de") "April" else "April"
+                                    5 -> if (language == "de") "Mai" else "May"
+                                    6 -> if (language == "de") "Juni" else "June"
+                                    7 -> if (language == "de") "Juli" else "July"
+                                    8 -> if (language == "de") "August" else "August"
+                                    9 -> if (language == "de") "September" else "September"
+                                    10 -> if (language == "de") "Oktober" else "October"
+                                    11 -> if (language == "de") "November" else "November"
+                                    else -> if (language == "de") "Dezember" else "December"
+                                }
+                                Surface(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .clickable { selectedReviewMonth = y to m },
+                                    color = DarkCard,
+                                    border = BorderStroke(1.dp, DarkBorder),
+                                    shape = RoundedCornerShape(16.dp)
                                 ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(40.dp)
+                                                    .background(SuccessGreen.copy(alpha = 0.15f), CircleShape),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(
+                                                    text = "📊",
+                                                    style = MaterialTheme.typography.titleMedium
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.width(12.dp))
+                                            Column {
+                                                Text(
+                                                    text = if (language == "de") "Rückblick $mName $y" else "Review $mName $y",
+                                                    style = MaterialTheme.typography.titleMedium,
+                                                    color = TextPrimary,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                                Text(
+                                                    text = "$monthLogsCount " + (if (language == "de") "Abschlüsse in diesem Monat" else "completions this month"),
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = TextSecondary
+                                                )
+                                            }
+                                        }
+
                                         Icon(
-                                            imageVector = Icons.Default.PieChart,
-                                            contentDescription = "Completion Rate",
-                                            tint = PrimaryViolet,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text(
-                                            text = if (language == "de") "Erfolgsquote" else "Success Rate",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = TextSecondary,
-                                            fontWeight = FontWeight.Bold,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
+                                            imageVector = Icons.Default.PlayCircle,
+                                            contentDescription = "Play",
+                                            tint = SuccessGreen,
+                                            modifier = Modifier.size(28.dp)
                                         )
                                     }
-                                    InfoIconButton(
-                                        title = if (language == "de") "Gesamt-Erfolgsquote" else "Overall Completion Rate",
-                                        explanation = if (language == "de") {
-                                            "Die prozentuale Erfolgsquote über all deine Gewohnheiten seit dem Start."
-                                        } else {
-                                            "The overall percentage of habits completed out of all possible habit occurrences since you started."
-                                        },
-                                        onClick = { t, e -> activeExplanation = t to e }
-                                    )
                                 }
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(
-                                    text = "${perfectDaysStats.totalCompletionRate}%",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = TextPrimary,
-                                    fontWeight = FontWeight.Bold
-                                )
                             }
                         }
                     }
                 }
             }
 
+            // Archive of Yearly Reviews (shown only if past completed review years exist)
+            if (availableYears.isNotEmpty()) {
+                item(key = "yearly_reviews_archive") {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 12.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.AutoAwesome,
+                                contentDescription = "Archive",
+                                tint = PrimaryViolet,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (language == "de") "JAHRESRÜCKBLICKE ARCHIV" else "YEARLY REVIEWS ARCHIVE",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = TextPrimary,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
 
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        Text(
+                            text = if (language == "de")
+                                "Greife jederzeit auf deine Jahresrückblicke zu und verfolge deinen Fortschritt über die Jahre."
+                            else
+                                "Access your past yearly reviews anytime and track your growth over the years.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            for (y in availableYears) {
+                                val yearLogsCount = remember(y, allLogs) {
+                                    allLogs.count { it.date.startsWith("$y-") && it.value > 0f }
+                                }
+                                Surface(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .clickable { selectedReviewYear = y },
+                                    color = DarkCard,
+                                    border = BorderStroke(1.dp, DarkBorder),
+                                    shape = RoundedCornerShape(16.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(40.dp)
+                                                    .background(PrimaryViolet.copy(alpha = 0.15f), CircleShape),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(
+                                                    text = "🎆",
+                                                    style = MaterialTheme.typography.titleMedium
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.width(12.dp))
+                                            Column {
+                                                Text(
+                                                    text = if (language == "de") "Jahresrückblick $y" else "$y Year in Review",
+                                                    style = MaterialTheme.typography.titleMedium,
+                                                    color = TextPrimary,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                                Text(
+                                                    text = "$yearLogsCount " + (if (language == "de") "Abschlüsse im Jahr $y" else "completions in $y"),
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = TextSecondary
+                                                )
+                                            }
+                                        }
+
+                                        Icon(
+                                            imageVector = Icons.Default.PlayCircle,
+                                            contentDescription = "Play",
+                                            tint = PrimaryViolet,
+                                            modifier = Modifier.size(28.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         if (activeExplanation != null) {
@@ -5823,6 +7718,27 @@ fun OverallStatsScreen(
                 title = activeExplanation!!.first,
                 explanation = activeExplanation!!.second,
                 onDismiss = { activeExplanation = null }
+            )
+        }
+
+        if (selectedReviewYear != null) {
+            YearlyReviewDialog(
+                year = selectedReviewYear!!,
+                allHabits = allHabits,
+                allLogs = allLogs,
+                language = language,
+                onDismiss = { selectedReviewYear = null }
+            )
+        }
+
+        if (selectedReviewMonth != null) {
+            MonthlyReviewDialog(
+                year = selectedReviewMonth!!.first,
+                month = selectedReviewMonth!!.second,
+                allHabits = allHabits,
+                allLogs = allLogs,
+                language = language,
+                onDismiss = { selectedReviewMonth = null }
             )
         }
 
@@ -5866,6 +7782,441 @@ fun OverallStatsScreen(
     }
 }
 
+data class SuccessRateStats(
+    val doneCount: Int = 0,
+    val missedCount: Int = 0,
+    val skippedCount: Int = 0,
+    val pendingCount: Int = 0,
+    val totalCount: Int = 0
+)
+
+fun calculateHabitSuccessStatsForPeriod(
+    habit: Habit,
+    logs: List<HabitLog>,
+    periodIndex: Int // 0 = Week, 1 = Month, 2 = Year, 3 = Total
+): SuccessRateStats {
+    val today = java.time.LocalDate.now()
+    val todayStr = today.toString()
+
+    val validStartMillis = if (habit.startDate > 946684800000L) habit.startDate else habit.createdAt
+    val habitStartDate = java.time.Instant.ofEpochMilli(validStartMillis).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+    val startSdfStr = habitStartDate.toString()
+
+    val startDate = when (periodIndex) {
+        1 -> { // Week (Monday of current week)
+            val mon = today.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY))
+            if (mon.isBefore(habitStartDate)) habitStartDate else mon
+        }
+        2 -> { // Month (1st of current month)
+            val m1 = today.withDayOfMonth(1)
+            if (m1.isBefore(habitStartDate)) habitStartDate else m1
+        }
+        3 -> { // Year (Jan 1st of current year)
+            val y1 = today.withDayOfYear(1)
+            if (y1.isBefore(habitStartDate)) habitStartDate else y1
+        }
+        else -> habitStartDate // 0 = Total
+    }
+
+    if (startDate.isAfter(today)) {
+        return SuccessRateStats()
+    }
+
+    val habitLogs = logs.filter { it.habitId == habit.id }
+    val logsByDate = habitLogs.associateBy { it.date }
+
+    var done = 0
+    var missed = 0
+    var skipped = 0
+    var pending = 0
+
+    var current = startDate
+    while (!current.isAfter(today)) {
+        val dateStr = current.toString()
+        if (isHabitActiveOnDate(habit, dateStr)) {
+            val log = logsByDate[dateStr]
+            val status = getLogStatus(habit, log, dateStr, startSdfStr, todayStr)
+            when (status) {
+                "SUCCESS" -> done++
+                "FAILED" -> missed++
+                "PAUSED" -> skipped++
+                "PENDING" -> pending++
+            }
+        }
+        current = current.plusDays(1)
+    }
+
+    val total = done + missed + skipped + pending
+    return SuccessRateStats(done, missed, skipped, pending, total)
+}
+
+fun calculateOverallSuccessStats(
+    allHabits: List<Habit>,
+    allLogs: List<HabitLog>,
+    periodIndex: Int = 0 // 0 = Total, 1 = Week, 2 = Month, 3 = Year
+): SuccessRateStats {
+    val today = java.time.LocalDate.now()
+    val todayStr = today.toString()
+    val activeHabits = allHabits.filter { !it.isArchived }
+
+    if (activeHabits.isEmpty()) return SuccessRateStats()
+
+    val logsMap = allLogs.groupBy { it.habitId to it.date }
+
+    var done = 0
+    var missed = 0
+    var skipped = 0
+    var pending = 0
+
+    activeHabits.forEach { habit ->
+        val validStartMillis = if (habit.startDate > 946684800000L) habit.startDate else habit.createdAt
+        val habitStartDate = java.time.Instant.ofEpochMilli(validStartMillis).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+        val startSdfStr = habitStartDate.toString()
+
+        val startDate = when (periodIndex) {
+            1 -> { // Week (Monday of current week)
+                val mon = today.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY))
+                if (mon.isBefore(habitStartDate)) habitStartDate else mon
+            }
+            2 -> { // Month (1st of current month)
+                val m1 = today.withDayOfMonth(1)
+                if (m1.isBefore(habitStartDate)) habitStartDate else m1
+            }
+            3 -> { // Year (Jan 1st of current year)
+                val y1 = today.withDayOfYear(1)
+                if (y1.isBefore(habitStartDate)) habitStartDate else y1
+            }
+            else -> habitStartDate // 0 = Total
+        }
+
+        if (!startDate.isAfter(today)) {
+            var current = startDate
+            while (!current.isAfter(today)) {
+                val dateStr = current.toString()
+                if (isHabitActiveOnDate(habit, dateStr)) {
+                    val log = logsMap[habit.id to dateStr]?.firstOrNull()
+                    val status = getLogStatus(habit, log, dateStr, startSdfStr, todayStr)
+                    when (status) {
+                        "SUCCESS" -> done++
+                        "FAILED" -> missed++
+                        "PAUSED" -> skipped++
+                        "PENDING" -> pending++
+                    }
+                }
+                current = current.plusDays(1)
+            }
+        }
+    }
+
+    val total = done + missed + skipped + pending
+    return SuccessRateStats(done, missed, skipped, pending, total)
+}
+
+@Composable
+fun SuccessRateCard(
+    title: String,
+    doneCount: Int,
+    missedCount: Int,
+    skippedCount: Int,
+    pendingCount: Int,
+    language: String,
+    infoTitle: String,
+    infoExplanation: String,
+    onInfoClick: (String, String) -> Unit,
+    showTimeframeSelector: Boolean = false,
+    selectedTimeframeIndex: Int = 0,
+    onTimeframeSelected: (Int) -> Unit = {}
+) {
+    val totalCount = doneCount + missedCount + skippedCount + pendingCount
+    val donePct = if (totalCount > 0) ((doneCount.toFloat() / totalCount.toFloat()) * 100f).roundToInt() else 0
+    val missedPct = if (totalCount > 0) ((missedCount.toFloat() / totalCount.toFloat()) * 100f).roundToInt() else 0
+    val skippedPct = if (totalCount > 0) ((skippedCount.toFloat() / totalCount.toFloat()) * 100f).roundToInt() else 0
+    val pendingPct = if (totalCount > 0) ((pendingCount.toFloat() / totalCount.toFloat()) * 100f).roundToInt() else 0
+
+    val animProgress = remember { Animatable(0f) }
+    LaunchedEffect(doneCount, missedCount, skippedCount, pendingCount, selectedTimeframeIndex) {
+        animProgress.snapTo(0f)
+        animProgress.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(durationMillis = 700, easing = FastOutSlowInEasing)
+        )
+    }
+    val animatedFactor = animProgress.value
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = DarkCard),
+        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, DarkBorder, RoundedCornerShape(20.dp))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Header Row
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .background(SuccessGreen.copy(alpha = 0.18f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = "Success Rate",
+                            tint = SuccessGreen,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = title.uppercase(Locale.getDefault()),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextSecondary,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    InfoIconButton(
+                        title = infoTitle,
+                        explanation = infoExplanation,
+                        onClick = onInfoClick
+                    )
+                }
+            }
+
+            // Timeframe Selector Row (if enabled)
+            if (showTimeframeSelector) {
+                Spacer(modifier = Modifier.height(14.dp))
+                TimeframeSelectorPills(
+                    selectedTimeframeIndex = selectedTimeframeIndex,
+                    onTimeframeSelected = onTimeframeSelected,
+                    language = language
+                )
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            // Ring Canvas + Center Content
+            Box(
+                modifier = Modifier.size(180.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                val ringTrackColor = ProgressTrack
+                val doneColor = SuccessGreen
+                val missedColor = HabitRed
+                val skippedColor = Color(0xFFF97316)
+                val pendingColor = Color(0xFFFACC15)
+
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val strokeWidth = 16.dp.toPx()
+                    val stroke = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                    val topLeft = Offset(strokeWidth / 2, strokeWidth / 2)
+                    val arcSize = Size(size.width - strokeWidth, size.height - strokeWidth)
+
+                    if (totalCount == 0) {
+                        drawArc(
+                            color = ringTrackColor,
+                            startAngle = -90f,
+                            sweepAngle = 360f,
+                            useCenter = false,
+                            topLeft = topLeft,
+                            size = arcSize,
+                            style = stroke
+                        )
+                    } else {
+                        val activeValues = listOf(
+                            doneCount to doneColor,
+                            missedCount to missedColor,
+                            skippedCount to skippedColor,
+                            pendingCount to pendingColor
+                        ).filter { it.first > 0 }
+
+                        val activeCount = activeValues.size
+                        val gapAngle = if (activeCount > 1) 6f else 0f
+                        val totalGapAngle = activeCount * gapAngle
+                        val availableAngle = (360f - totalGapAngle) * animatedFactor
+
+                        var currentStartAngle = -90f
+
+                        activeValues.forEach { (count, color) ->
+                            val sweep = (count.toFloat() / totalCount.toFloat()) * availableAngle
+                            if (sweep > 0f) {
+                                drawArc(
+                                    color = color,
+                                    startAngle = currentStartAngle,
+                                    sweepAngle = sweep,
+                                    useCenter = false,
+                                    topLeft = topLeft,
+                                    size = arcSize,
+                                    style = stroke
+                                )
+                                currentStartAngle += sweep + gapAngle
+                            }
+                        }
+                    }
+                }
+
+                // Center Information
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .background(SuccessGreen.copy(alpha = 0.18f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = "Success",
+                            tint = SuccessGreen,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "$donePct%",
+                        style = MaterialTheme.typography.headlineLarge,
+                        fontSize = 26.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = if (language == "de") "$doneCount von $totalCount" else "$doneCount of $totalCount",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextSecondary
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // 4 Summary Metrics Cards at the bottom
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                // 1. Done
+                MetricPillBox(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Default.CheckCircle,
+                    iconTint = SuccessGreen,
+                    bgColor = SuccessGreen.copy(alpha = 0.12f),
+                    value = "$donePct%",
+                    count = doneCount,
+                    label = if (language == "de") "Erreicht" else "Done"
+                )
+
+                // 2. Missed
+                MetricPillBox(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Default.Close,
+                    iconTint = HabitRed,
+                    bgColor = HabitRed.copy(alpha = 0.12f),
+                    value = "$missedPct%",
+                    count = missedCount,
+                    label = if (language == "de") "Gescheitert" else "Missed"
+                )
+
+                // 3. Skipped
+                MetricPillBox(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Default.FastForward,
+                    iconTint = Color(0xFFF97316),
+                    bgColor = Color(0xFFF97316).copy(alpha = 0.12f),
+                    value = "$skippedPct%",
+                    count = skippedCount,
+                    label = if (language == "de") "Skipped" else "Skipped"
+                )
+
+                // 4. Pending
+                MetricPillBox(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Default.Schedule,
+                    iconTint = Color(0xFFFACC15),
+                    bgColor = Color(0xFFFACC15).copy(alpha = 0.12f),
+                    value = "$pendingPct%",
+                    count = pendingCount,
+                    label = if (language == "de") "Ausstehend" else "Pending"
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun MetricPillBox(
+    modifier: Modifier = Modifier,
+    icon: ImageVector,
+    iconTint: Color,
+    bgColor: Color,
+    value: String,
+    count: Int,
+    label: String
+) {
+    Surface(
+        modifier = modifier,
+        color = Color.White.copy(alpha = 0.03f),
+        shape = RoundedCornerShape(14.dp),
+        border = BorderStroke(1.dp, DarkBorder.copy(alpha = 0.5f))
+    ) {
+        Column(
+            modifier = Modifier.padding(vertical = 12.dp, horizontal = 2.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(24.dp)
+                    .background(bgColor, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = label,
+                    tint = iconTint,
+                    modifier = Modifier.size(13.dp)
+                )
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = "$count",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.ExtraBold,
+                color = TextPrimary,
+                fontSize = 16.sp
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = iconTint,
+                fontSize = 11.sp
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = TextSecondary,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1
+            )
+        }
+    }
+}
+
 @Composable
 fun AchievementCounterCol(label: String, count: Int) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -5890,25 +8241,27 @@ fun CalendarDayCell(
     dayNum: String,
     status: String,
     habitColor: Color,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onCellClick: (() -> Unit)? = null
 ) {
     val bgColor = when (status) {
         "SUCCESS" -> SuccessGreen
         "FAILED" -> ErrorRed
-        "PENDING" -> HabitYellow
-        "PAUSED" -> HabitOrange
-        else -> PrimaryViolet.copy(alpha = 0.15f) // Soft lila tint for inactive/future days
+        "PENDING" -> Color(0xFFFACC15)
+        "PAUSED" -> Color(0xFFF97316)
+        else -> Color.White.copy(alpha = 0.03f) // Completely neutral dark grey background without any purple/lila tint
     }
     val textColor = when (status) {
         "SUCCESS", "FAILED", "PENDING", "PAUSED" -> DarkBg
-        else -> if (status == "INACTIVE") TextSecondary else TextPrimary
+        else -> if (status == "INACTIVE") TextSecondary.copy(alpha = 0.4f) else TextPrimary
     }
 
     Box(
         modifier = modifier
             .padding(4.dp)
             .clip(RoundedCornerShape(8.dp))
-            .background(bgColor),
+            .background(bgColor)
+            .then(if (onCellClick != null) Modifier.clickable { onCellClick() } else Modifier),
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -5929,7 +8282,8 @@ fun CalendarMonthGrid(
     canPrevMonth: Boolean,
     canNextMonth: Boolean,
     onPrevMonth: () -> Unit,
-    onNextMonth: () -> Unit
+    onNextMonth: () -> Unit,
+    onDayClick: ((String) -> Unit)? = null
 ) {
     Column {
         Row(
@@ -6001,6 +8355,7 @@ fun CalendarMonthGrid(
                                 dayNum = cell.dayNum,
                                 status = cell.status,
                                 habitColor = habitColor,
+                                onCellClick = if (onDayClick != null && cell.id.isNotBlank()) { { onDayClick(cell.id) } } else null,
                                 modifier = Modifier.weight(1f).aspectRatio(1f)
                             )
                         }
@@ -6083,7 +8438,7 @@ fun CalendarMonthGrid(
                             .background(HabitOrange)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = if (language == "de") "Pausiert" else "Paused", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
+                    Text(text = if (language == "de") "Skipped" else "Skipped", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
                 }
             }
         }
@@ -6299,6 +8654,12 @@ fun SettingsScreen(
     val backupFolderUri by viewModel.backupFolderUri.collectAsStateWithLifecycle()
     val syncStatus by viewModel.syncStatus.collectAsStateWithLifecycle()
     val vibrationEnabled by viewModel.vibrationEnabled.collectAsStateWithLifecycle()
+    val infoCardsEnabled by viewModel.infoCardsEnabled.collectAsStateWithLifecycle()
+    val reviewNotificationsEnabled by viewModel.reviewNotificationsEnabled.collectAsStateWithLifecycle()
+    val monthlyReviewEnabled by viewModel.monthlyReviewEnabled.collectAsStateWithLifecycle()
+    val monthlyReviewTime by viewModel.monthlyReviewTime.collectAsStateWithLifecycle()
+    val yearlyReviewEnabled by viewModel.yearlyReviewEnabled.collectAsStateWithLifecycle()
+    val yearlyReviewTime by viewModel.yearlyReviewTime.collectAsStateWithLifecycle()
 
     var showWipeConfirm by remember { mutableStateOf(false) }
     var showArchivedList by remember { mutableStateOf(false) }
@@ -6619,25 +8980,228 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
             contentPadding = PaddingValues(bottom = 32.dp, top = 84.dp)
         ) {
-            // Feedback & Effekte (Ton & Vibration) Card
+            // 1. Allgemein & Personalisierung Card
             item {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = DarkCard),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(20.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .border(1.dp, DarkBorder, RoundedCornerShape(16.dp))
+                        .border(1.dp, DarkBorder, RoundedCornerShape(20.dp))
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            text = if (language == "de") "Erfolgs-Feedback" else "Completion Feedback",
+                            text = if (language == "de") "Allgemein & Personalisierung" else "General & Personalization",
                             style = MaterialTheme.typography.titleMedium,
-                            color = TextPrimary,
-                            fontWeight = FontWeight.Bold
+                            color = PrimaryViolet,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(bottom = 12.dp)
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
 
-                        // Vibration
+                        // Option: Sprache
+                        Column {
+                            Text(
+                                text = if (language == "de") "Sprache" else "Language",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TextPrimary,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Button(
+                                    onClick = { viewModel.setLanguage("de") },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (language == "de") PrimaryViolet else ProgressTrack
+                                    ),
+                                    shape = RoundedCornerShape(12.dp),
+                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                                ) {
+                                    Text("Deutsch")
+                                }
+                                Button(
+                                    onClick = { viewModel.setLanguage("en") },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (language == "en") PrimaryViolet else ProgressTrack
+                                    ),
+                                    shape = RoundedCornerShape(12.dp),
+                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                                ) {
+                                    Text("English")
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+                        HorizontalDivider(color = DarkBorder, thickness = 1.dp)
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Option: Infokarten & Hinweise
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Info,
+                                    contentDescription = "Info Cards",
+                                    tint = PrimaryViolet,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = if (language == "de") "Infokarten & Hinweise anzeigen" else "Show info cards & tips",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = TextPrimary,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Text(
+                                        text = if (language == "de") "Blendet Erklärungen und Info-Buttons ein" else "Display explanatory cards and info icons",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = TextSecondary
+                                    )
+                                }
+                            }
+                            Switch(
+                                checked = infoCardsEnabled,
+                                onCheckedChange = { viewModel.setInfoCardsEnabled(it) },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = Color.White,
+                                    checkedTrackColor = PrimaryViolet,
+                                    uncheckedThumbColor = TextSecondary,
+                                    uncheckedTrackColor = ProgressTrack
+                                )
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+                        HorizontalDivider(color = DarkBorder, thickness = 1.dp)
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Option: Onboarding neu starten
+                        Column {
+                            Text(
+                                text = if (language == "de") "Einführung" else "Introduction",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TextPrimary,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = if (language == "de") "Starte die Einführung erneut, um alle App-Tipps zu sehen." else "Restart the introduction to review all app tips.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextSecondary,
+                                modifier = Modifier.padding(bottom = 10.dp)
+                            )
+                            Button(
+                                onClick = { viewModel.resetOnboarding() },
+                                colors = ButtonDefaults.buttonColors(containerColor = ProgressTrack),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.testTag("btn_restart_onboarding")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.RestartAlt,
+                                    contentDescription = null,
+                                    tint = TextPrimary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = if (language == "de") "Einführung neu starten" else "Restart Introduction",
+                                    color = TextPrimary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 2. Gewohnheiten & Fokus Card
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = DarkCard),
+                    shape = RoundedCornerShape(20.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, DarkBorder, RoundedCornerShape(20.dp))
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = if (language == "de") "Gewohnheiten & Fokus" else "Habits & Focus",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = HabitOrange,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(bottom = 12.dp)
+                        )
+
+                        // Option: Archivierte Gewohnheiten
+                        val archiveInteractionSource = remember { MutableInteractionSource() }
+                        val archiveIsPressed by archiveInteractionSource.collectIsPressedAsState()
+                        val archiveArrowOffsetX by animateDpAsState(
+                            targetValue = if (archiveIsPressed) 8.dp else 0.dp,
+                            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+                            label = "archive_arrow_offset"
+                        )
+                        val archiveArrowScale by animateFloatAsState(
+                            targetValue = if (archiveIsPressed) 1.25f else 1.0f,
+                            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+                            label = "archive_arrow_scale"
+                        )
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable(
+                                    interactionSource = archiveInteractionSource,
+                                    indication = ripple(),
+                                    onClick = { showArchivedList = true }
+                                )
+                                .padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                Icon(
+                                    imageVector = Icons.Default.Inbox,
+                                    contentDescription = "Archive",
+                                    tint = HabitOrange,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = if (language == "de") "Archivierte Gewohnheiten" else "Archived Habits",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = TextPrimary,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Text(
+                                        text = if (language == "de") "Inaktive Gewohnheiten reaktivieren" else "Reactivate suspended habits",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = TextSecondary
+                                    )
+                                }
+                            }
+                            Icon(
+                                imageVector = Icons.Default.ChevronRight,
+                                contentDescription = "Go",
+                                tint = if (archiveIsPressed) HabitOrange else TextSecondary,
+                                modifier = Modifier
+                                    .offset(x = archiveArrowOffsetX)
+                                    .scale(archiveArrowScale)
+                                    .size(20.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+                        HorizontalDivider(color = DarkBorder, thickness = 1.dp)
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Option: Vibration beim Erledigen
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -6679,50 +9243,30 @@ fun SettingsScreen(
                                 )
                             )
                         }
-                    }
-                }
-            }
 
-            // Fokus-Sounds & Hintergründe Card
-            item {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = DarkCard),
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .border(1.dp, DarkBorder, RoundedCornerShape(16.dp))
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        HorizontalDivider(color = DarkBorder, thickness = 1.dp)
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Option: Fokus-Sounds & Hintergründe
+                        Column {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(36.dp)
-                                        .clip(CircleShape)
-                                        .background(PrimaryViolet.copy(alpha = 0.2f)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.MusicNote,
-                                        contentDescription = null,
-                                        tint = PrimaryViolet,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
+                                Icon(
+                                    imageVector = Icons.Default.MusicNote,
+                                    contentDescription = null,
+                                    tint = PrimaryViolet,
+                                    modifier = Modifier.size(20.dp)
+                                )
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column {
                                     Text(
                                         text = if (language == "de") "Fokus-Sounds & Hintergründe" else "Focus Sounds & Soundscapes",
-                                        style = MaterialTheme.typography.titleMedium,
+                                        style = MaterialTheme.typography.bodyMedium,
                                         color = TextPrimary,
-                                        fontWeight = FontWeight.Bold
+                                        fontWeight = FontWeight.Medium
                                     )
                                     Text(
                                         text = if (language == "de") {
@@ -6739,482 +9283,727 @@ fun SettingsScreen(
                                     )
                                 }
                             }
-                        }
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Button(
-                                onClick = { showAudioDialog = true },
-                                colors = ButtonDefaults.buttonColors(containerColor = PrimaryViolet),
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.weight(1f)
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                Icon(imageVector = Icons.Default.LibraryMusic, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(if (language == "de") "Bibliothek verwalten" else "Manage Library", fontWeight = FontWeight.Bold)
-                            }
-                            OutlinedButton(
-                                onClick = { audioPickerLauncherSettings.launch("audio/*") },
-                                shape = RoundedCornerShape(12.dp),
-                                border = BorderStroke(1.dp, SuccessGreen)
-                            ) {
-                                Icon(imageVector = Icons.Default.AddCircle, contentDescription = null, tint = SuccessGreen, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(if (language == "de") "Importieren" else "Import", color = SuccessGreen, fontWeight = FontWeight.Bold)
+                                Button(
+                                    onClick = { showAudioDialog = true },
+                                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryViolet),
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(imageVector = Icons.Default.LibraryMusic, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(if (language == "de") "Verwalten" else "Manage", fontWeight = FontWeight.Bold)
+                                }
+                                OutlinedButton(
+                                    onClick = { audioPickerLauncherSettings.launch("audio/*") },
+                                    shape = RoundedCornerShape(12.dp),
+                                    border = BorderStroke(1.dp, SuccessGreen)
+                                ) {
+                                    Icon(imageVector = Icons.Default.AddCircle, contentDescription = null, tint = SuccessGreen, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(if (language == "de") "Import" else "Import", color = SuccessGreen, fontWeight = FontWeight.Bold)
+                                }
                             }
                         }
                     }
                 }
             }
 
-            // Onboarding & Test Card
+            // 3. Rückblicke & Berichte Card
             item {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = DarkCard),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(20.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .border(1.dp, DarkBorder, RoundedCornerShape(16.dp))
+                        .border(1.dp, DarkBorder, RoundedCornerShape(20.dp))
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            text = if (language == "de") "Onboarding & Einführung" else "Onboarding & Introduction",
+                            text = if (language == "de") "Rückblicke & Berichte" else "Reviews & Reports",
                             style = MaterialTheme.typography.titleMedium,
-                            color = TextPrimary,
-                            fontWeight = FontWeight.Bold
+                            color = SuccessGreen,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(bottom = 12.dp)
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
+
+                        // Option: Benachrichtigungen
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.NotificationsActive,
+                                    contentDescription = "Notifications",
+                                    tint = PrimaryViolet,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = if (language == "de") "Benachrichtigungen" else "Notifications",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = TextPrimary,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Text(
+                                        text = if (language == "de") "Meldung bei neuen Rückblicken" else "Notify when new reviews are ready",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = TextSecondary
+                                    )
+                                }
+                            }
+                            Switch(
+                                checked = reviewNotificationsEnabled,
+                                onCheckedChange = { viewModel.setReviewNotificationsEnabled(it) },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = Color.White,
+                                    checkedTrackColor = PrimaryViolet,
+                                    uncheckedThumbColor = TextSecondary,
+                                    uncheckedTrackColor = ProgressTrack
+                                )
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+                        HorizontalDivider(color = DarkBorder, thickness = 1.dp)
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Option: Monatsrückblick
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CalendarViewMonth,
+                                    contentDescription = "Monthly",
+                                    tint = SuccessGreen,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = if (language == "de") "Monatsrückblick" else "Monthly Review",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = TextPrimary,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Text(
+                                        text = if (language == "de") "Monatliche Statistiken & Highlights" else "Analyze monthly statistics & highlights",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = TextSecondary
+                                    )
+                                }
+                            }
+                            Switch(
+                                checked = monthlyReviewEnabled,
+                                onCheckedChange = { viewModel.setMonthlyReviewEnabled(it) },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = Color.White,
+                                    checkedTrackColor = SuccessGreen,
+                                    uncheckedThumbColor = TextSecondary,
+                                    uncheckedTrackColor = ProgressTrack
+                                )
+                            )
+                        }
+
+                        if (monthlyReviewEnabled) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(start = 32.dp)
+                            ) {
+                                val monthlyParts = monthlyReviewTime.split("-")
+                                val mDay = monthlyParts.getOrNull(0) ?: "01"
+                                val mTime = monthlyParts.getOrNull(1) ?: "09:00"
+
+                                Text(
+                                    text = if (language == "de") "Bereitstellung am Tag:" else "Generate on Day:",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = TextSecondary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    listOf("01", "05", "10", "28").forEach { d ->
+                                        val isSelected = d == mDay
+                                        Box(
+                                            modifier = Modifier
+                                                .background(
+                                                    if (isSelected) SuccessGreen.copy(alpha = 0.2f) else ProgressTrack,
+                                                    RoundedCornerShape(8.dp)
+                                                )
+                                                .border(
+                                                    1.dp,
+                                                    if (isSelected) SuccessGreen else DarkBorder,
+                                                    RoundedCornerShape(8.dp)
+                                                )
+                                                .clickable { viewModel.setMonthlyReviewTime("$d-$mTime") }
+                                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                                        ) {
+                                            Text(
+                                                text = "${d}.",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = if (isSelected) SuccessGreen else TextPrimary,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(10.dp))
+
+                                Text(
+                                    text = if (language == "de") "Bereitstellung um Uhrzeit:" else "Generate at Time:",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = TextSecondary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    listOf("08:00", "09:00", "12:00", "18:00", "20:00").forEach { t ->
+                                        val isSelected = t == mTime
+                                        Box(
+                                            modifier = Modifier
+                                                .background(
+                                                    if (isSelected) SuccessGreen.copy(alpha = 0.2f) else ProgressTrack,
+                                                    RoundedCornerShape(8.dp)
+                                                )
+                                                .border(
+                                                    1.dp,
+                                                    if (isSelected) SuccessGreen else DarkBorder,
+                                                    RoundedCornerShape(8.dp)
+                                                )
+                                                .clickable { viewModel.setMonthlyReviewTime("$mDay-$t") }
+                                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                                        ) {
+                                            Text(
+                                                text = t,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = if (isSelected) SuccessGreen else TextPrimary,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+                        HorizontalDivider(color = DarkBorder, thickness = 1.dp)
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Option: Jahresrückblick
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.DateRange,
+                                    contentDescription = "Yearly",
+                                    tint = HabitOrange,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = if (language == "de") "Jahresrückblick" else "Yearly Review",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = TextPrimary,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Text(
+                                        text = if (language == "de") "Großer Jahresrückblick mit Abzeichen & Highlights" else "Grand Year in Review with badges & highlights",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = TextSecondary
+                                    )
+                                }
+                            }
+                            Switch(
+                                checked = yearlyReviewEnabled,
+                                onCheckedChange = { viewModel.setYearlyReviewEnabled(it) },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = Color.White,
+                                    checkedTrackColor = HabitOrange,
+                                    uncheckedThumbColor = TextSecondary,
+                                    uncheckedTrackColor = ProgressTrack
+                                )
+                            )
+                        }
+
+                        if (yearlyReviewEnabled) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(start = 32.dp)
+                            ) {
+                                val yearlyParts = yearlyReviewTime.split("-")
+                                val yDay = yearlyParts.getOrNull(0) ?: "28"
+                                val yTime = yearlyParts.getOrNull(1) ?: "10:00"
+
+                                Text(
+                                    text = if (language == "de") "Bereitstellung im Dezember am Tag:" else "Generate in December on Day:",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = TextSecondary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    listOf("24", "28", "30", "31").forEach { d ->
+                                        val isSelected = d == yDay
+                                        Box(
+                                            modifier = Modifier
+                                                .background(
+                                                    if (isSelected) HabitOrange.copy(alpha = 0.2f) else ProgressTrack,
+                                                    RoundedCornerShape(8.dp)
+                                                )
+                                                .border(
+                                                    1.dp,
+                                                    if (isSelected) HabitOrange else DarkBorder,
+                                                    RoundedCornerShape(8.dp)
+                                                )
+                                                .clickable { viewModel.setYearlyReviewTime("$d-$yTime") }
+                                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                                        ) {
+                                            Text(
+                                                text = "${d}.",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = if (isSelected) HabitOrange else TextPrimary,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(10.dp))
+
+                                Text(
+                                    text = if (language == "de") "Bereitstellung um Uhrzeit:" else "Generate at Time:",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = TextSecondary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    listOf("08:00", "10:00", "12:00", "18:00", "20:00").forEach { t ->
+                                        val isSelected = t == yTime
+                                        Box(
+                                            modifier = Modifier
+                                                .background(
+                                                    if (isSelected) HabitOrange.copy(alpha = 0.2f) else ProgressTrack,
+                                                    RoundedCornerShape(8.dp)
+                                                )
+                                                .border(
+                                                    1.dp,
+                                                    if (isSelected) HabitOrange else DarkBorder,
+                                                    RoundedCornerShape(8.dp)
+                                                )
+                                                .clickable { viewModel.setYearlyReviewTime("$yDay-$t") }
+                                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                                        ) {
+                                            Text(
+                                                text = t,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = if (isSelected) HabitOrange else TextPrimary,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 4. Daten & Sicherung Card
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = DarkCard),
+                    shape = RoundedCornerShape(20.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, DarkBorder, RoundedCornerShape(20.dp))
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            text = if (language == "de") "Starte die Einführung erneut, um alle App-Funktionen und Tipps zu sehen." else "Restart the introduction to review all app features and tips.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = TextSecondary
+                            text = if (language == "de") "Daten & Sicherung" else "Data & Backup",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = ErrorRed,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(bottom = 12.dp)
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // SAF Backup & Restore
+                        Column {
+                            Text(
+                                text = if (language == "de") "Lokales SAF Backup & Restore" else "Local SAF Backup & Restore",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TextPrimary,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = if (language == "de") {
+                                    "Wähle einen Ordner aus. Die App erstellt dort täglich automatisch ein Backup der letzten 3 Tage. Du kannst auch jederzeit manuell sichern oder wiederherstellen."
+                                } else {
+                                    "Select a local folder. The app will automatically save daily JSON exports there (retaining only the 3 latest). You can also back up or restore manually."
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextSecondary
+                            )
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            // Selected folder info
+                            Text(
+                                text = if (language == "de") "Ausgewählter Ordner:" else "Selected Folder:",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextSecondary,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(ProgressTrack)
+                                    .padding(8.dp)
+                            ) {
+                                Text(
+                                    text = if (backupFolderUri.isEmpty()) {
+                                        if (language == "de") "Kein Ordner ausgewählt" else "No folder selected"
+                                    } else {
+                                        backupFolderUri
+                                    },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (backupFolderUri.isEmpty()) ErrorRed else SuccessGreen,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            Button(
+                                onClick = { folderLauncher.launch(null) },
+                                colors = ButtonDefaults.buttonColors(containerColor = PrimaryViolet),
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(Icons.Default.Folder, contentDescription = "Folder", modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(if (language == "de") "Ordner auswählen" else "Select Folder")
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Button(
+                                    onClick = { viewModel.triggerManualBackup() },
+                                    enabled = backupFolderUri.isNotEmpty(),
+                                    colors = ButtonDefaults.buttonColors(containerColor = ProgressTrack),
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Icon(Icons.Default.Backup, contentDescription = "Backup", modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(if (language == "de") "Sichern" else "Backup")
+                                }
+
+                                Button(
+                                    onClick = { fileLauncher.launch(arrayOf("application/json", "*/*")) },
+                                    colors = ButtonDefaults.buttonColors(containerColor = ProgressTrack),
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Icon(Icons.Default.Restore, contentDescription = "Restore", modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(if (language == "de") "Einspielen" else "Restore")
+                                }
+                            }
+
+                            if (syncStatus != null) {
+                                Spacer(modifier = Modifier.height(10.dp))
+                                Text(
+                                    text = syncStatus ?: "",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = SuccessGreen,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.clickable { viewModel.clearSyncStatus() }
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+                        HorizontalDivider(color = DarkBorder, thickness = 1.dp)
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Danger Zone / Wipe All Data
+                        Column {
+                            Text(
+                                text = if (language == "de") "Gefahrenbereich" else "Danger Zone",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = ErrorRed,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = if (language == "de") "Hiermit werden alle Gewohnheiten unwiderruflich gelöscht." else "This permanently deletes all habits and tracking history.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextSecondary,
+                                modifier = Modifier.padding(bottom = 10.dp)
+                            )
+                            Button(
+                                onClick = { showWipeConfirm = true },
+                                colors = ButtonDefaults.buttonColors(containerColor = ErrorRed),
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(Icons.Default.DeleteForever, contentDescription = "Wipe", modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(if (language == "de") "Alles löschen" else "Wipe All Data")
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 5. Support, Feedback & Teilen Card
+            item {
+                val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = DarkCard),
+                    shape = RoundedCornerShape(20.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, DarkBorder, RoundedCornerShape(20.dp))
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = if (language == "de") "Support, Feedback & Teilen" else "Support, Feedback & Share",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = PrimaryViolet,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(bottom = 12.dp)
+                        )
+
+                        // Option: Teilen mit Freunden (Share with a friend)
                         Button(
-                            onClick = { viewModel.resetOnboarding() },
-                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryViolet),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.testTag("btn_restart_onboarding")
+                            onClick = {
+                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_SUBJECT, if (language == "de") "Empfehlung: Frequent Habits" else "Recommendation: Frequent Habits")
+                                    putExtra(Intent.EXTRA_TEXT, if (language == "de") {
+                                        "Hey! Ich nutze die App 'Frequent Habits', um meine Gewohnheiten zu tracken und meinen Alltag zu verbessern. Komplett werbefrei, open-source und offline-first! Schau sie dir an: https://github.com/FrequeNCy144/Frequent-Habits"
+                                    } else {
+                                        "Hey! I'm using 'Frequent Habits' to track my daily habits and improve my routine. Fully ad-free, open-source, and offline-first! Check it out: https://github.com/FrequeNCy144/Frequent-Habits"
+                                    })
+                                }
+                                context.startActivity(Intent.createChooser(shareIntent, if (language == "de") "Teilen mit..." else "Share with..."))
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = SuccessGreen),
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.RestartAlt,
-                                contentDescription = null,
+                                imageVector = Icons.Default.Share,
+                                contentDescription = "Share",
                                 tint = Color.White,
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = if (language == "de") "Onboarding neu starten" else "Restart Onboarding",
+                                text = if (language == "de") "App mit Freunden teilen" else "Share with a friend",
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold
                             )
                         }
-                    }
-                }
-            }
 
-            // Language setup card
-            item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = DarkCard),
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, DarkBorder, RoundedCornerShape(16.dp))
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = if (language == "de") "Sprache" else "Language",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = TextPrimary,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Option: GitHub Issue melden
                         Button(
-                            onClick = { viewModel.setLanguage("de") },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (language == "de") PrimaryViolet else ProgressTrack
-                            ),
+                            onClick = { uriHandler.openUri("https://github.com/FrequeNCy144/Frequent-Habits/issues/new") },
+                            colors = ButtonDefaults.buttonColors(containerColor = ProgressTrack),
+                            modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp)
                         ) {
-                            Text("Deutsch")
-                        }
-                        Button(
-                            onClick = { viewModel.setLanguage("en") },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (language == "en") PrimaryViolet else ProgressTrack
-                            ),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Text("English")
-                        }
-                    }
-                }
-            }
-        }
-
-        // Archivierte Gewohnheiten card
-        item {
-            val archiveInteractionSource = remember { MutableInteractionSource() }
-            val archiveIsPressed by archiveInteractionSource.collectIsPressedAsState()
-            val archiveArrowOffsetX by animateDpAsState(
-                targetValue = if (archiveIsPressed) 8.dp else 0.dp,
-                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
-                label = "archive_arrow_offset"
-            )
-            val archiveArrowScale by animateFloatAsState(
-                targetValue = if (archiveIsPressed) 1.25f else 1.0f,
-                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
-                label = "archive_arrow_scale"
-            )
-
-            Card(
-                colors = CardDefaults.cardColors(containerColor = DarkCard),
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, DarkBorder, RoundedCornerShape(16.dp))
-                    .clickable(
-                        interactionSource = archiveInteractionSource,
-                        indication = ripple(),
-                        onClick = { showArchivedList = true }
-                    )
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Inbox,
-                            contentDescription = "Archive",
-                            tint = HabitOrange,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
+                            Icon(
+                                imageVector = Icons.Default.BugReport,
+                                contentDescription = "GitHub Issue",
+                                tint = TextPrimary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = if (language == "de") "Archivierte Gewohnheiten" else "Archived Habits",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = TextPrimary,
+                                text = if (language == "de") "GitHub Issue / Bug melden" else "Report Issue / Bug on GitHub",
+                                color = TextPrimary
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Option: E-Mail Feedback / Support
+                        Button(
+                            onClick = {
+                                val emailIntent = Intent(Intent.ACTION_SENDTO).apply {
+                                    data = android.net.Uri.parse("mailto:support@frequncy-apps.com")
+                                }
+                                try {
+                                    context.startActivity(emailIntent)
+                                } catch (e: Exception) {
+                                    Toast.makeText(
+                                        context,
+                                        if (language == "de") "Keine E-Mail-App gefunden" else "No email app found",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = ProgressTrack),
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Email,
+                                contentDescription = "Email",
+                                tint = TextPrimary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (language == "de") "E-Mail Feedback / Support" else "Email Feedback / Support",
+                                color = TextPrimary
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+                        HorizontalDivider(color = DarkBorder, thickness = 1.dp)
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Option: GitHub Repository
+                        Button(
+                            onClick = { uriHandler.openUri("https://github.com/FrequeNCy144/Frequent-Habits") },
+                            colors = ButtonDefaults.buttonColors(containerColor = ProgressTrack),
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Code,
+                                contentDescription = "GitHub",
+                                tint = TextPrimary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "GitHub Repository",
+                                color = TextPrimary
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Option: Website
+                        Button(
+                            onClick = { uriHandler.openUri("https://frequency-apps.com") },
+                            colors = ButtonDefaults.buttonColors(containerColor = ProgressTrack),
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Language,
+                                contentDescription = "Website",
+                                tint = TextPrimary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Website (frequency-apps.com)",
+                                color = TextPrimary
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Authentic Liberapay Styled Donate Button (Liberapay Official Brand Colors)
+                        Button(
+                            onClick = { uriHandler.openUri("https://liberapay.com/FrequeNCy/donate") },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = androidx.compose.ui.graphics.Color(0xFFF6C915) // Official Liberapay Brand Yellow
+                            ),
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Favorite,
+                                contentDescription = "Donate",
+                                tint = androidx.compose.ui.graphics.Color(0xFF1A1A1A), // Dark charcoal
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (language == "de") "Spenden via Liberapay" else "Donate via Liberapay",
+                                color = androidx.compose.ui.graphics.Color(0xFF1A1A1A),
                                 fontWeight = FontWeight.Bold
                             )
-                            Text(
-                                text = if (language == "de") "Inaktive Gewohnheiten reaktivieren" else "Reactivate suspended habits",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextSecondary
-                            )
                         }
-                    }
-                    Icon(
-                        imageVector = Icons.Default.ChevronRight,
-                        contentDescription = "Go",
-                        tint = if (archiveIsPressed) PrimaryViolet else TextSecondary,
-                        modifier = Modifier
-                            .offset(x = archiveArrowOffsetX)
-                            .scale(archiveArrowScale)
-                            .size(20.dp)
-                    )
-                }
-            }
-        }
-
-
-
-        // SAF Backup & Restore configuration card
-        item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = DarkCard),
-                shape = RoundedCornerShape(20.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, DarkBorder, RoundedCornerShape(20.dp))
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = if (language == "de") "Lokales SAF Backup & Restore" else "Local SAF Backup & Restore",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = TextPrimary,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = if (language == "de") {
-                            "Wähle einen Ordner aus. Die App erstellt dort täglich automatisch ein Backup der letzten 3 Tage. Du kannst auch jederzeit manuell sichern oder wiederherstellen."
-                        } else {
-                            "Select a local folder. The app will automatically save daily JSON exports there (retaining only the 3 latest). You can also back up or restore manually."
-                        },
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Selected folder info
-                    Text(
-                        text = if (language == "de") "Ausgewählter Ordner:" else "Selected Folder:",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(ProgressTrack)
-                            .padding(8.dp)
-                    ) {
-                        Text(
-                            text = if (backupFolderUri.isEmpty()) {
-                                if (language == "de") "Kein Ordner ausgewählt" else "No folder selected"
-                            } else {
-                                backupFolderUri
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (backupFolderUri.isEmpty()) ErrorRed else SuccessGreen,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Button(
-                        onClick = { folderLauncher.launch(null) },
-                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryViolet),
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Icon(Icons.Default.Folder, contentDescription = "Folder")
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(if (language == "de") "Ordner auswählen" else "Select Folder")
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Button(
-                            onClick = { viewModel.triggerManualBackup() },
-                            enabled = backupFolderUri.isNotEmpty(),
-                            colors = ButtonDefaults.buttonColors(containerColor = ProgressTrack),
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Icon(Icons.Default.Backup, contentDescription = "Backup")
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(if (language == "de") "Jetzt Sichern" else "Backup Now")
-                        }
-
-                        Button(
-                            onClick = { fileLauncher.launch(arrayOf("application/json", "*/*")) },
-                            colors = ButtonDefaults.buttonColors(containerColor = ProgressTrack),
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Icon(Icons.Default.Restore, contentDescription = "Restore")
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(if (language == "de") "Einspielen" else "Restore File")
-                        }
-                    }
-
-                    if (syncStatus != null) {
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = syncStatus ?: "",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = SuccessGreen,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.clickable { viewModel.clearSyncStatus() }
-                        )
                     }
                 }
             }
-        }
 
-        // Wipe Data card
-        item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = DarkCard),
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, DarkBorder, RoundedCornerShape(16.dp))
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+            // Dedication (Widmung) at the very bottom
+            item {
+                Spacer(modifier = Modifier.height(24.dp))
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
                     Text(
-                        text = if (language == "de") "Gefahrenbereich" else "Danger Zone",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = ErrorRed,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Button(
-                        onClick = { showWipeConfirm = true },
-                        colors = ButtonDefaults.buttonColors(containerColor = ErrorRed),
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Icon(Icons.Default.DeleteForever, contentDescription = "Wipe")
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(if (language == "de") "Alles löschen" else "Wipe All Data")
-                    }
-                }
-            }
-        }
-
-        // Community & Support card
-        item {
-            val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
-            Card(
-                colors = CardDefaults.cardColors(containerColor = DarkCard),
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, DarkBorder, RoundedCornerShape(16.dp))
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = if (language == "de") "Community & Support" else "Community & Support",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = PrimaryViolet,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    
-                    // GitHub Link Button
-                    Button(
-                        onClick = { uriHandler.openUri("https://github.com/FrequeNCy144/Frequent-Habits") },
-                        colors = ButtonDefaults.buttonColors(containerColor = ProgressTrack),
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Code,
-                            contentDescription = "GitHub",
-                            tint = TextPrimary
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = if (language == "de") "GitHub Repository" else "GitHub Repository",
-                            color = TextPrimary
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // frequency-apps.com Website Button
-                    Button(
-                        onClick = { uriHandler.openUri("https://frequency-apps.com") },
-                        colors = ButtonDefaults.buttonColors(containerColor = ProgressTrack),
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Language,
-                            contentDescription = "Website",
-                            tint = TextPrimary
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = if (language == "de") "Website (frequency-apps.com)" else "Website (frequency-apps.com)",
-                            color = TextPrimary
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Button(
-                        onClick = {
-                            val emailIntent = Intent(Intent.ACTION_SENDTO).apply {
-                                data = android.net.Uri.parse("mailto:support@frequncy-apps.com")
-                            }
-                            try {
-                                context.startActivity(emailIntent)
-                            } catch (e: Exception) {
-                                Toast.makeText(
-                                    context,
-                                    if (language == "de") "Keine E-Mail-App gefunden" else "No email app found",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = ProgressTrack),
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Email,
-                            contentDescription = "Email",
-                            tint = TextPrimary
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Feedback / Support",
-                            color = TextPrimary
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Authentic Liberapay Styled Donate Button (Liberapay Official Brand Colors)
-                    Button(
-                        onClick = { uriHandler.openUri("https://liberapay.com/FrequeNCy/donate") },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = androidx.compose.ui.graphics.Color(0xFFF6C915) // Official Liberapay Brand Yellow
+                        text = "„An Saskia – danke, dass du an meiner Seite bist, heute und an jedem weiteren Tag.“",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                            fontWeight = FontWeight.Light
                         ),
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Favorite,
-                            contentDescription = "Donate",
-                            tint = androidx.compose.ui.graphics.Color(0xFF1A1A1A) // Dark charcoal
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = if (language == "de") "Spenden via Liberapay" else "Donate via Liberapay",
-                            color = androidx.compose.ui.graphics.Color(0xFF1A1A1A),
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+                        color = TextSecondary.copy(alpha = 0.5f),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
         }
-
-        // Dedication (Widmung) at the very bottom
-        item {
-            Spacer(modifier = Modifier.height(24.dp))
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "„An Saskia – danke, dass du an meiner Seite bist, heute und an jedem weiteren Tag.“",
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
-                        fontWeight = FontWeight.Light
-                    ),
-                    color = TextSecondary.copy(alpha = 0.5f),
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-        }
-    }
 
     if (showWipeConfirm) {
         AlertDialog(
@@ -7425,10 +10214,19 @@ fun CreateHabitScreen(
         keyboardController?.show()
     }
 
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+    ClearFocusOnKeyboardDismiss()
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(DarkBg)
+            .pointerInput(Unit) {
+                detectTapGestures(onTap = {
+                    focusManager.clearFocus()
+                    keyboardController?.hide()
+                })
+            }
     ) {
         Column(
             modifier = Modifier
@@ -7442,84 +10240,95 @@ fun CreateHabitScreen(
             Spacer(modifier = Modifier.height(84.dp))
             
             // Name field directly
-            OutlinedTextField(
-                value = name,
-                onValueChange = { 
-                    name = it
-                    if (it.isNotBlank()) {
-                        nameError = false
-                    }
-                },
-                label = { Text(if (language == "de") "Name der Gewohnheit" else "Habit Name") },
-                placeholder = { Text(if (language == "de") "z.B. Meditieren, Laufen, Lesen..." else "e.g., Meditate, Running, Reading...") },
-                isError = nameError,
-                supportingText = {
-                    if (nameError) {
-                        Text(
-                            text = if (language == "de") "Bitte gib einen Namen ein" else "Please enter a name",
-                            color = FailedRed,
-                            style = MaterialTheme.typography.labelSmall
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = if (language == "de") "Name der Gewohnheit" else "Habit Name",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = TextPrimary,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(start = 4.dp)
+                )
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { 
+                        name = it
+                        if (it.isNotBlank()) {
+                            nameError = false
+                        }
+                    },
+                    placeholder = { Text(if (language == "de") "z.B. Meditieren, Laufen, Lesen..." else "e.g., Meditate, Running, Reading...") },
+                    isError = nameError,
+                    supportingText = {
+                        if (nameError) {
+                            Text(
+                                text = if (language == "de") "Bitte gib einen Namen ein" else "Please enter a name",
+                                color = FailedRed,
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(nameFocusRequester)
+                        .testTag("habit_name_input"),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = PrimaryViolet,
+                        unfocusedBorderColor = DarkBorder,
+                        errorBorderColor = FailedRed,
+                        errorCursorColor = FailedRed,
+                        errorSupportingTextColor = FailedRed,
+                        focusedContainerColor = DarkCard,
+                        unfocusedContainerColor = DarkCard,
+                        errorContainerColor = FailedRed.copy(alpha = 0.08f)
+                    ),
+                    shape = RoundedCornerShape(16.dp),
+                    singleLine = true,
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = null,
+                            tint = if (name.isNotBlank()) PrimaryViolet else TextSecondary,
+                            modifier = Modifier.size(20.dp)
                         )
                     }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(nameFocusRequester)
-                    .testTag("habit_name_input"),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = PrimaryViolet,
-                    unfocusedBorderColor = DarkBorder,
-                    focusedLabelColor = PrimaryViolet,
-                    unfocusedLabelColor = TextSecondary,
-                    errorBorderColor = FailedRed,
-                    errorLabelColor = FailedRed,
-                    errorCursorColor = FailedRed,
-                    errorSupportingTextColor = FailedRed,
-                    focusedContainerColor = DarkCard,
-                    unfocusedContainerColor = DarkCard.copy(alpha = 0.6f),
-                    errorContainerColor = FailedRed.copy(alpha = 0.08f)
-                ),
-                shape = RoundedCornerShape(16.dp),
-                singleLine = true,
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = null,
-                        tint = if (name.isNotBlank()) PrimaryViolet else TextSecondary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            )
+                )
+            }
 
             // Description field (optional)
-            OutlinedTextField(
-                value = description,
-                onValueChange = { description = it },
-                label = { Text(if (language == "de") "Beschreibung (optional)" else "Description (optional)") },
-                placeholder = { Text(if (language == "de") "z.B. Notizen, Motivation oder Regeln..." else "e.g. Notes, motivation or rules...") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("habit_description_input"),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = PrimaryViolet,
-                    unfocusedBorderColor = DarkBorder,
-                    focusedLabelColor = PrimaryViolet,
-                    unfocusedLabelColor = TextSecondary,
-                    focusedContainerColor = DarkCard,
-                    unfocusedContainerColor = DarkCard.copy(alpha = 0.6f)
-                ),
-                shape = RoundedCornerShape(16.dp),
-                minLines = 1,
-                maxLines = 4,
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Description,
-                        contentDescription = null,
-                        tint = if (description.isNotBlank()) PrimaryViolet else TextSecondary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = if (language == "de") "Beschreibung (optional)" else "Description (optional)",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = TextPrimary,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(start = 4.dp)
+                )
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    placeholder = { Text(if (language == "de") "z.B. Notizen, Motivation oder Regeln..." else "e.g. Notes, motivation or rules...") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("habit_description_input"),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = PrimaryViolet,
+                        unfocusedBorderColor = DarkBorder,
+                        focusedContainerColor = DarkCard,
+                        unfocusedContainerColor = DarkCard
+                    ),
+                    shape = RoundedCornerShape(16.dp),
+                    minLines = 1,
+                    maxLines = 4,
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Description,
+                            contentDescription = null,
+                            tint = if (description.isNotBlank()) PrimaryViolet else TextSecondary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                )
+            }
 
                 // Goal Segment (Aufbauen / Abgewöhnen)
                 Column(
@@ -7999,6 +10808,36 @@ fun CreateHabitScreen(
                                         style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = FontWeight.Bold,
                                         color = if (isSelected) DarkBg else TextPrimary
+                                    )
+                                }
+                            }
+                        }
+                        if (LocalInfoCardsEnabled.current) {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp),
+                                color = PrimaryViolet.copy(alpha = 0.12f),
+                                border = BorderStroke(1.dp, PrimaryViolet.copy(alpha = 0.3f))
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Info,
+                                        contentDescription = "Info",
+                                        tint = PrimaryViolet,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Text(
+                                        text = if (language == "de")
+                                            "Flexibler 7-Tage-Zeitraum: Das Wochenziel zählt deine Abschlüsse der letzten 7 Tage (rollierend) – nicht starr von Montag bis Sonntag."
+                                        else
+                                            "Flexible 7-day window: Your weekly target counts completions over the last 7 days (rolling) — not strictly Monday to Sunday.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = TextPrimary
                                     )
                                 }
                             }
@@ -9224,6 +12063,21 @@ fun ProfileScreen(
     val perfectDaysState by viewModel.perfectDaysStats.collectAsStateWithLifecycle()
     val perfectDaysStreak = perfectDaysState.perfectDaysStreak
 
+    val userName by viewModel.userName.collectAsStateWithLifecycle()
+    val profileImageUri by viewModel.profileImageUri.collectAsStateWithLifecycle()
+
+    var showEditNameDialog by remember { mutableStateOf(false) }
+    var tempUserName by remember(userName) { mutableStateOf(userName) }
+    var showProfileShareDialog by remember { mutableStateOf(false) }
+
+    val profileImagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            viewModel.updateProfileImageUri(uri.toString())
+        }
+    }
+
     var activeExplanation by remember { mutableStateOf<Pair<String, String>?>(null) }
     var selectedTab by rememberSaveable { mutableIntStateOf(0) } // 0 = Freigeschaltet, 1 = Alle Erfolge
 
@@ -9343,28 +12197,49 @@ fun ProfileScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Fixed Top Header Row with Settings Gear
-        Row(
+        // Fixed Top Header Row with Share on Top Left and Settings on Top Right
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, top = 28.dp, bottom = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .padding(start = 16.dp, end = 16.dp, top = 28.dp, bottom = 12.dp)
         ) {
+            // Top Left: Share Profile Button
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .border(1.dp, DarkBorder, RoundedCornerShape(12.dp))
+                    .background(DarkCard, RoundedCornerShape(12.dp))
+                    .clickable { showProfileShareDialog = true }
+                    .align(Alignment.CenterStart)
+                    .testTag("profile_share_button"),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Share,
+                    contentDescription = "Share Profile",
+                    tint = PrimaryViolet,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            // Center Title
             Text(
                 text = if (language == "de") "Profil" else "Profile",
                 style = MaterialTheme.typography.displayLarge,
                 color = TextPrimary,
                 fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Start,
-                modifier = Modifier.weight(1f)
+                textAlign = TextAlign.Center,
+                modifier = Modifier.align(Alignment.Center)
             )
+
+            // Top Right: Settings Gear Button
             Box(
                 modifier = Modifier
                     .size(44.dp)
                     .border(1.dp, DarkBorder, RoundedCornerShape(12.dp))
                     .background(DarkCard, RoundedCornerShape(12.dp))
                     .clickable { onSettingsClick() }
+                    .align(Alignment.CenterEnd)
                     .testTag("profile_settings_button"),
                 contentAlignment = Alignment.Center
             ) {
@@ -9385,6 +12260,89 @@ fun ProfileScreen(
                 contentPadding = PaddingValues(top = 8.dp, bottom = 180.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                item {
+                    // Profile Avatar & Username Header (Matching Screenshot 1)
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(104.dp)
+                                .clickable {
+                                    tempUserName = userName
+                                    showEditNameDialog = true
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Surface(
+                                modifier = Modifier.size(104.dp),
+                                shape = CircleShape,
+                                color = DarkCard,
+                                border = BorderStroke(2.dp, PrimaryViolet)
+                            ) {
+                                if (profileImageUri.isNotEmpty()) {
+                                    AsyncImage(
+                                        model = profileImageUri,
+                                        contentDescription = "Profile Picture",
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .clip(CircleShape),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                } else {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(PrimaryViolet.copy(alpha = 0.2f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Person,
+                                            contentDescription = "Avatar Placeholder",
+                                            tint = PrimaryViolet,
+                                            modifier = Modifier.size(54.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable {
+                                    tempUserName = userName
+                                    showEditNameDialog = true
+                                }
+                                .padding(horizontal = 16.dp, vertical = 6.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (userName.isBlank()) {
+                                Text(
+                                    text = "______",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = TextSecondary,
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = TextAlign.Center
+                                )
+                            } else {
+                                Text(
+                                    text = userName,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = TextPrimary,
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    }
+                }
+
                 item {
                     Card(
                         colors = CardDefaults.cardColors(containerColor = DarkCard),
@@ -9696,11 +12654,129 @@ fun ProfileScreen(
             }
         }
 
+        if (showEditNameDialog) {
+            AlertDialog(
+                onDismissRequest = { showEditNameDialog = false },
+                containerColor = DarkCard,
+                title = {
+                    Text(
+                        text = if (language == "de") "Profil bearbeiten" else "Edit Profile",
+                        color = TextPrimary,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                text = {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Surface(
+                                modifier = Modifier.size(60.dp),
+                                shape = CircleShape,
+                                color = DarkCard,
+                                border = BorderStroke(2.dp, PrimaryViolet)
+                            ) {
+                                if (profileImageUri.isNotEmpty()) {
+                                    AsyncImage(
+                                        model = profileImageUri,
+                                        contentDescription = "Profile Picture",
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .clip(CircleShape),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                } else {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(PrimaryViolet.copy(alpha = 0.2f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Person,
+                                            contentDescription = "Avatar Placeholder",
+                                            tint = PrimaryViolet,
+                                            modifier = Modifier.size(32.dp)
+                                        )
+                                    }
+                                }
+                            }
+
+                            OutlinedButton(
+                                onClick = { profileImagePickerLauncher.launch("image/*") },
+                                border = BorderStroke(1.dp, PrimaryViolet),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.PhotoCamera,
+                                    contentDescription = "Change picture",
+                                    tint = PrimaryViolet,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = if (language == "de") "Foto ändern" else "Change photo",
+                                    color = PrimaryViolet
+                                )
+                            }
+                        }
+
+                        OutlinedTextField(
+                            value = tempUserName,
+                            onValueChange = { tempUserName = it },
+                            label = { Text(if (language == "de") "Name" else "Name") },
+                            placeholder = { Text(if (language == "de") "Dein Name..." else "Your name...") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = PrimaryViolet,
+                                unfocusedBorderColor = DarkBorder,
+                                focusedTextColor = TextPrimary,
+                                unfocusedTextColor = TextPrimary
+                            )
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            viewModel.updateUserName(tempUserName)
+                            showEditNameDialog = false
+                        }
+                    ) {
+                        Text(if (language == "de") "Speichern" else "Save", color = PrimaryViolet, fontWeight = FontWeight.Bold)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showEditNameDialog = false }) {
+                        Text(if (language == "de") "Abbrechen" else "Cancel", color = TextSecondary)
+                    }
+                }
+            )
+        }
+
         if (activeExplanation != null) {
             ExplanationDialog(
                 title = activeExplanation!!.first,
                 explanation = activeExplanation!!.second,
                 onDismiss = { activeExplanation = null }
+            )
+        }
+
+        if (showProfileShareDialog) {
+            ProfileShareDialog(
+                userName = userName,
+                profileImageUri = profileImageUri,
+                habits = habits,
+                logs = allLogs,
+                language = language,
+                onDismiss = { showProfileShareDialog = false }
             )
         }
     }
@@ -9963,6 +13039,7 @@ fun InfoIconButton(
     onClick: (String, String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    if (!LocalInfoCardsEnabled.current) return
     IconButton(
         onClick = { onClick(title, explanation) },
         modifier = modifier.size(44.dp)
@@ -10033,15 +13110,30 @@ fun DailyNoteDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(
-                text = if (language == "de") "Tägliche Notiz" else "Daily Note",
-                style = MaterialTheme.typography.titleLarge,
-                color = TextPrimary,
-                fontWeight = FontWeight.Bold
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = if (language == "de") "Tägliche Notiz" else "Daily Note",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = TextPrimary,
+                    fontWeight = FontWeight.Bold
+                )
+                IconButton(onClick = onDismiss) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Close",
+                        tint = TextSecondary
+                    )
+                }
+            }
         },
         text = {
-            OutlinedTextField(
+            Column {
+                ClearFocusOnKeyboardDismiss()
+                OutlinedTextField(
                 value = noteText,
                 onValueChange = { noteText = it },
                 placeholder = {
@@ -10066,7 +13158,8 @@ fun DailyNoteDialog(
                     cursorColor = PrimaryViolet
                 )
             )
-        },
+        }
+    },
         confirmButton = {
             Button(
                 onClick = { onSave(noteText) },
@@ -10077,14 +13170,6 @@ fun DailyNoteDialog(
                     text = if (language == "de") "Speichern" else "Save",
                     color = TextPrimary,
                     fontWeight = FontWeight.Bold
-                )
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(
-                    text = if (language == "de") "Abbrechen" else "Cancel",
-                    color = TextSecondary
                 )
             }
         },
@@ -11232,6 +14317,7 @@ fun OnboardingScreen(
 ) {
     var currentStep by remember { mutableIntStateOf(0) }
     val totalSteps = 6
+    var dragOffset by remember { mutableFloatStateOf(0f) }
 
     Box(
         modifier = Modifier
@@ -11247,27 +14333,14 @@ fun OnboardingScreen(
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Top Bar: Back Button, Step Indicator & Skip Button
+            // Top Bar: Step Indicator & Skip Button (No Back Button)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Back button if step > 0
-                if (currentStep > 0) {
-                    IconButton(
-                        onClick = { currentStep-- },
-                        modifier = Modifier.testTag("btn_onboarding_back_top")
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = if (language == "de") "Zurück" else "Back",
-                            tint = TextPrimary
-                        )
-                    }
-                } else {
-                    Spacer(modifier = Modifier.width(48.dp))
-                }
+                // Dummy spacer for layout balance
+                Spacer(modifier = Modifier.width(60.dp))
 
                 // Step Badge
                 Surface(
@@ -11298,13 +14371,13 @@ fun OnboardingScreen(
                         )
                     }
                 } else {
-                    Spacer(modifier = Modifier.width(48.dp))
+                    Spacer(modifier = Modifier.width(60.dp))
                 }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Main Content Body with Animated Content
+            // Main Content Body with Animated Content & Horizontal Swipe Gesture
             AnimatedContent(
                 targetState = currentStep,
                 transitionSpec = {
@@ -11318,7 +14391,29 @@ fun OnboardingScreen(
                 },
                 modifier = Modifier
                     .weight(1f)
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .pointerInput(currentStep) {
+                        detectHorizontalDragGestures(
+                            onDragEnd = {
+                                if (dragOffset < -60f) {
+                                    if (currentStep < totalSteps - 1) {
+                                        currentStep++
+                                    }
+                                } else if (dragOffset > 60f) {
+                                    if (currentStep > 0) {
+                                        currentStep--
+                                    }
+                                }
+                                dragOffset = 0f
+                            },
+                            onDragCancel = {
+                                dragOffset = 0f
+                            },
+                            onHorizontalDrag = { _, dragAmount ->
+                                dragOffset += dragAmount
+                            }
+                        )
+                    },
                 label = "onboarding_step_anim"
             ) { step ->
                 Column(
@@ -11367,74 +14462,43 @@ fun OnboardingScreen(
                 }
             }
 
-            // Bottom Buttons Row: Optional Back Button + Next/Finish Button
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
+            // Full Width Next/Finish Button
+            Button(
+                onClick = {
+                    if (currentStep < totalSteps - 1) {
+                        currentStep++
+                    } else {
+                        onComplete()
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp)
+                    .testTag("btn_onboarding_next"),
+                colors = ButtonDefaults.buttonColors(containerColor = PrimaryViolet),
+                shape = RoundedCornerShape(16.dp)
             ) {
-                if (currentStep > 0) {
-                    OutlinedButton(
-                        onClick = { currentStep-- },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(52.dp)
-                            .testTag("btn_onboarding_back_bottom"),
-                        border = BorderStroke(1.dp, DarkBorder),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary)
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = if (language == "de") "Zurück" else "Back",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 15.sp
-                        )
-                    }
-                }
-
-                Button(
-                    onClick = {
-                        if (currentStep < totalSteps - 1) {
-                            currentStep++
-                        } else {
-                            onComplete()
-                        }
-                    },
-                    modifier = Modifier
-                        .weight(if (currentStep > 0) 1.5f else 1f)
-                        .height(52.dp)
-                        .testTag("btn_onboarding_next"),
-                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryViolet),
-                    shape = RoundedCornerShape(16.dp)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            text = if (currentStep == totalSteps - 1) {
-                                if (language == "de") "Los geht's!" else "Get Started!"
-                            } else {
-                                if (language == "de") "Weiter" else "Next"
-                            },
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Icon(
-                            imageVector = if (currentStep == totalSteps - 1) Icons.Default.Check else Icons.Default.ArrowForward,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
+                    Text(
+                        text = if (currentStep == totalSteps - 1) {
+                            if (language == "de") "Los geht's!" else "Get Started!"
+                        } else {
+                            if (language == "de") "Weiter" else "Next"
+                        },
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Icon(
+                        imageVector = if (currentStep == totalSteps - 1) Icons.Default.Check else Icons.Default.ArrowForward,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
         }
@@ -11542,6 +14606,2633 @@ private fun OnboardingStep0(language: String) {
         )
     }
 }
+
+// ==========================================
+// YEARLY REVIEW FEATURE & CAROUSEL SLIDES
+// ==========================================
+
+fun parseHabitColor(colorName: String): Color {
+    return when (colorName.lowercase()) {
+        "blue" -> HabitBlue
+        "purple", "violet" -> HabitPurple
+        "cyan" -> HabitCyan
+        "green" -> HabitGreen
+        "yellow" -> HabitYellow
+        "orange" -> HabitOrange
+        "red" -> HabitRed
+        "pink" -> HabitPink
+        "slate" -> HabitSlate
+        "teal" -> HabitTeal
+        "rose" -> HabitRose
+        "indigo" -> HabitIndigo
+        else -> try {
+            if (colorName.startsWith("#")) Color(android.graphics.Color.parseColor(colorName))
+            else PrimaryViolet
+        } catch (e: Exception) {
+            PrimaryViolet
+        }
+    }
+}
+
+data class MonthlyReviewData(
+    val year: Int,
+    val month: Int,
+    val monthName: String,
+    val totalCompletions: Int,
+    val prevMonthCompletions: Int,
+    val growthPercentage: Int,
+    val startScore: Int,
+    val endScore: Int,
+    val scoreDelta: Int,
+    val mvpHabit: Habit?,
+    val mvpCompletions: Int,
+    val mvpStrength: Int,
+    val focusHabit: Habit?,
+    val focusCompletions: Int,
+    val focusExpected: Int,
+    val bestDayOfWeekName: String,
+    val bestDayOfWeekRate: Int
+)
+
+fun calculateHabitStrengthOnDate(habit: Habit, logs: List<HabitLog>, targetDateStr: String): Int {
+    val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+    val targetDate = try { sdf.parse(targetDateStr) } catch (e: Exception) { java.util.Date() }
+    val targetMillis = targetDate?.time ?: System.currentTimeMillis()
+    val validStartMillis = if (habit.startDate > 946684800000L) habit.startDate else habit.createdAt
+    val startSdfStr = sdf.format(java.util.Date(validStartMillis))
+    
+    val filteredLogs = logs.filter { it.date <= targetDateStr && it.date >= startSdfStr }
+    val habitLogs = filteredLogs.filter { it.habitId == habit.id }
+    
+    val completedEpochDays = habitLogs.filter { log ->
+        val isCompleted = when (log.value) {
+            -1f -> false
+            -2f -> true
+            else -> if (habit.type == "BINARY") true else log.value >= habit.targetValue
+        }
+        isCompleted && !log.isPaused
+    }.map { 
+        try {
+            java.time.LocalDate.parse(it.date).toEpochDay().toInt()
+        } catch (e: Exception) {
+            0
+        }
+    }.toSet()
+    
+    if (habit.frequency == "TIMES_WEEKLY") {
+        val targetTimes = habit.specificDays.toIntOrNull() ?: 3
+        val activeDays = (targetMillis - validStartMillis) / (24 * 3600 * 1000) + 1
+        val activeWeeks = (activeDays / 7.0).coerceAtMost(4.0).coerceAtLeast(1.0)
+        val expectedCompletions = (activeWeeks * targetTimes).toInt().coerceAtLeast(1)
+        
+        val limitMillis = targetMillis - 28L * 24 * 3600 * 1000
+        val limitSdfStr = sdf.format(java.util.Date(limitMillis.coerceAtLeast(validStartMillis)))
+        val completedInLast4Weeks = habitLogs.filter { log ->
+            val isCompleted = when (log.value) {
+                -1f -> false
+                -2f -> true
+                else -> if (habit.type == "BINARY") true else log.value >= habit.targetValue
+            }
+            isCompleted && !log.isPaused && log.date >= limitSdfStr
+        }.size
+        
+        return (completedInLast4Weeks.toFloat() / expectedCompletions.toFloat() * 100).toInt().coerceIn(0, 100)
+    }
+    
+    val loggedEpochDays = habitLogs.map { 
+        try {
+            java.time.LocalDate.parse(it.date).toEpochDay().toInt()
+        } catch (e: Exception) {
+            0
+        }
+    }.toSet()
+    
+    val todayEpoch = try {
+        java.time.LocalDate.parse(targetDateStr).toEpochDay().toInt()
+    } catch (e: Exception) {
+        0
+    }
+    val startEpoch = (validStartMillis / (24 * 3600 * 1000)).toInt()
+    
+    var weightedCompleted = 0
+    var totalPossibleWeight = 0
+    val totalDaysToCheck = 30
+    
+    val maxDays = if (todayEpoch - startEpoch + 1 < totalDaysToCheck) {
+        todayEpoch - startEpoch + 1
+    } else {
+        totalDaysToCheck
+    }
+    
+    if (maxDays <= 0) return 0
+    
+    for (i in 0 until maxDays) {
+        val currentEpoch = todayEpoch - i
+        val dayWeight = maxDays - i
+        
+        val successful = if (habit.isNegative) {
+            !loggedEpochDays.contains(currentEpoch)
+        } else {
+            completedEpochDays.contains(currentEpoch)
+        }
+        
+        if (successful) {
+            weightedCompleted += dayWeight
+        }
+        totalPossibleWeight += dayWeight
+    }
+    
+    val percentage = if (totalPossibleWeight > 0) {
+        (weightedCompleted.toFloat() / totalPossibleWeight.toFloat() * 100).toInt()
+    } else {
+        0
+    }
+    return percentage.coerceIn(0, 100)
+}
+
+fun calculateMonthlyReviewData(
+    year: Int,
+    month: Int,
+    allHabits: List<Habit>,
+    allLogs: List<HabitLog>,
+    language: String
+): MonthlyReviewData {
+    val monthPrefix = String.format(java.util.Locale.US, "%04d-%02d-", year, month)
+    val monthLogs = allLogs.filter { it.date.startsWith(monthPrefix) && it.value > 0f && !it.isPaused }
+    val totalCompletions = monthLogs.size
+    
+    val prevYear = if (month == 1) year - 1 else year
+    val prevMonth = if (month == 1) 12 else month - 1
+    val prevMonthPrefix = String.format(java.util.Locale.US, "%04d-%02d-", prevYear, prevMonth)
+    val prevLogs = allLogs.filter { it.date.startsWith(prevMonthPrefix) && it.value > 0f && !it.isPaused }
+    val prevMonthCompletions = prevLogs.size
+    
+    val growthPercentage = if (prevMonthCompletions > 0) {
+        (((totalCompletions - prevMonthCompletions).toFloat() / prevMonthCompletions) * 100).toInt()
+    } else {
+        0
+    }
+    
+    val calendar = java.util.Calendar.getInstance()
+    // Last day of previous month
+    calendar.set(java.util.Calendar.YEAR, prevYear)
+    calendar.set(java.util.Calendar.MONTH, prevMonth - 1)
+    val prevMaxDay = calendar.getActualMaximum(java.util.Calendar.DAY_OF_MONTH)
+    val prevMonthLastDay = String.format(java.util.Locale.US, "%04d-%02d-%02d", prevYear, prevMonth, prevMaxDay)
+    
+    // Last day of this month
+    calendar.set(java.util.Calendar.YEAR, year)
+    calendar.set(java.util.Calendar.MONTH, month - 1)
+    val thisMaxDay = calendar.getActualMaximum(java.util.Calendar.DAY_OF_MONTH)
+    val thisMonthLastDay = String.format(java.util.Locale.US, "%04d-%02d-%02d", year, month, thisMaxDay)
+    
+    val activeHabits = allHabits.filter { !it.isArchived }
+    
+    val startScore = if (activeHabits.isNotEmpty()) {
+        activeHabits.map { calculateHabitStrengthOnDate(it, allLogs, prevMonthLastDay) }.average().toInt()
+    } else 0
+    
+    val endScore = if (activeHabits.isNotEmpty()) {
+        activeHabits.map { calculateHabitStrengthOnDate(it, allLogs, thisMonthLastDay) }.average().toInt()
+    } else 0
+    
+    val scoreDelta = endScore - startScore
+    
+    // MVP Habit: most completions in this month
+    val mvpHabit = activeHabits.maxByOrNull { h ->
+        allLogs.count { it.habitId == h.id && it.date.startsWith(monthPrefix) && it.value > 0f && !it.isPaused }
+    }
+    val mvpCompletions = if (mvpHabit != null) {
+        allLogs.count { it.habitId == mvpHabit.id && it.date.startsWith(monthPrefix) && it.value > 0f && !it.isPaused }
+    } else 0
+    val mvpStrength = if (mvpHabit != null) {
+        calculateHabitStrengthOnDate(mvpHabit, allLogs, thisMonthLastDay)
+    } else 0
+    
+    // Focus Habit: lowest completion rate in this month
+    val focusHabit = activeHabits.filter { h ->
+        val validStartStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date(if (h.startDate > 946684800000L) h.startDate else h.createdAt))
+        validStartStr <= thisMonthLastDay
+    }.minByOrNull { h ->
+        val comps = allLogs.count { it.habitId == h.id && it.date.startsWith(monthPrefix) && it.value > 0f && !it.isPaused }
+        val expected = if (h.frequency == "TIMES_WEEKLY") (h.specificDays.toIntOrNull() ?: 3) * 4 else 28
+        comps.toFloat() / expected.coerceAtLeast(1).toFloat()
+    }
+    
+    val focusCompletions = if (focusHabit != null) {
+        allLogs.count { it.habitId == focusHabit.id && it.date.startsWith(monthPrefix) && it.value > 0f && !it.isPaused }
+    } else 0
+    
+    val focusExpected = if (focusHabit != null) {
+        if (focusHabit.frequency == "TIMES_WEEKLY") (focusHabit.specificDays.toIntOrNull() ?: 3) * 4 else 28
+    } else 0
+    
+    // Power day of week
+    val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+    val logsByDayOfWeek = monthLogs.groupBy { log ->
+        try {
+            val d = sdf.parse(log.date)
+            val cal = java.util.Calendar.getInstance()
+            if (d != null) cal.time = d
+            cal.get(java.util.Calendar.DAY_OF_WEEK)
+        } catch (e: Exception) {
+            java.util.Calendar.MONDAY
+        }
+    }
+    val bestDayEntry = logsByDayOfWeek.maxByOrNull { it.value.size }
+    val bestDayOfWeekNum = bestDayEntry?.key ?: java.util.Calendar.MONDAY
+    val bestDayOfWeekName = getDayOfWeekNameLocalized(bestDayOfWeekNum, language)
+    val bestDayOfWeekRate = bestDayEntry?.value?.size ?: 0
+    
+    return MonthlyReviewData(
+        year = year,
+        month = month,
+        monthName = getMonthNameLocalized(month, language),
+        totalCompletions = totalCompletions,
+        prevMonthCompletions = prevMonthCompletions,
+        growthPercentage = growthPercentage,
+        startScore = startScore,
+        endScore = endScore,
+        scoreDelta = scoreDelta,
+        mvpHabit = mvpHabit,
+        mvpCompletions = mvpCompletions,
+        mvpStrength = mvpStrength,
+        focusHabit = focusHabit,
+        focusCompletions = focusCompletions,
+        focusExpected = focusExpected,
+        bestDayOfWeekName = bestDayOfWeekName,
+        bestDayOfWeekRate = bestDayOfWeekRate
+    )
+}
+
+fun calculateStreakFast(habit: Habit, logs: List<HabitLog>): Pair<Int, Int> {
+    val validStartMillis = if (habit.startDate > 946684800000L) habit.startDate else habit.createdAt
+    val startSdfStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date(validStartMillis))
+    val habitLogs = logs.filter { it.habitId == habit.id && it.date >= startSdfStr }
+    if (habitLogs.isEmpty()) return 0 to 0
+
+    val completedDates = habitLogs.filter { log ->
+        val isCompleted = when (log.value) {
+            -1f -> false
+            -2f -> true
+            else -> if (habit.type == "BINARY") true else log.value >= habit.targetValue
+        }
+        isCompleted && !log.isPaused
+    }.map { it.date }.toSet()
+
+    if (habit.frequency == "TIMES_WEEKLY") {
+        val comps = completedDates.size
+        return comps to comps
+    }
+
+    val sortedDates = completedDates.sorted()
+    if (sortedDates.isEmpty()) return 0 to 0
+
+    var longest = 0
+    var current = 0
+    val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+    val todayStr = sdf.format(java.util.Date())
+    
+    val epochDays = sortedDates.map { 
+        try {
+            java.time.LocalDate.parse(it).toEpochDay().toInt()
+        } catch (e: Exception) {
+            0
+        }
+    }.toSet()
+    
+    if (epochDays.isEmpty()) return 0 to 0
+    
+    val minEpoch = epochDays.minOrNull() ?: 0
+    val maxEpoch = epochDays.maxOrNull() ?: 0
+    
+    var tempCurrent = 0
+    for (epoch in minEpoch..maxEpoch) {
+        if (epochDays.contains(epoch)) {
+            tempCurrent++
+            if (tempCurrent > longest) {
+                longest = tempCurrent
+            }
+        } else {
+            tempCurrent = 0
+        }
+    }
+    
+    val todayEpoch = try {
+        java.time.LocalDate.parse(todayStr).toEpochDay().toInt()
+    } catch (e: Exception) {
+        0
+    }
+    
+    var currentStreak = 0
+    var checkEpoch = todayEpoch
+    if (!epochDays.contains(todayEpoch) && epochDays.contains(todayEpoch - 1)) {
+        checkEpoch = todayEpoch - 1
+    }
+    
+    while (epochDays.contains(checkEpoch)) {
+        currentStreak++
+        checkEpoch--
+    }
+
+    return currentStreak to longest
+}
+
+data class YearlyReviewData(
+    val year: Int,
+    val totalCompletions: Int,
+    val activeDaysCount: Int,
+    val activeDaysPercentage: Int,
+    val topHabit: Habit?,
+    val topHabitCompletions: Int,
+    val growthHabit: Habit?,
+    val growthHabitCompletions: Int,
+    val bestMonthName: String,
+    val bestMonthCompletions: Int,
+    val bestDayOfWeekName: String,
+    val bestDayOfWeekCompletions: Int,
+    val perfectDaysCount: Int,
+    val longestStreak: Int = 0,
+    val longestStreakHabit: Habit? = null,
+    val isStreakActive: Boolean = false,
+    val startScore: Int = 0,
+    val endScore: Int = 0,
+    val scoreDelta: Int = 0
+)
+
+fun calculateYearlyReviewData(
+    year: Int,
+    allHabits: List<Habit>,
+    allLogs: List<HabitLog>,
+    language: String
+): YearlyReviewData {
+    val yearPrefix = "$year-"
+    val yearLogs = allLogs.filter { it.date.startsWith(yearPrefix) && it.value > 0f && !it.isPaused }
+    val totalCompletions = yearLogs.size
+
+    val activeDates = yearLogs.map { it.date }.distinct()
+    val activeDaysCount = activeDates.size
+
+    val currentYear = Calendar.getInstance().get(Calendar.YEAR)
+    val totalDays = if (year == currentYear) {
+        Calendar.getInstance().get(Calendar.DAY_OF_YEAR)
+    } else {
+        if ((year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)) 366 else 365
+    }
+    val activeDaysPercentage = if (totalDays > 0) ((activeDaysCount.toFloat() / totalDays) * 100).toInt().coerceIn(0, 100) else 0
+
+    // Logs by habit
+    val logsByHabit = yearLogs.groupBy { it.habitId }
+    val topHabitEntry = logsByHabit.maxByOrNull { it.value.size }
+    val topHabit = allHabits.find { it.id == topHabitEntry?.key }
+    val topHabitCompletions = topHabitEntry?.value?.size ?: 0
+
+    val growthHabit = allHabits
+        .filter { !it.isArchived && it.id != topHabit?.id }
+        .minByOrNull { h -> logsByHabit[h.id]?.size ?: 0 }
+    val growthHabitCompletions = if (growthHabit != null) logsByHabit[growthHabit.id]?.size ?: 0 else 0
+
+    // Best month
+    val logsByMonth = yearLogs.groupBy { 
+        if (it.date.length >= 7) it.date.substring(5, 7) else "01" 
+    }
+    val bestMonthEntry = logsByMonth.maxByOrNull { it.value.size }
+    val monthNum = (bestMonthEntry?.key ?: "01").toIntOrNull() ?: 1
+    val bestMonthName = getMonthNameLocalized(monthNum, language)
+    val bestMonthCompletions = bestMonthEntry?.value?.size ?: 0
+
+    // Best Day of Week
+    val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+    val logsByDayOfWeek = yearLogs.groupBy { log ->
+        try {
+            val d = sdf.parse(log.date)
+            val cal = Calendar.getInstance()
+            if (d != null) cal.time = d
+            cal.get(Calendar.DAY_OF_WEEK)
+        } catch (e: Exception) {
+            Calendar.MONDAY
+        }
+    }
+    val bestDayEntry = logsByDayOfWeek.maxByOrNull { it.value.size }
+    val dayOfWeekNum = bestDayEntry?.key ?: Calendar.MONDAY
+    val bestDayOfWeekName = getDayOfWeekNameLocalized(dayOfWeekNum, language)
+    val bestDayOfWeekCompletions = bestDayEntry?.value?.size ?: 0
+
+    // Perfect days count
+    val activeHabits = allHabits.filter { !it.isArchived }
+    val perfectDaysCount = if (activeHabits.isNotEmpty()) {
+        activeDates.count { date ->
+            val dateLogs = yearLogs.filter { it.date == date }
+            val completedHabitIds = dateLogs.map { it.habitId }.toSet()
+            activeHabits.all { h -> completedHabitIds.contains(h.id) }
+        }
+    } else 0
+
+    // Longest streak in this year across all habits
+    var longestStreakVal = 0
+    var longestStreakHabitVal: Habit? = null
+    var isStreakActiveVal = false
+    
+    for (h in allHabits) {
+        val hLogs = allLogs.filter { it.habitId == h.id && it.date.startsWith(yearPrefix) }
+        val (cur, max) = calculateStreakFast(h, hLogs)
+        if (max > longestStreakVal) {
+            longestStreakVal = max
+            longestStreakHabitVal = h
+            isStreakActiveVal = cur > 0 && cur >= max
+        }
+    }
+    
+    // Account transformation
+    val prevYearLastDay = "${year - 1}-12-31"
+    val yearLastDay = "$year-12-31"
+    
+    val startScore = if (activeHabits.isNotEmpty()) {
+        activeHabits.map { calculateHabitStrengthOnDate(it, allLogs, prevYearLastDay) }.average().toInt()
+    } else 0
+    
+    val endScore = if (activeHabits.isNotEmpty()) {
+        activeHabits.map { calculateHabitStrengthOnDate(it, allLogs, yearLastDay) }.average().toInt()
+    } else 0
+    
+    val scoreDelta = endScore - startScore
+
+    return YearlyReviewData(
+        year = year,
+        totalCompletions = totalCompletions,
+        activeDaysCount = activeDaysCount,
+        activeDaysPercentage = activeDaysPercentage,
+        topHabit = topHabit,
+        topHabitCompletions = topHabitCompletions,
+        growthHabit = growthHabit,
+        growthHabitCompletions = growthHabitCompletions,
+        bestMonthName = bestMonthName,
+        bestMonthCompletions = bestMonthCompletions,
+        bestDayOfWeekName = bestDayOfWeekName,
+        bestDayOfWeekCompletions = bestDayOfWeekCompletions,
+        perfectDaysCount = perfectDaysCount,
+        longestStreak = longestStreakVal,
+        longestStreakHabit = longestStreakHabitVal,
+        isStreakActive = isStreakActiveVal,
+        startScore = startScore,
+        endScore = endScore,
+        scoreDelta = scoreDelta
+    )
+}
+
+fun getMonthNameLocalized(month: Int, language: String): String {
+    val GermanMonths = listOf(
+        "Januar", "Februar", "März", "April", "Mai", "Juni",
+        "Juli", "August", "September", "Oktober", "November", "Dezember"
+    )
+    val EnglishMonths = listOf(
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    )
+    val idx = (month - 1).coerceIn(0, 11)
+    return if (language == "de") GermanMonths[idx] else EnglishMonths[idx]
+}
+
+fun getDayOfWeekNameLocalized(dayOfWeek: Int, language: String): String {
+    val GermanDays = mapOf(
+        Calendar.MONDAY to "Montag",
+        Calendar.TUESDAY to "Dienstag",
+        Calendar.WEDNESDAY to "Mittwoch",
+        Calendar.THURSDAY to "Donnerstag",
+        Calendar.FRIDAY to "Freitag",
+        Calendar.SATURDAY to "Samstag",
+        Calendar.SUNDAY to "Sonntag"
+    )
+    val EnglishDays = mapOf(
+        Calendar.MONDAY to "Monday",
+        Calendar.TUESDAY to "Tuesday",
+        Calendar.WEDNESDAY to "Wednesday",
+        Calendar.THURSDAY to "Thursday",
+        Calendar.FRIDAY to "Friday",
+        Calendar.SATURDAY to "Saturday",
+        Calendar.SUNDAY to "Sunday"
+    )
+    return if (language == "de") GermanDays[dayOfWeek] ?: "Montag" else EnglishDays[dayOfWeek] ?: "Monday"
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun YearlyReviewDialog(
+    year: Int,
+    allHabits: List<Habit>,
+    allLogs: List<HabitLog>,
+    language: String,
+    onDismiss: () -> Unit
+) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        val reviewData = remember(year, allHabits, allLogs, language) {
+            calculateYearlyReviewData(year, allHabits, allLogs, language)
+        }
+        val pageCount = 6
+        val pagerState = rememberPagerState(pageCount = { pageCount })
+        val coroutineScope = rememberCoroutineScope()
+
+        val gradientColors = when (pagerState.currentPage) {
+            0 -> listOf(Color(0xFF1E1B4B), Color(0xFF0F172A), DarkBg)
+            1 -> listOf(Color(0xFF064E3B), Color(0xFF0F172A), DarkBg)
+            2 -> listOf(Color(0xFF4C1D95), Color(0xFF1E1B4B), DarkBg)
+            3 -> listOf(Color(0xFF78350F), Color(0xFF18181B), DarkBg)
+            4 -> listOf(Color(0xFF164E63), Color(0xFF0F172A), DarkBg)
+            else -> listOf(Color(0xFF312E81), Color(0xFF1E1B4B), DarkBg)
+        }
+
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = DarkBg
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Brush.verticalGradient(gradientColors))
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 20.dp)
+                        .statusBarsPadding()
+                        .navigationBarsPadding()
+                ) {
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Progress indicators & close button
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        for (i in 0 until pageCount) {
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(4.dp)
+                                    .clip(RoundedCornerShape(2.dp))
+                                    .background(
+                                        if (i <= pagerState.currentPage) Color.White else Color.White.copy(alpha = 0.25f)
+                                    )
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        IconButton(
+                            onClick = onDismiss,
+                            modifier = Modifier
+                                .size(32.dp)
+                                .background(Color.White.copy(alpha = 0.15f), CircleShape)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Close",
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    HorizontalPager(
+                        state = pagerState,
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                    ) { page ->
+                        when (page) {
+                            0 -> YearlyReviewCoverSlide(year, language, reviewData)
+                            1 -> YearlyReviewVolumeSlide(year, language, reviewData)
+                            2 -> YearlyReviewTopHabitSlide(year, language, reviewData)
+                            3 -> YearlyReviewGrowthSlide(year, language, reviewData)
+                            4 -> YearlyReviewPeakMomentsSlide(year, language, reviewData)
+                            else -> YearlyReviewSummarySlide(year, language, reviewData, onDismiss)
+                        }
+                    }
+
+                    // Bottom Navigation Buttons
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 24.dp, top = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (pagerState.currentPage > 0) {
+                            OutlinedButton(
+                                onClick = {
+                                    coroutineScope.launch {
+                                        pagerState.animateScrollToPage(pagerState.currentPage - 1)
+                                    }
+                                },
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.4f)),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Previous",
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(if (language == "de") "Zurück" else "Back")
+                            }
+                        } else {
+                            Spacer(modifier = Modifier.width(1.dp))
+                        }
+
+                        if (pagerState.currentPage < pageCount - 1) {
+                            Button(
+                                onClick = {
+                                    coroutineScope.launch {
+                                        pagerState.animateScrollToPage(pagerState.currentPage + 1)
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = PrimaryViolet,
+                                    contentColor = Color.White
+                                ),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Text(
+                                    if (language == "de") "Weiter" else "Next",
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                    contentDescription = "Next",
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        } else {
+                            Button(
+                                onClick = onDismiss,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = SuccessGreen,
+                                    contentColor = Color.White
+                                ),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Finish",
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    if (language == "de") "Fertig" else "Done",
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun YearlyReviewCoverSlide(year: Int, language: String, reviewData: YearlyReviewData) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(120.dp)
+                .background(Color.White.copy(alpha = 0.12f), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.EmojiEvents,
+                contentDescription = "Trophy",
+                tint = Color(0xFFF59E0B),
+                modifier = Modifier.size(64.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(28.dp))
+
+        Surface(
+            color = PrimaryViolet.copy(alpha = 0.3f),
+            shape = RoundedCornerShape(20.dp),
+            border = BorderStroke(1.dp, PrimaryViolet.copy(alpha = 0.6f))
+        ) {
+            Text(
+                text = "✨ $year IN REVIEW ✨",
+                style = MaterialTheme.typography.labelLarge,
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = if (language == "de") "Dein Jahresrückblick $year" else "Your $year Review",
+            style = MaterialTheme.typography.headlineLarge,
+            color = Color.White,
+            fontWeight = FontWeight.ExtraBold,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Text(
+            text = if (language == "de") 
+                "Ein Jahr voller Gewohnheiten, Erfolge und persönlichem Wachstum. Lass uns deine Meilensteine feiern!" 
+            else 
+                "A year of habits, achievements, and personal growth. Let's celebrate your milestones!",
+            style = MaterialTheme.typography.bodyLarge,
+            color = Color.White.copy(alpha = 0.8f),
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+@Composable
+fun YearlyReviewVolumeSlide(year: Int, language: String, reviewData: YearlyReviewData) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = if (language == "de") "Dein Einsatz in $year" else "Your Dedication in $year",
+            style = MaterialTheme.typography.headlineMedium,
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Card 1: Total Completions
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = Color.White.copy(alpha = 0.1f),
+            shape = RoundedCornerShape(20.dp),
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f))
+        ) {
+            Row(
+                modifier = Modifier.padding(20.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .background(Color(0xFF8B5CF6).copy(alpha = 0.3f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.TaskAlt,
+                        contentDescription = "Completions",
+                        tint = Color(0xFFA78BFA),
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                Column {
+                    Text(
+                        text = reviewData.totalCompletions.toString(),
+                        style = MaterialTheme.typography.headlineLarge,
+                        color = Color.White,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                    Text(
+                        text = if (language == "de") "Erfüllte Gewohnheiten insgesamt" else "Total habits completed",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.8f)
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        // Card 2: Active Days
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = Color.White.copy(alpha = 0.1f),
+            shape = RoundedCornerShape(20.dp),
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f))
+        ) {
+            Row(
+                modifier = Modifier.padding(20.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .background(Color(0xFF10B981).copy(alpha = 0.3f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CalendarToday,
+                        contentDescription = "Active Days",
+                        tint = Color(0xFF34D399),
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                Column {
+                    Text(
+                        text = "${reviewData.activeDaysCount} ${if (language == "de") "Tage" else "Days"}",
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = if (language == "de") 
+                            "${reviewData.activeDaysPercentage}% aller Tage in $year aktiv gewesen" 
+                        else 
+                            "Active on ${reviewData.activeDaysPercentage}% of days in $year",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.8f)
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        // Card 3: Perfect Days
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = Color.White.copy(alpha = 0.1f),
+            shape = RoundedCornerShape(20.dp),
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f))
+        ) {
+            Row(
+                modifier = Modifier.padding(20.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .background(Color(0xFFF59E0B).copy(alpha = 0.3f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Star,
+                        contentDescription = "Perfect Days",
+                        tint = Color(0xFFFBBF24),
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                Column {
+                    Text(
+                        text = "${reviewData.perfectDaysCount} ${if (language == "de") "Perfekte Tage" else "Perfect Days"}",
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = if (language == "de") "100% aller Gewohnheiten an diesen Tagen abgeschlossen" else "All habits completed on these days",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.8f)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun YearlyReviewTopHabitSlide(year: Int, language: String, reviewData: YearlyReviewData) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = "⭐ " + (if (language == "de") "Star-Gewohnheit $year" else "$year Star Habit"),
+            style = MaterialTheme.typography.headlineMedium,
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+
+        Text(
+            text = if (language == "de") "Deine beständigste und erfolgreichste Gewohnheit" else "Your most consistent and completed habit",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color.White.copy(alpha = 0.8f),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 6.dp)
+        )
+
+        Spacer(modifier = Modifier.height(28.dp))
+
+        if (reviewData.topHabit != null) {
+            val h = reviewData.topHabit
+            val hColor = parseHabitColor(h.color)
+
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = Color.White.copy(alpha = 0.12f),
+                shape = RoundedCornerShape(24.dp),
+                border = BorderStroke(2.dp, hColor)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(68.dp)
+                            .background(hColor.copy(alpha = 0.25f), CircleShape)
+                            .border(2.dp, hColor, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = h.icon,
+                            style = MaterialTheme.typography.headlineMedium
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = h.name,
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Surface(
+                        color = hColor.copy(alpha = 0.3f),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            text = "${reviewData.topHabitCompletions} " + (if (language == "de") "Abschlüsse in $year" else "Completions in $year"),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = if (language == "de") 
+                            "Du hast hier herausragende Disziplin gezeigt! Behalte diesen Schwung bei." 
+                        else 
+                            "You showed outstanding discipline here! Keep up this amazing momentum.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.85f),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        } else {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = Color.White.copy(alpha = 0.1f),
+                shape = RoundedCornerShape(20.dp)
+            ) {
+                Text(
+                    text = if (language == "de") "Noch keine ausreichenden Daten für $year." else "No habit data available for $year yet.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Color.White,
+                    modifier = Modifier.padding(24.dp),
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun YearlyReviewGrowthSlide(year: Int, language: String, reviewData: YearlyReviewData) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = "🌱 " + (if (language == "de") "Wachstumsfeld" else "Growth Area"),
+            style = MaterialTheme.typography.headlineMedium,
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+
+        Text(
+            text = if (language == "de") 
+                "Hier schlummert großes Potenzial für das neue Jahr ${year + 1}" 
+            else 
+                "Great potential waiting for you in ${year + 1}",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color.White.copy(alpha = 0.8f),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 6.dp)
+        )
+
+        Spacer(modifier = Modifier.height(28.dp))
+
+        if (reviewData.growthHabit != null) {
+            val h = reviewData.growthHabit
+            val hColor = parseHabitColor(h.color)
+
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = Color.White.copy(alpha = 0.12f),
+                shape = RoundedCornerShape(24.dp),
+                border = BorderStroke(1.5.dp, Color(0xFFF59E0B).copy(alpha = 0.7f))
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(68.dp)
+                            .background(Color(0xFFF59E0B).copy(alpha = 0.2f), CircleShape)
+                            .border(2.dp, Color(0xFFF59E0B), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = h.icon,
+                            style = MaterialTheme.typography.headlineMedium
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = h.name,
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text(
+                        text = "${reviewData.growthHabitCompletions} " + (if (language == "de") "Abschlüsse in $year" else "Completions in $year"),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color(0xFFFCD34D),
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = if (language == "de") 
+                            "Setze dir für ${year + 1} kleine, machbare Schritte, um diese Gewohnheit auf das nächste Level zu heben!" 
+                        else 
+                            "Set small, actionable steps for ${year + 1} to take this habit to the next level!",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.85f),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        } else {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = Color.White.copy(alpha = 0.1f),
+                shape = RoundedCornerShape(20.dp)
+            ) {
+                Text(
+                    text = if (language == "de") "Du liegst bei allen deinen Gewohnheiten voll im Plan! Super!" else "You are crushing all your habits! Great job!",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Color.White,
+                    modifier = Modifier.padding(24.dp),
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun YearlyReviewPeakMomentsSlide(year: Int, language: String, reviewData: YearlyReviewData) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = "📅 " + (if (language == "de") "Höhepunkte & Muster" else "Peak Moments & Patterns"),
+            style = MaterialTheme.typography.headlineMedium,
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+
+        Text(
+            text = if (language == "de") "Deine stärksten Zeiten im Jahr $year" else "Your most productive times in $year",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color.White.copy(alpha = 0.8f),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 6.dp)
+        )
+
+        Spacer(modifier = Modifier.height(28.dp))
+
+        // Best Month
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = Color.White.copy(alpha = 0.1f),
+            shape = RoundedCornerShape(20.dp),
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f))
+        ) {
+            Row(
+                modifier = Modifier.padding(20.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .background(Color(0xFF06B6D4).copy(alpha = 0.3f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.TrendingUp,
+                        contentDescription = "Peak Month",
+                        tint = Color(0xFF22D3EE),
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                Column {
+                    Text(
+                        text = if (language == "de") "Stärkster Monat" else "Top Month",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color.White.copy(alpha = 0.7f)
+                    )
+                    Text(
+                        text = reviewData.bestMonthName,
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "${reviewData.bestMonthCompletions} " + (if (language == "de") "Abschlüsse in diesem Monat 🚀" else "Completions in this month 🚀"),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.85f)
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Best Day of Week
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = Color.White.copy(alpha = 0.1f),
+            shape = RoundedCornerShape(20.dp),
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f))
+        ) {
+            Row(
+                modifier = Modifier.padding(20.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .background(Color(0xFFEC4899).copy(alpha = 0.3f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Bolt,
+                        contentDescription = "Peak Day",
+                        tint = Color(0xFFF472B6),
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                Column {
+                    Text(
+                        text = if (language == "de") "Produktivster Wochentag" else "Most Productive Day",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color.White.copy(alpha = 0.7f)
+                    )
+                    Text(
+                        text = reviewData.bestDayOfWeekName,
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "${reviewData.bestDayOfWeekCompletions} " + (if (language == "de") "Abschlüsse an diesem Wochentag ⚡" else "Completions on this weekday ⚡"),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.85f)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun YearlyReviewSummarySlide(
+    year: Int,
+    language: String,
+    reviewData: YearlyReviewData,
+    onDismiss: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(80.dp)
+                .background(SuccessGreen.copy(alpha = 0.2f), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.AutoAwesome,
+                contentDescription = "Awesome",
+                tint = SuccessGreen,
+                modifier = Modifier.size(44.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = if (language == "de") "Zusammenfassung $year" else "$year Summary",
+            style = MaterialTheme.typography.headlineMedium,
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = Color.White.copy(alpha = 0.12f),
+            shape = RoundedCornerShape(24.dp),
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.25f))
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = if (language == "de") "Gesamt-Abschlüsse:" else "Total Completions:",
+                        color = Color.White.copy(alpha = 0.8f),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        text = reviewData.totalCompletions.toString(),
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = if (language == "de") "Aktive Tage:" else "Active Days:",
+                        color = Color.White.copy(alpha = 0.8f),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        text = "${reviewData.activeDaysCount} (${reviewData.activeDaysPercentage}%)",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+
+                if (reviewData.topHabit != null) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = if (language == "de") "Top Gewohnheit:" else "Top Habit:",
+                            color = Color.White.copy(alpha = 0.8f),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            text = "${reviewData.topHabit.icon} ${reviewData.topHabit.name}",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = if (language == "de") "Bester Monat:" else "Best Month:",
+                        color = Color.White.copy(alpha = 0.8f),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        text = reviewData.bestMonthName,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        val context = LocalContext.current
+        Button(
+            onClick = {
+                val bitmap = renderYearlyReviewShareBitmap(year, reviewData, language)
+                val summaryText = if (language == "de")
+                    "Mein Jahresrückblick $year:\n• ${reviewData.totalCompletions} Erfolge\n• ${reviewData.activeDaysCount} aktive Tage (${reviewData.activeDaysPercentage}%)\nShared via Everyday Habits App"
+                else
+                    "My $year Review:\n• ${reviewData.totalCompletions} completions\n• ${reviewData.activeDaysCount} active days (${reviewData.activeDaysPercentage}%)\nShared via Everyday Habits App"
+                com.example.ui.shareBitmapImage(context, bitmap, if (language == "de") "Jahresrückblick $year" else "$year Review", summaryText)
+            },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFFA855F7),
+                contentColor = Color.White
+            ),
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp)
+        ) {
+            Icon(imageVector = Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = if (language == "de") "Rückblick teilen" else "Share Review",
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.bodyLarge
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = if (language == "de") 
+                "Danke für deine Treue in $year! Auf ein fantastisches, produktives neues Jahr!" 
+            else 
+                "Thank you for your consistency in $year! Here's to a fantastic and habit-filled new year!",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color.White.copy(alpha = 0.85f),
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+fun renderYearlyReviewShareBitmap(
+    year: Int,
+    reviewData: YearlyReviewData,
+    language: String
+): android.graphics.Bitmap {
+    val width = 1080
+    val height = 1350
+    val bitmap = android.graphics.Bitmap.createBitmap(width, height, android.graphics.Bitmap.Config.ARGB_8888)
+    val canvas = android.graphics.Canvas(bitmap)
+
+    val bgPaint = android.graphics.Paint().apply {
+        isAntiAlias = true
+        shader = android.graphics.LinearGradient(
+            0f, 0f, 0f, height.toFloat(),
+            android.graphics.Color.parseColor("#312E81"),
+            android.graphics.Color.parseColor("#0F172A"),
+            android.graphics.Shader.TileMode.CLAMP
+        )
+    }
+    canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bgPaint)
+
+    val cardPaint = android.graphics.Paint().apply {
+        isAntiAlias = true
+        color = android.graphics.Color.parseColor("#A855F7")
+        style = android.graphics.Paint.Style.STROKE
+        strokeWidth = 12f
+    }
+    val cardRect = android.graphics.RectF(60f, 60f, width - 60f, height - 60f)
+    canvas.drawRoundRect(cardRect, 48f, 48f, cardPaint)
+
+    var currentY = 220f
+
+    val titlePaint = android.graphics.Paint().apply {
+        isAntiAlias = true
+        color = android.graphics.Color.WHITE
+        textSize = 72f
+        typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+        textAlign = android.graphics.Paint.Align.CENTER
+    }
+    canvas.drawText("✨ $year IN REVIEW ✨", width / 2f, currentY, titlePaint)
+    currentY += 140f
+
+    val metricPaint = android.graphics.Paint().apply {
+        isAntiAlias = true
+        color = android.graphics.Color.WHITE
+        textSize = 44f
+        typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+        textAlign = android.graphics.Paint.Align.CENTER
+    }
+
+    val totalText = if (language == "de") "Gesamt-Abschlüsse: ${reviewData.totalCompletions}" else "Total Completions: ${reviewData.totalCompletions}"
+    canvas.drawText(totalText, width / 2f, currentY, metricPaint)
+    currentY += 100f
+
+    val activeText = if (language == "de") "Aktive Tage: ${reviewData.activeDaysCount} (${reviewData.activeDaysPercentage}%)" else "Active Days: ${reviewData.activeDaysCount} (${reviewData.activeDaysPercentage}%)"
+    canvas.drawText(activeText, width / 2f, currentY, metricPaint)
+    currentY += 100f
+
+    if (reviewData.topHabit != null) {
+        val topText = if (language == "de") "Top Gewohnheit: ${reviewData.topHabit.icon} ${reviewData.topHabit.name}" else "Top Habit: ${reviewData.topHabit.icon} ${reviewData.topHabit.name}"
+        canvas.drawText(topText, width / 2f, currentY, metricPaint)
+        currentY += 100f
+    }
+
+    val monthText = if (language == "de") "Bester Monat: ${reviewData.bestMonthName}" else "Best Month: ${reviewData.bestMonthName}"
+    canvas.drawText(monthText, width / 2f, currentY, metricPaint)
+    currentY += 160f
+
+    val footerPaint = android.graphics.Paint().apply {
+        isAntiAlias = true
+        color = android.graphics.Color.parseColor("#A855F7")
+        textSize = 38f
+        typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+        textAlign = android.graphics.Paint.Align.CENTER
+    }
+    canvas.drawText("Everyday Habits App", width / 2f, currentY, footerPaint)
+
+    return bitmap
+}
+
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun MonthlyReviewDialog(
+    year: Int,
+    month: Int,
+    allHabits: List<Habit>,
+    allLogs: List<HabitLog>,
+    language: String,
+    onDismiss: () -> Unit
+) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        val reviewData = remember(year, month, allHabits, allLogs, language) {
+            calculateMonthlyReviewData(year, month, allHabits, allLogs, language)
+        }
+        val pageCount = 5
+        val pagerState = rememberPagerState(pageCount = { pageCount })
+        val coroutineScope = rememberCoroutineScope()
+
+        val gradientColors = when (pagerState.currentPage) {
+            0 -> listOf(Color(0xFF1E1B4B), Color(0xFF0F172A), DarkBg)
+            1 -> listOf(Color(0xFF064E3B), Color(0xFF0F172A), DarkBg)
+            2 -> listOf(Color(0xFF4C1D95), Color(0xFF1E1B4B), DarkBg)
+            3 -> listOf(Color(0xFF78350F), Color(0xFF18181B), DarkBg)
+            else -> listOf(Color(0xFF1E3A8A), Color(0xFF0F172A), DarkBg)
+        }
+
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = DarkBg
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Brush.verticalGradient(gradientColors))
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 20.dp)
+                        .statusBarsPadding()
+                        .navigationBarsPadding()
+                ) {
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Progress indicators & close button
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        for (i in 0 until pageCount) {
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(4.dp)
+                                    .clip(RoundedCornerShape(2.dp))
+                                    .background(
+                                        if (i <= pagerState.currentPage) Color.White else Color.White.copy(alpha = 0.25f)
+                                    )
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        IconButton(
+                            onClick = onDismiss,
+                            modifier = Modifier
+                                .size(32.dp)
+                                .background(Color.White.copy(alpha = 0.15f), CircleShape)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Close",
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    HorizontalPager(
+                        state = pagerState,
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                    ) { page ->
+                        when (page) {
+                            0 -> MonthlyReviewCoverSlide(year, month, language, reviewData)
+                            1 -> MonthlyReviewVolumeSlide(year, month, language, reviewData)
+                            2 -> MonthlyReviewMVPSlide(year, month, language, reviewData)
+                            3 -> MonthlyReviewFocusSlide(year, month, language, reviewData)
+                            else -> MonthlyReviewSummarySlide(year, month, language, reviewData, onDismiss)
+                        }
+                    }
+
+                    // Bottom Navigation Buttons
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 24.dp, top = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (pagerState.currentPage > 0) {
+                            OutlinedButton(
+                                onClick = {
+                                    coroutineScope.launch {
+                                        pagerState.animateScrollToPage(pagerState.currentPage - 1)
+                                    }
+                                },
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.4f)),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Previous",
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(if (language == "de") "Zurück" else "Back")
+                            }
+                        } else {
+                            Spacer(modifier = Modifier.width(1.dp))
+                        }
+
+                        if (pagerState.currentPage < pageCount - 1) {
+                            Button(
+                                onClick = {
+                                    coroutineScope.launch {
+                                        pagerState.animateScrollToPage(pagerState.currentPage + 1)
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = PrimaryViolet,
+                                    contentColor = Color.White
+                                ),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Text(
+                                    if (language == "de") "Weiter" else "Next",
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                    contentDescription = "Next",
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        } else {
+                            Button(
+                                onClick = onDismiss,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = SuccessGreen,
+                                    contentColor = Color.White
+                                ),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Finish",
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    if (language == "de") "Fertig" else "Done",
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun MonthlyReviewCoverSlide(year: Int, month: Int, language: String, reviewData: MonthlyReviewData) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(120.dp)
+                .background(Color.White.copy(alpha = 0.12f), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.CalendarToday,
+                contentDescription = "Calendar",
+                tint = Color(0xFFA78BFA),
+                modifier = Modifier.size(64.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(28.dp))
+
+        Surface(
+            color = PrimaryViolet.copy(alpha = 0.3f),
+            shape = RoundedCornerShape(20.dp),
+            border = BorderStroke(1.dp, PrimaryViolet.copy(alpha = 0.6f))
+        ) {
+            Text(
+                text = "✨ ${reviewData.monthName.uppercase(java.util.Locale.US)} $year ✨",
+                style = MaterialTheme.typography.labelLarge,
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = if (language == "de") "Dein Monatsrückblick" else "Your Monthly Review",
+            style = MaterialTheme.typography.headlineLarge,
+            color = Color.White,
+            fontWeight = FontWeight.ExtraBold,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Text(
+            text = if (language == "de") 
+                "Deine Routine, deine Gewohnheiten und dein Fortschritt im ${reviewData.monthName}. Lass uns deine Entwicklung feiern!" 
+            else 
+                "Your routine, your habits, and your progress in ${reviewData.monthName}. Let's celebrate your growth!",
+            style = MaterialTheme.typography.bodyLarge,
+            color = Color.White.copy(alpha = 0.8f),
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+@Composable
+fun MonthlyReviewVolumeSlide(year: Int, month: Int, language: String, reviewData: MonthlyReviewData) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = if (language == "de") "Dein Einsatz im ${reviewData.monthName}" else "Your Dedication in ${reviewData.monthName}",
+            style = MaterialTheme.typography.headlineMedium,
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Check-ins Card
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = Color.White.copy(alpha = 0.1f),
+            shape = RoundedCornerShape(20.dp),
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f))
+        ) {
+            Row(
+                modifier = Modifier.padding(20.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .background(Color(0xFF8B5CF6).copy(alpha = 0.3f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Analytics,
+                        contentDescription = "Checkins",
+                        tint = Color(0xFFA78BFA),
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                Column {
+                    Text(
+                        text = "${reviewData.totalCompletions} ${if (language == "de") "Check-ins" else "Check-ins"}",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = Color.White,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                    
+                    val compText = if (reviewData.prevMonthCompletions > 0) {
+                        val sign = if (reviewData.growthPercentage >= 0) "+" else ""
+                        if (language == "de")
+                            "$sign${reviewData.growthPercentage}% im Vergleich zum Vormonat (${reviewData.prevMonthCompletions}) 📈"
+                        else
+                            "$sign${reviewData.growthPercentage}% compared to last month (${reviewData.prevMonthCompletions}) 📈"
+                    } else {
+                        if (language == "de") "Dein erster aktiver Monat! 🌟" else "Your first active month! 🌟"
+                    }
+                    Text(
+                        text = compText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.8f)
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Account Score Card
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = Color.White.copy(alpha = 0.1f),
+            shape = RoundedCornerShape(20.dp),
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f))
+        ) {
+            Row(
+                modifier = Modifier.padding(20.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .background(Color(0xFF10B981).copy(alpha = 0.3f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Star,
+                        contentDescription = "Account Score",
+                        tint = Color(0xFF34D399),
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                Column {
+                    Text(
+                        text = if (language == "de") "Account-Stärke" else "Account Strength",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color.White.copy(alpha = 0.7f)
+                    )
+                    Text(
+                        text = "Score: ${reviewData.startScore} ➔ ${reviewData.endScore}",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                    val deltaSign = if (reviewData.scoreDelta >= 0) "+" else ""
+                    val deltaColor = if (reviewData.scoreDelta >= 0) "🟢" else "🔴"
+                    Text(
+                        text = if (language == "de") 
+                            "Veränderung: $deltaSign${reviewData.scoreDelta} Punkte $deltaColor" 
+                        else 
+                            "Change: $deltaSign${reviewData.scoreDelta} points $deltaColor",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.8f)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun MonthlyReviewMVPSlide(year: Int, month: Int, language: String, reviewData: MonthlyReviewData) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = "👑 " + (if (language == "de") "Gewohnheits-MVP" else "Habit MVP"),
+            style = MaterialTheme.typography.headlineMedium,
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+
+        Text(
+            text = if (language == "de") 
+                "Deine absolut stärkste Routine in diesem Monat" 
+            else 
+                "Your strongest routine of the month",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color.White.copy(alpha = 0.8f),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 6.dp)
+        )
+
+        Spacer(modifier = Modifier.height(28.dp))
+
+        if (reviewData.mvpHabit != null) {
+            val h = reviewData.mvpHabit
+            val hColor = parseHabitColor(h.color)
+
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = Color.White.copy(alpha = 0.12f),
+                shape = RoundedCornerShape(24.dp),
+                border = BorderStroke(2.dp, hColor)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(68.dp)
+                            .background(hColor.copy(alpha = 0.25f), CircleShape)
+                            .border(2.dp, hColor, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = h.icon,
+                            style = MaterialTheme.typography.headlineMedium
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = h.name,
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text(
+                        text = if (language == "de")
+                            "${reviewData.mvpCompletions} Check-ins im ${reviewData.monthName}"
+                        else
+                            "${reviewData.mvpCompletions} check-ins in ${reviewData.monthName}",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Text(
+                        text = if (language == "de")
+                            "Gewohnheitsstärke: ${reviewData.mvpStrength}%"
+                        else
+                            "Habit strength: ${reviewData.mvpStrength}%",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.8f)
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = if (language == "de") 
+                            "Unfassbar beständig! Behalte diese überragende Routine im nächsten Monat bei." 
+                        else 
+                            "Incredible consistency! Maintain this superior routine next month.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.85f),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        } else {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = Color.White.copy(alpha = 0.1f),
+                shape = RoundedCornerShape(20.dp)
+            ) {
+                Text(
+                    text = if (language == "de") "Noch keine ausreichenden Daten für diesen Monat." else "No habit data available for this month yet.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Color.White,
+                    modifier = Modifier.padding(24.dp),
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun MonthlyReviewFocusSlide(year: Int, month: Int, language: String, reviewData: MonthlyReviewData) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = "🌱 " + (if (language == "de") "Fokus-Bereich" else "Focus Area"),
+            style = MaterialTheme.typography.headlineMedium,
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+
+        Text(
+            text = if (language == "de") 
+                "Hier gab es die meisten Lücken – ein super Potenzial für den neuen Monat!" 
+            else 
+                "Where most gaps appeared – a great potential for the new month!",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color.White.copy(alpha = 0.8f),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 6.dp)
+        )
+
+        Spacer(modifier = Modifier.height(28.dp))
+
+        if (reviewData.focusHabit != null) {
+            val h = reviewData.focusHabit
+            val hColor = parseHabitColor(h.color)
+
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = Color.White.copy(alpha = 0.12f),
+                shape = RoundedCornerShape(24.dp),
+                border = BorderStroke(1.5.dp, Color(0xFFF59E0B).copy(alpha = 0.7f))
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(68.dp)
+                            .background(Color(0xFFF59E0B).copy(alpha = 0.2f), CircleShape)
+                            .border(2.dp, Color(0xFFF59E0B), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = h.icon,
+                            style = MaterialTheme.typography.headlineMedium
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = h.name,
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text(
+                        text = if (language == "de")
+                            "${reviewData.focusCompletions} von ${reviewData.focusExpected} Einheiten erledigt"
+                        else
+                            "${reviewData.focusCompletions} of ${reviewData.focusExpected} units completed",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color(0xFFFCD34D),
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = if (language == "de") 
+                            "Keine Sorge! Nimm dir für den neuen Monat vor, diese Gewohnheit als Erstes am Tag zu erledigen." 
+                        else 
+                            "Don't worry! Try scheduling this habit first thing in the morning for the new month.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.85f),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        } else {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = Color.White.copy(alpha = 0.1f),
+                shape = RoundedCornerShape(20.dp)
+            ) {
+                Text(
+                    text = if (language == "de") "Du liegst bei allen deinen Gewohnheiten voll im Plan! Super!" else "You are crushing all your habits! Great job!",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Color.White,
+                    modifier = Modifier.padding(24.dp),
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun MonthlyReviewSummarySlide(
+    year: Int,
+    month: Int,
+    language: String,
+    reviewData: MonthlyReviewData,
+    onDismiss: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(80.dp)
+                .background(Color(0xFF3B82F6).copy(alpha = 0.2f), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Star,
+                contentDescription = "Awesome",
+                tint = Color(0xFF3B82F6),
+                modifier = Modifier.size(44.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = if (language == "de") "Zusammenfassung ${reviewData.monthName}" else "${reviewData.monthName} Summary",
+            style = MaterialTheme.typography.headlineMedium,
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = Color.White.copy(alpha = 0.12f),
+            shape = RoundedCornerShape(24.dp),
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.25f))
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = if (language == "de") "Gesamt-Checkins:" else "Total Check-ins:",
+                        color = Color.White.copy(alpha = 0.8f),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        text = reviewData.totalCompletions.toString(),
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = if (language == "de") "Account-Stärke:" else "Account Strength:",
+                        color = Color.White.copy(alpha = 0.8f),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        text = "${reviewData.endScore} (${if (reviewData.scoreDelta >= 0) "+" else ""}${reviewData.scoreDelta})",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+
+                if (reviewData.mvpHabit != null) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = if (language == "de") "Monats-MVP:" else "Monthly MVP:",
+                            color = Color.White.copy(alpha = 0.8f),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            text = "${reviewData.mvpHabit.icon} ${reviewData.mvpHabit.name}",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = if (language == "de") "Power-Tag:" else "Power Day:",
+                        color = Color.White.copy(alpha = 0.8f),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        text = "${reviewData.bestDayOfWeekName} (${reviewData.bestDayOfWeekRate} Einheiten)",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        val context = LocalContext.current
+        Button(
+            onClick = {
+                val bitmap = renderMonthlyReviewShareBitmap(year, month, reviewData, language)
+                val summaryText = if (language == "de")
+                    "Mein Rückblick für ${reviewData.monthName} $year:\n• ${reviewData.totalCompletions} Check-ins\n• Stärke: ${reviewData.endScore} (${if (reviewData.scoreDelta >= 0) "+" else ""}${reviewData.scoreDelta})\nShared via Everyday Habits App"
+                else
+                    "My ${reviewData.monthName} $year Review:\n• ${reviewData.totalCompletions} check-ins\n• Strength: ${reviewData.endScore} (${if (reviewData.scoreDelta >= 0) "+" else ""}${reviewData.scoreDelta})\nShared via Everyday Habits App"
+                com.example.ui.shareBitmapImage(context, bitmap, if (language == "de") "Monatsrückblick ${reviewData.monthName} $year" else "${reviewData.monthName} $year Review", summaryText)
+            },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFF3B82F6),
+                contentColor = Color.White
+            ),
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp)
+        ) {
+            Icon(imageVector = Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = if (language == "de") "Rückblick teilen" else "Share Review",
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.bodyLarge
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = if (language == "de") 
+                "Großartige Arbeit! Jeder Tag ist eine Chance, besser zu werden. Weiter so!" 
+            else 
+                "Great job! Every day is a new chance to grow. Keep it up!",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color.White.copy(alpha = 0.85f),
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+fun renderMonthlyReviewShareBitmap(
+    year: Int,
+    month: Int,
+    reviewData: MonthlyReviewData,
+    language: String
+): android.graphics.Bitmap {
+    val width = 1080
+    val height = 1350
+    val bitmap = android.graphics.Bitmap.createBitmap(width, height, android.graphics.Bitmap.Config.ARGB_8888)
+    val canvas = android.graphics.Canvas(bitmap)
+
+    val bgPaint = android.graphics.Paint().apply {
+        isAntiAlias = true
+        shader = android.graphics.LinearGradient(
+            0f, 0f, 0f, height.toFloat(),
+            android.graphics.Color.parseColor("#1E3A8A"),
+            android.graphics.Color.parseColor("#0F172A"),
+            android.graphics.Shader.TileMode.CLAMP
+        )
+    }
+    canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bgPaint)
+
+    val cardPaint = android.graphics.Paint().apply {
+        isAntiAlias = true
+        color = android.graphics.Color.parseColor("#3B82F6")
+        style = android.graphics.Paint.Style.STROKE
+        strokeWidth = 12f
+    }
+    val cardRect = android.graphics.RectF(60f, 60f, width - 60f, height - 60f)
+    canvas.drawRoundRect(cardRect, 48f, 48f, cardPaint)
+
+    var currentY = 220f
+
+    val titlePaint = android.graphics.Paint().apply {
+        isAntiAlias = true
+        color = android.graphics.Color.WHITE
+        textSize = 72f
+        typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+        textAlign = android.graphics.Paint.Align.CENTER
+    }
+    canvas.drawText("✨ ${reviewData.monthName.uppercase(java.util.Locale.US)} $year ✨", width / 2f, currentY, titlePaint)
+    currentY += 140f
+
+    val metricPaint = android.graphics.Paint().apply {
+        isAntiAlias = true
+        color = android.graphics.Color.WHITE
+        textSize = 44f
+        typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+        textAlign = android.graphics.Paint.Align.CENTER
+    }
+
+    val totalText = if (language == "de") "Gesamt-Checkins: ${reviewData.totalCompletions}" else "Total Check-ins: ${reviewData.totalCompletions}"
+    canvas.drawText(totalText, width / 2f, currentY, metricPaint)
+    currentY += 100f
+
+    val activeText = if (language == "de") "Account-Stärke: ${reviewData.endScore} (${if (reviewData.scoreDelta >= 0) "+" else ""}${reviewData.scoreDelta})" else "Account Strength: ${reviewData.endScore} (${if (reviewData.scoreDelta >= 0) "+" else ""}${reviewData.scoreDelta})"
+    canvas.drawText(activeText, width / 2f, currentY, metricPaint)
+    currentY += 100f
+
+    if (reviewData.mvpHabit != null) {
+        val topText = if (language == "de") "Monats-MVP: ${reviewData.mvpHabit.icon} ${reviewData.mvpHabit.name}" else "Monthly MVP: ${reviewData.mvpHabit.icon} ${reviewData.mvpHabit.name}"
+        canvas.drawText(topText, width / 2f, currentY, metricPaint)
+        currentY += 100f
+    }
+
+    val powerDayText = if (language == "de") "Power-Tag: ${reviewData.bestDayOfWeekName}" else "Power Day: ${reviewData.bestDayOfWeekName}"
+    canvas.drawText(powerDayText, width / 2f, currentY, metricPaint)
+    currentY += 160f
+
+    val footerPaint = android.graphics.Paint().apply {
+        isAntiAlias = true
+        color = android.graphics.Color.parseColor("#3B82F6")
+        textSize = 38f
+        typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+        textAlign = android.graphics.Paint.Align.CENTER
+    }
+    canvas.drawText("Everyday Habits App", width / 2f, currentY, footerPaint)
+
+    return bitmap
+}
+
+
+@Composable
+fun YearlyReviewStreakSlide(year: Int, language: String, reviewData: YearlyReviewData) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = "🔥 " + (if (language == "de") "Deine längste Serie" else "Your Longest Streak"),
+            style = MaterialTheme.typography.headlineMedium,
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+
+        Text(
+            text = if (language == "de") "Beständigkeit zahlt sich aus!" else "Consistency is the key!",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color.White.copy(alpha = 0.8f),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 6.dp)
+        )
+
+        Spacer(modifier = Modifier.height(28.dp))
+
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = Color.White.copy(alpha = 0.12f),
+            shape = RoundedCornerShape(24.dp),
+            border = BorderStroke(2.dp, Color(0xFFF59E0B))
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(80.dp)
+                        .background(Color(0xFFF59E0B).copy(alpha = 0.2f), CircleShape)
+                        .border(2.dp, Color(0xFFF59E0B), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.FlashOn,
+                        contentDescription = "Streak",
+                        tint = Color(0xFFF59E0B),
+                        modifier = Modifier.size(44.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "${reviewData.longestStreak} ${if (language == "de") { if (reviewData.longestStreak == 1) "Tag am Stück" else "Tage am Stück" } else { if (reviewData.longestStreak == 1) "Day Streak" else "Days Streak" }}",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                )
+
+                if (reviewData.longestStreakHabit != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = if (language == "de") 
+                            "Erreicht bei: ${reviewData.longestStreakHabit.icon} ${reviewData.longestStreakHabit.name}" 
+                        else 
+                            "Achieved on: ${reviewData.longestStreakHabit.icon} ${reviewData.longestStreakHabit.name}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.85f),
+                        textAlign = TextAlign.Center
+                    )
+                }
+
+                if (reviewData.isStreakActive) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Surface(
+                        color = Color(0xFF10B981).copy(alpha = 0.25f),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, Color(0xFF10B981))
+                    ) {
+                        Text(
+                            text = if (language == "de") "... und läuft weiter! 🔥" else "... and still going! 🔥",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = Color(0xFF34D399),
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun YearlyReviewTransformationSlide(year: Int, language: String, reviewData: YearlyReviewData) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = "📈 " + (if (language == "de") "Konto-Transformation" else "Account Transformation"),
+            style = MaterialTheme.typography.headlineMedium,
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+
+        Text(
+            text = if (language == "de") 
+                "Deine Entwicklung der globalen Account-Stärke über das Jahr $year" 
+            else 
+                "Your overall account strength development throughout $year",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color.White.copy(alpha = 0.8f),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 6.dp)
+        )
+
+        Spacer(modifier = Modifier.height(28.dp))
+
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = Color.White.copy(alpha = 0.12f),
+            shape = RoundedCornerShape(24.dp),
+            border = BorderStroke(1.5.dp, Color(0xFF8B5CF6).copy(alpha = 0.7f))
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceAround,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = if (language == "de") "Start" else "Start",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color.White.copy(alpha = 0.6f)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "${reviewData.startScore}",
+                            style = MaterialTheme.typography.headlineLarge,
+                            color = Color.White.copy(alpha = 0.8f),
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = "to",
+                        tint = Color(0xFFA78BFA),
+                        modifier = Modifier.size(32.dp)
+                    )
+
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = if (language == "de") "Ende" else "End",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color.White.copy(alpha = 0.6f)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "${reviewData.endScore}",
+                            style = MaterialTheme.typography.headlineLarge,
+                            color = Color.White,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                val sign = if (reviewData.scoreDelta >= 0) "+" else ""
+                val deltaColor = if (reviewData.scoreDelta >= 0) Color(0xFF34D399) else Color(0xFFF87171)
+                
+                Surface(
+                    color = deltaColor.copy(alpha = 0.2f),
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, deltaColor)
+                ) {
+                    Text(
+                        text = if (language == "de") 
+                            "Score um $sign${reviewData.scoreDelta} Punkte gesteigert! 🎉" 
+                        else 
+                            "Score increased by $sign${reviewData.scoreDelta} points! 🎉",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = deltaColor,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun YearlyReviewTrophySlide(year: Int, language: String, reviewData: YearlyReviewData) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = "🏆 " + (if (language == "de") "Erfolge & Trophäen" else "Achievements & Trophies"),
+            style = MaterialTheme.typography.headlineMedium,
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+
+        Text(
+            text = if (language == "de") 
+                "Deine verdienten Abzeichen im Jahr $year" 
+            else 
+                "Your earned badges in $year",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color.White.copy(alpha = 0.8f),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 6.dp)
+        )
+
+        Spacer(modifier = Modifier.height(28.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceAround
+        ) {
+            val trophies = listOf(
+                Triple("🥇", if (language == "de") "Check-ins" else "Check-ins", reviewData.totalCompletions >= 100),
+                Triple("⭐", if (language == "de") "Perfekt" else "Perfect", reviewData.perfectDaysCount >= 10),
+                Triple("🔥", if (language == "de") "Disziplin" else "Streak", reviewData.longestStreak >= 7)
+            )
+
+            for ((emoji, name, unlocked) in trophies) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(72.dp)
+                            .background(
+                                if (unlocked) Color(0xFFFBBF24).copy(alpha = 0.25f) else Color.White.copy(alpha = 0.1f),
+                                CircleShape
+                            )
+                            .border(
+                                2.dp,
+                                if (unlocked) Color(0xFFFBBF24) else Color.White.copy(alpha = 0.2f),
+                                CircleShape
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = emoji,
+                            style = MaterialTheme.typography.headlineMedium,
+                            modifier = Modifier.graphicsLayer(alpha = if (unlocked) 1f else 0.4f)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = name,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = if (unlocked) Color.White else Color.White.copy(alpha = 0.5f),
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = if (unlocked) (if (language == "de") "Freigeschaltet" else "Unlocked") else (if (language == "de") "Gesperrt" else "Locked"),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (unlocked) Color(0xFF34D399) else Color.White.copy(alpha = 0.4f)
+                    )
+                }
+            }
+        }
+    }
+}
+
 
 // STEP 1: Gewohnheiten bedienen & bearbeiten (Direct 1-to-1 HabitItemRow Usage)
 @Composable
@@ -11796,10 +17487,10 @@ private fun OnboardingStep2(language: String) {
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Background Audio Selection Dropdown Box
+                // Background Audio Selection Search + Upload Bar
                 Column(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
                         text = if (language == "de") "Hintergrund-Audio" else "Background Audio",
@@ -11809,50 +17500,104 @@ private fun OnboardingStep2(language: String) {
                     )
 
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(DarkBg, RoundedCornerShape(12.dp))
-                            .border(1.dp, DarkBorder, RoundedCornerShape(12.dp))
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier
+                                .weight(1f)
+                                .background(DarkBg, RoundedCornerShape(14.dp))
+                                .border(1.dp, DarkBorder, RoundedCornerShape(14.dp))
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.MusicNote,
-                                contentDescription = null,
-                                tint = PrimaryViolet,
-                                modifier = Modifier.size(18.dp)
-                            )
+                            Icon(Icons.Default.Search, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = if (language == "de") "Sanfter Landregen.mp3" else "Gentle Rain.mp3",
-                                color = TextPrimary,
-                                style = MaterialTheme.typography.bodySmall,
-                                fontWeight = FontWeight.Medium,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                text = if (language == "de") "Sound suchen..." else "Search sound...",
+                                color = TextSecondary,
+                                fontSize = 13.sp
                             )
                         }
 
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.AddCircle,
-                                contentDescription = "Import",
-                                tint = SuccessGreen,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Icon(
-                                imageVector = Icons.Default.ArrowDropDown,
-                                contentDescription = null,
-                                tint = TextSecondary,
-                                modifier = Modifier.size(22.dp)
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = PrimaryViolet,
+                            modifier = Modifier.size(42.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = "Upload",
+                                    tint = TextPrimary,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                        }
+                    }
+
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Bottom 2-Row Action Buttons (Reset + Failed on top, Save on bottom)
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedButton(
+                            onClick = { },
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = HabitOrange),
+                            border = BorderStroke(1.dp, HabitOrange.copy(alpha = 0.5f)),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(38.dp)
+                        ) {
+                            Text(
+                                text = if (language == "de") "Reset" else "Reset",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp
                             )
                         }
+
+                        OutlinedButton(
+                            onClick = { },
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = FailedRed),
+                            border = BorderStroke(1.dp, FailedRed.copy(alpha = 0.5f)),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(38.dp)
+                        ) {
+                            Text(
+                                text = if (language == "de") "Fehlgeschlagen" else "Failed",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+
+                    Button(
+                        onClick = { },
+                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryViolet),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(40.dp)
+                    ) {
+                        Text(
+                            text = if (language == "de") "Speichern" else "Save",
+                            color = TextPrimary,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
                     }
                 }
             }
@@ -11884,7 +17629,8 @@ private fun OnboardingStep2(language: String) {
     }
 }
 
-// STEP 3: Erfolge & Trophäen (Direct 1-to-1 Streak & Global Achievement Cards)
+
+// STEP 3: Statistiken & Heatmap
 @Composable
 private fun OnboardingStep3(language: String) {
     Column(
@@ -11892,64 +17638,6 @@ private fun OnboardingStep3(language: String) {
         verticalArrangement = Arrangement.Center,
         modifier = Modifier.fillMaxWidth()
     ) {
-        // 1. Real HabitStreakAchievementCard for an individual habit (up to Gold streak)
-        HabitStreakAchievementCard(
-            habitName = if (language == "de") "Morgenmeditation" else "Morning Meditation",
-            habitColor = PrimaryViolet,
-            habitIcon = "meditation",
-            longestStreak = 14,
-            language = language
-        )
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        // 2. Real GlobalAchievementCard for Gesamt-Erledigungen (10 Completions - Erster Schritt)
-        GlobalAchievementCard(
-            type = "COMPLETIONS",
-            tier = "COMP_10",
-            title = if (language == "de") "Erster Schritt" else "First Step",
-            description = if (language == "de") "10 Erledigungen insgesamt erreicht" else "10 total completions reached",
-            targetValue = 10,
-            currentValue = 10,
-            isUnlocked = true,
-            language = language
-        )
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        Text(
-            text = if (language == "de") "Gewohnheit-Serien & Trophäen" else "Habit Streaks & Trophies",
-            style = MaterialTheme.typography.titleMedium,
-            color = TextPrimary,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center
-        )
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        Text(
-            text = if (language == "de") {
-                "Jede Gewohnheit besitzt eigene Serien-Meilensteine (Holz bis Gold). Zusätzlich schaltest du globale Trophäen frei!"
-            } else {
-                "Each habit has its own streak milestones (Wood to Gold). Plus, unlock global trophies as you progress!"
-            },
-            style = MaterialTheme.typography.bodySmall,
-            color = TextSecondary,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 8.dp)
-        )
-    }
-}
-
-// STEP 4: Home-Widgets & SAF Backup (1-to-1 matching habit_widget.xml & widget_habit_item.xml)
-@Composable
-private fun OnboardingStep4(language: String) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        // Exact Home Screen Widget Preview Container (habit_widget.xml layout)
         Card(
             colors = CardDefaults.cardColors(containerColor = DarkCard),
             shape = RoundedCornerShape(20.dp),
@@ -11958,163 +17646,45 @@ private fun OnboardingStep4(language: String) {
                 .border(1.dp, DarkBorder, RoundedCornerShape(20.dp))
         ) {
             Column(
-                modifier = Modifier.padding(14.dp)
+                modifier = Modifier.padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Top Widget Header with Progress Bar (habit_widget.xml FrameLayout / ProgressBar)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Widgets,
-                            contentDescription = null,
-                            tint = PrimaryViolet,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = if (language == "de") "HOMESCREEN WIDGET" else "HOMESCREEN WIDGET",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = TextSecondary,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    Text(
-                        text = "2/3 Erledigt",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = SuccessGreen,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Progress Bar Container (widget_progress_bar)
-                LinearProgressIndicator(
-                    progress = { 0.66f },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(6.dp)
-                        .clip(CircleShape),
-                    color = SuccessGreen,
-                    trackColor = ProgressTrack
+                Text(
+                    text = if (language == "de") "STATISTIK & HEATMAP" else "STATISTICS & HEATMAP",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = TextSecondary,
+                    fontWeight = FontWeight.Bold
                 )
-
                 Spacer(modifier = Modifier.height(12.dp))
-
-                // Scrollable Habits List Preview (widget_habit_item.xml)
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    // Item 1: Numerical Habit (Wasser trinken)
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(DarkBg, RoundedCornerShape(12.dp))
-                            .border(1.dp, DarkBorder, RoundedCornerShape(12.dp))
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(24.dp)
-                                    .background(HabitTeal.copy(alpha = 0.2f), CircleShape),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    painter = painterResource(id = HabitIconMapping.getIconDrawableId("water")),
-                                    contentDescription = null,
-                                    tint = HabitTeal,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = if (language == "de") "Wasser trinken (2250/3000)" else "Drink Water (2250/3000)",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextPrimary,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                        // Circular check icon (ic_widget_circle_unchecked)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    repeat(7) {
                         Box(
                             modifier = Modifier
-                                .size(24.dp)
-                                .border(1.5.dp, TextSecondary, CircleShape)
+                                .weight(1f)
+                                .height(32.dp)
+                                .background(
+                                    if (it % 2 == 0) SuccessGreen else SuccessGreen.copy(alpha = 0.3f),
+                                    RoundedCornerShape(6.dp)
+                                )
                         )
-                    }
-
-                    // Item 2: Completed Binary Habit (Morgenmeditation)
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(SuccessBg, RoundedCornerShape(12.dp))
-                            .border(1.dp, SuccessGreen.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(24.dp)
-                                    .background(PrimaryViolet.copy(alpha = 0.2f), CircleShape),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    painter = painterResource(id = HabitIconMapping.getIconDrawableId("meditation")),
-                                    contentDescription = null,
-                                    tint = PrimaryViolet,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = if (language == "de") "Morgenmeditation" else "Morning Meditation",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextPrimary,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                        // Circular check icon completed (ic_widget_circle_checked)
-                        Box(
-                            modifier = Modifier
-                                .size(24.dp)
-                                .background(SuccessGreen, CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(14.dp)
-                            )
-                        }
                     }
                 }
             }
         }
-
         Spacer(modifier = Modifier.height(14.dp))
-
         Text(
-            text = if (language == "de") "Homescreen Widget & Schneller Zugriff" else "Homescreen Widget & Quick Access",
+            text = if (language == "de") "Behalte den Überblick" else "Keep Track of Progress",
             style = MaterialTheme.typography.titleMedium,
             color = TextPrimary,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
         )
-
         Spacer(modifier = Modifier.height(4.dp))
-
         Text(
-            text = if (language == "de") {
-                "Setze dein interaktives Widget direkt auf den Startbildschirm zum Abhaken ohne die App öffnen zu müssen."
-            } else {
-                "Place your interactive widget on your launcher screen to check off habits without opening the app."
-            },
+            text = if (language == "de") "Visualisiere deine Erfolge in der Wochen- und Jahresübersicht." else "Visualize your achievements in weekly and yearly overviews.",
             style = MaterialTheme.typography.bodySmall,
             color = TextSecondary,
             textAlign = TextAlign.Center,
@@ -12123,26 +17693,9 @@ private fun OnboardingStep4(language: String) {
     }
 }
 
-// STEP 5: SAF Local Backup Folder Setup
+// STEP 4: Home-Widgets & SAF Backup
 @Composable
-private fun OnboardingStep5(language: String, viewModel: HabitsViewModel) {
-    val context = LocalContext.current
-    val backupFolderUri by viewModel.backupFolderUri.collectAsStateWithLifecycle()
-
-    val folderLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocumentTree()
-    ) { uri ->
-        if (uri != null) {
-            try {
-                val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-                context.contentResolver.takePersistableUriPermission(uri, takeFlags)
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-            viewModel.saveBackupFolderUri(uri.toString())
-        }
-    }
-
+private fun OnboardingStep4(language: String) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
@@ -12153,201 +17706,85 @@ private fun OnboardingStep5(language: String, viewModel: HabitsViewModel) {
             shape = RoundedCornerShape(20.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .border(
-                    1.5.dp,
-                    if (backupFolderUri.isNotEmpty()) SuccessGreen.copy(alpha = 0.6f) else PrimaryViolet.copy(alpha = 0.4f),
-                    RoundedCornerShape(20.dp)
-                )
+                .border(1.dp, DarkBorder, RoundedCornerShape(20.dp))
         ) {
             Column(
-                modifier = Modifier.padding(18.dp),
+                modifier = Modifier.padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Icon Badge
-                Box(
-                    modifier = Modifier
-                        .size(60.dp)
-                        .background(
-                            if (backupFolderUri.isNotEmpty()) SuccessGreen.copy(alpha = 0.15f) else PrimaryViolet.copy(alpha = 0.15f),
-                            CircleShape
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = if (backupFolderUri.isNotEmpty()) Icons.Default.CheckCircle else Icons.Default.Folder,
-                        contentDescription = "Backup Folder",
-                        tint = if (backupFolderUri.isNotEmpty()) SuccessGreen else PrimaryViolet,
-                        modifier = Modifier.size(34.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Text(
-                    text = if (language == "de") "Sicherungsordner jetzt einrichten" else "Set Up Backup Folder Now",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = TextPrimary,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center
-                )
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                Text(
-                    text = if (language == "de") {
-                        "Wähle direkt hier deinen Ordner für automatische lokale Sicherungen auf deinem Gerät aus."
-                    } else {
-                        "Directly select your folder for automatic local backups on your device right here."
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary,
-                    textAlign = TextAlign.Center
-                )
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                // Steps explanation box
-                Surface(
-                    color = DarkBg,
-                    shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, DarkBorder),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(20.dp)
-                                    .background(PrimaryViolet, CircleShape),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text("1", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                            }
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Text(
-                                text = if (language == "de") "Tippe unten auf den 'Backup-Ordner'-Button" else "Tap the 'Select Backup Folder' button below",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = TextPrimary
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(20.dp)
-                                    .background(SecondaryViolet, CircleShape),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text("2", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                            }
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Text(
-                                text = if (language == "de") "Wähle z.B. deinen 'Dokumente'-Ordner" else "Choose e.g. your 'Documents' folder",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = TextPrimary
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                // Current Status Card
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (backupFolderUri.isNotEmpty()) SuccessGreen.copy(alpha = 0.12f) else DarkBg
-                    ),
-                    shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(
-                        1.dp,
-                        if (backupFolderUri.isNotEmpty()) SuccessGreen.copy(alpha = 0.5f) else DarkBorder
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = if (backupFolderUri.isNotEmpty()) Icons.Default.CheckCircle else Icons.Default.FolderOpen,
-                            contentDescription = null,
-                            tint = if (backupFolderUri.isNotEmpty()) SuccessGreen else TextSecondary,
-                            modifier = Modifier.size(22.dp)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = if (backupFolderUri.isNotEmpty()) {
-                                    if (language == "de") "✓ Ordner eingerichtet!" else "✓ Folder configured!"
-                                } else {
-                                    if (language == "de") "Noch kein Ordner ausgewählt" else "No folder selected yet"
-                                },
-                                style = MaterialTheme.typography.labelMedium,
-                                color = if (backupFolderUri.isNotEmpty()) SuccessGreen else TextPrimary,
-                                fontWeight = FontWeight.Bold
-                            )
-                            if (backupFolderUri.isNotEmpty()) {
-                                Text(
-                                    text = backupFolderUri,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = TextSecondary,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                // Primary Action Button to trigger SAF Folder Picker
-                Button(
-                    onClick = { folderLauncher.launch(null) },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (backupFolderUri.isNotEmpty()) SecondaryViolet else PrimaryViolet
-                    ),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp)
-                        .testTag("btn_onboarding_select_backup_folder")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.FolderOpen,
+                        imageVector = Icons.Default.Widgets,
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                        tint = Color.White
+                        tint = PrimaryViolet,
+                        modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (backupFolderUri.isNotEmpty()) {
-                            if (language == "de") "Ordner ändern" else "Change Folder"
-                        } else {
-                            if (language == "de") "📂 Jetzt Backup-Ordner auswählen" else "📂 Select Backup Folder Now"
-                        },
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
-                        color = Color.White
+                        text = if (language == "de") "HOMESCREEN WIDGETS" else "HOMESCREEN WIDGETS",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextSecondary,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
         }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
+        Spacer(modifier = Modifier.height(14.dp))
         Text(
-            text = if (language == "de") {
-                "Kann auch später jederzeit in den Einstellungen angepasst werden."
-            } else {
-                "Can also be configured anytime later in Settings."
-            },
+            text = if (language == "de") "Schnellzugriff auf deinen Homescreen" else "Quick Access on Homescreen",
+            style = MaterialTheme.typography.titleMedium,
+            color = TextPrimary,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = if (language == "de") "Füge Widgets hinzu, um deine Gewohnheiten direkt vom Homescreen aus abzuhaken." else "Add widgets to complete habits directly from your home screen.",
             style = MaterialTheme.typography.bodySmall,
             color = TextSecondary,
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(horizontal = 8.dp)
+        )
+    }
+}
+
+// STEP 5: Fertigstellen / Starten
+@Composable
+private fun OnboardingStep5(language: String, viewModel: HabitsViewModel) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Box(
+            modifier = Modifier
+                .size(80.dp)
+                .background(PrimaryViolet.copy(alpha = 0.2f), CircleShape)
+                .border(2.dp, PrimaryViolet, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Check,
+                contentDescription = null,
+                tint = PrimaryViolet,
+                modifier = Modifier.size(40.dp)
+            )
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = if (language == "de") "Bereit für deine Reise!" else "Ready for your journey!",
+            style = MaterialTheme.typography.titleLarge,
+            color = TextPrimary,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = if (language == "de") "Starte jetzt und baue deine Traumgewohnheiten auf." else "Start now and build your dream habits.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = TextSecondary,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 16.dp)
         )
     }
 }
