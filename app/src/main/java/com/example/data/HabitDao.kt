@@ -83,4 +83,40 @@ interface HabitDao {
 
     @Query("DELETE FROM daily_notes")
     suspend fun clearAllDailyNotes()
+
+    @Query("SELECT * FROM time_capsule_notes WHERE type = :type AND targetPeriod = :targetPeriod LIMIT 1")
+    fun getTimeCapsuleNote(type: String, targetPeriod: String): Flow<TimeCapsuleNote?>
+
+    @Query("SELECT * FROM time_capsule_notes WHERE type = :type AND targetPeriod = :targetPeriod LIMIT 1")
+    suspend fun getTimeCapsuleNoteRaw(type: String, targetPeriod: String): TimeCapsuleNote?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTimeCapsuleNote(note: TimeCapsuleNote): Long
+
+    @Delete
+    suspend fun deleteTimeCapsuleNote(note: TimeCapsuleNote)
+
+    @Query("DELETE FROM time_capsule_notes")
+    suspend fun clearAllTimeCapsuleNotes()
+
+    @Query("SELECT * FROM milestone_rewards")
+    fun getAllMilestoneRewards(): Flow<List<MilestoneReward>>
+
+    @Query("SELECT * FROM milestone_rewards")
+    suspend fun getAllMilestoneRewardsRaw(): List<MilestoneReward>
+
+    @Query("SELECT * FROM milestone_rewards WHERE habitId = :habitId")
+    fun getMilestoneRewardsForHabit(habitId: Int): Flow<List<MilestoneReward>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertMilestoneReward(reward: MilestoneReward)
+
+    @Update
+    suspend fun updateMilestoneReward(reward: MilestoneReward)
+
+    @Delete
+    suspend fun deleteMilestoneReward(reward: MilestoneReward)
+
+    @Query("DELETE FROM milestone_rewards WHERE habitId = :habitId")
+    suspend fun deleteMilestoneRewardsForHabit(habitId: Int)
 }

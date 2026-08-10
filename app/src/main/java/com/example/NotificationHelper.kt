@@ -17,10 +17,8 @@ object NotificationHelper {
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-
         // Cancel previous alarm
         alarmManager.cancel(pendingIntent)
-
         val calendar = Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, hour)
             set(Calendar.MINUTE, minute)
@@ -30,7 +28,6 @@ object NotificationHelper {
                 add(Calendar.DAY_OF_YEAR, 1)
             }
         }
-
         try {
             alarmManager.setRepeating(
                 AlarmManager.RTC_WAKEUP,
@@ -67,10 +64,8 @@ object NotificationHelper {
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-
         // Cancel previous alarm if any
         alarmManager.cancel(pendingIntent)
-
         val calendar = Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, hour)
             set(Calendar.MINUTE, minute)
@@ -80,7 +75,6 @@ object NotificationHelper {
                 add(Calendar.DAY_OF_YEAR, 1)
             }
         }
-
         try {
             alarmManager.setRepeating(
                 AlarmManager.RTC_WAKEUP,
@@ -108,7 +102,6 @@ object NotificationHelper {
     fun cancelAllHabitReminders(context: Context, habit: Habit) {
         // 1. Cancel default main reminder
         cancelHabitReminder(context, habit.id)
-
         // 2. Cancel custom reminders
         if (habit.customReminders.isNotEmpty()) {
             habit.customReminders.split(",").forEach { timeStr ->
@@ -137,7 +130,6 @@ object NotificationHelper {
             if (habit.reminderEnabled) {
                 scheduleSingleReminder(context, habit.id, habit.id, habit.name, habit.reminderHour, habit.reminderMinute)
             }
-
             // 2. Schedule custom reminders
             if (habit.customReminders.isNotEmpty()) {
                 habit.customReminders.split(",").forEach { timeStr ->
@@ -167,9 +159,7 @@ object NotificationHelper {
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-
         alarmManager.cancel(pendingIntent)
-
         val calendar = Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, hour)
             set(Calendar.MINUTE, minute)
@@ -179,7 +169,6 @@ object NotificationHelper {
                 add(Calendar.DAY_OF_YEAR, 1)
             }
         }
-
         try {
             alarmManager.setRepeating(
                 AlarmManager.RTC_WAKEUP,
@@ -190,5 +179,100 @@ object NotificationHelper {
         } catch (e: Exception) {
             e.printStackTrace()
         }
+    }
+
+    fun scheduleReviewNotifications(context: Context) {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
+        val prefs = context.getSharedPreferences("habits_settings", Context.MODE_PRIVATE)
+
+        // 1. Monthly Review Alarm (1st day of month at 00:00 AM)
+        val monthlyIntent = Intent(context, ReviewNotificationReceiver::class.java).apply {
+            putExtra("OPEN_REVIEW_TYPE", "MONTHLY")
+        }
+        val monthlyPendingIntent = PendingIntent.getBroadcast(
+            context,
+            88001,
+            monthlyIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        alarmManager.cancel(monthlyPendingIntent)
+
+        if (prefs.getBoolean("monthly_review_enabled", true)) {
+            val calMonthly = Calendar.getInstance().apply {
+                set(Calendar.DAY_OF_MONTH, 1)
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+                if (timeInMillis <= System.currentTimeMillis()) {
+                    add(Calendar.MONTH, 1)
+                }
+            }
+            try {
+                alarmManager.set(
+                    AlarmManager.RTC_WAKEUP,
+                    calMonthly.timeInMillis,
+                    monthlyPendingIntent
+                )
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+
+        // 2. Yearly Review Alarm (Jan 1st at 00:00 AM)
+        val yearlyIntent = Intent(context, ReviewNotificationReceiver::class.java).apply {
+            putExtra("OPEN_REVIEW_TYPE", "YEARLY")
+        }
+        val yearlyPendingIntent = PendingIntent.getBroadcast(
+            context,
+            88002,
+            yearlyIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        alarmManager.cancel(yearlyPendingIntent)
+
+        if (prefs.getBoolean("yearly_review_enabled", true)) {
+            val calYearly = Calendar.getInstance().apply {
+                set(Calendar.MONTH, Calendar.JANUARY)
+                set(Calendar.DAY_OF_MONTH, 1)
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+                if (timeInMillis <= System.currentTimeMillis()) {
+                    add(Calendar.YEAR, 1)
+                }
+            }
+            try {
+                alarmManager.set(
+                    AlarmManager.RTC_WAKEUP,
+                    calYearly.timeInMillis,
+                    yearlyPendingIntent
+                )
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun cancelReviewNotifications(context: Context) {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
+        val monthlyIntent = Intent(context, ReviewNotificationReceiver::class.java)
+        val monthlyPendingIntent = PendingIntent.getBroadcast(
+            context,
+            88001,
+            monthlyIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        alarmManager.cancel(monthlyPendingIntent)
+
+        val yearlyIntent = Intent(context, ReviewNotificationReceiver::class.java)
+        val yearlyPendingIntent = PendingIntent.getBroadcast(
+            context,
+            88002,
+            yearlyIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        alarmManager.cancel(yearlyPendingIntent)
     }
 }

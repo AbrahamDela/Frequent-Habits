@@ -13,6 +13,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
 import android.widget.RemoteViews
+import androidx.compose.ui.graphics.toArgb
 import com.example.data.AppDatabase
 import com.frequent.habits.R
 import kotlinx.coroutines.CoroutineScope
@@ -388,8 +389,32 @@ class HabitWidgetProvider : AppWidgetProvider() {
                 val views = RemoteViews(context.packageName, R.layout.habit_widget)
                 views.setProgressBar(R.id.widget_progress_bar, 100, progressPercent, false)
 
-                val displayDate = getDisplayDate(selectedDate)
-                views.setTextViewText(R.id.widget_date_title, displayDate)
+                val greenColorInt = android.graphics.Color.parseColor("#10B981")
+                try {
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                        views.setColorStateList(
+                            R.id.widget_progress_bar,
+                            "setProgressTintList",
+                            android.content.res.ColorStateList.valueOf(greenColorInt)
+                        )
+                    } else {
+                        views.setInt(
+                            R.id.widget_progress_bar,
+                            "setProgressTintList",
+                            greenColorInt
+                        )
+                    }
+                } catch (e: Exception) {
+                    // Ignore if tint call fails on older device
+                }
+
+                val allLogs = db.habitDao().getAllLogsRaw()
+                val perfectStats = com.example.data.StreakCalculator.calculate(allHabits, allLogs)
+                val currentStreak = perfectStats.currentStreak
+
+                val sharedPrefs = context.getSharedPreferences("habit_prefs", Context.MODE_PRIVATE)
+                sharedPrefs.edit().putInt("current_perfect_streak", currentStreak).apply()
+                views.setTextViewText(R.id.widget_streak_text, currentStreak.toString())
 
                 val openAppInt = Intent(context, MainActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -400,8 +425,8 @@ class HabitWidgetProvider : AppWidgetProvider() {
                     openAppInt,
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                 )
-                views.setOnClickPendingIntent(R.id.widget_date_title, pendingInt)
                 views.setOnClickPendingIntent(R.id.widget_progress_bar, pendingInt)
+                views.setOnClickPendingIntent(R.id.widget_streak_container, pendingInt)
 
                 if (isFullUpdate) {
                     val serviceIntent = Intent(context, HabitWidgetService::class.java).apply {

@@ -1,0 +1,220 @@
+--- app/src/main/java/com/example/MainActivity.kt
++++ app/src/main/java/com/example/MainActivity.kt
+@@ -12564,8 +12564,11 @@
+     var rewardText by remember { mutableStateOf("") }
+     var conditionType by remember { mutableStateOf("STREAK") }
+     var conditionValueStr by remember { mutableStateOf("") }
++    
++    var mode by remember { mutableStateOf("CUSTOM") } // "CUSTOM" or "TROPHY"
++    var selectedTrophyId by remember { mutableStateOf("COMP_10") }
++    var isDropdownExpanded by remember { mutableStateOf(false) }
+     
+-    AlertDialog(
++    val scrollState = rememberScrollState()
++
++    val standardTrophies = listOf(
++        "COMP_10" to (if (language == "de") "10 Erledigungen" else "10 Completions"),
++        "COMP_50" to (if (language == "de") "50 Erledigungen" else "50 Completions"),
++        "COMP_200" to (if (language == "de") "200 Erledigungen" else "200 Completions"),
++        "COMP_500" to (if (language == "de") "500 Erledigungen" else "500 Completions"),
++        "STREAK_7" to (if (language == "de") "7 Tage Streak" else "7 Day Streak"),
++        "STREAK_30" to (if (language == "de") "30 Tage Streak" else "30 Day Streak"),
++        "STREAK_100" to (if (language == "de") "100 Tage Streak" else "100 Day Streak"),
++        "STREAK_365" to (if (language == "de") "365 Tage Streak" else "365 Day Streak"),
++        "PERF_7" to (if (language == "de") "7 perfekte Tage" else "7 Perfect Days"),
++        "PERF_30" to (if (language == "de") "30 perfekte Tage" else "30 Perfect Days"),
++        "PERF_100" to (if (language == "de") "100 perfekte Tage" else "100 Perfect Days")
++    )
++
++    AlertDialog(
+         onDismissRequest = onDismiss,
+         containerColor = DarkCard,
+         title = {
+@@ -12579,7 +12582,31 @@
+         text = {
+-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
++            Column(verticalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.verticalScroll(scrollState)) {
++                
++                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
++                    FilterChip(
++                        selected = mode == "CUSTOM",
++                        onClick = { mode = "CUSTOM" },
++                        label = { Text(if (language == "de") "Eigene" else "Custom") },
++                        colors = FilterChipDefaults.filterChipColors(
++                            selectedContainerColor = PrimaryViolet,
++                            selectedLabelColor = Color.White
++                        )
++                    )
++                    FilterChip(
++                        selected = mode == "TROPHY",
++                        onClick = { mode = "TROPHY" },
++                        label = { Text(if (language == "de") "Trophäe" else "Trophy") },
++                        colors = FilterChipDefaults.filterChipColors(
++                            selectedContainerColor = PrimaryViolet,
++                            selectedLabelColor = Color.White
++                        )
++                    )
++                }
++                
+                 OutlinedTextField(
+                     value = rewardText,
+                     onValueChange = { rewardText = it },
+@@ -12593,29 +12620,79 @@
+                     shape = RoundedCornerShape(12.dp)
+                 )
+                 
+-                Text(
+-                    text = if (language == "de") "Bedingung:" else "Condition:",
+-                    color = TextPrimary,
+-                    fontWeight = FontWeight.Bold
+-                )
+-                
+-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+-                    FilterChip(
+-                        selected = conditionType == "STREAK",
+-                        onClick = { conditionType = "STREAK" },
+-                        label = { Text(if (language == "de") "Streak (Tage)" else "Streak (Days)") },
+-                        colors = FilterChipDefaults.filterChipColors(
+-                            selectedContainerColor = PrimaryViolet,
+-                            selectedLabelColor = Color.White
+-                        )
+-                    )
+-                    FilterChip(
+-                        selected = conditionType == "COMPLETIONS",
+-                        onClick = { conditionType = "COMPLETIONS" },
+-                        label = { Text(if (language == "de") "Gesamt (Mal)" else "Total (Times)") },
+-                        colors = FilterChipDefaults.filterChipColors(
+-                            selectedContainerColor = PrimaryViolet,
+-                            selectedLabelColor = Color.White
+-                        )
+-                    )
+-                }
+-                
+-                OutlinedTextField(
+-                    value = conditionValueStr,
+-                    onValueChange = { conditionValueStr = it.filter { ch -> ch.isDigit() } },
+-                    label = { Text(if (language == "de") "Ziel-Wert" else "Target Value", color = TextSecondary) },
+-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+-                    colors = OutlinedTextFieldDefaults.colors(
+-                        focusedBorderColor = PrimaryViolet,
+-                        unfocusedBorderColor = DarkBorder,
+-                        focusedTextColor = TextPrimary,
+-                        unfocusedTextColor = TextPrimary
+-                    ),
+-                    modifier = Modifier.fillMaxWidth(),
+-                    shape = RoundedCornerShape(12.dp)
+-                )
++                if (mode == "CUSTOM") {
++                    Text(
++                        text = if (language == "de") "Bedingung:" else "Condition:",
++                        color = TextPrimary,
++                        fontWeight = FontWeight.Bold
++                    )
++                    
++                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
++                        FilterChip(
++                            selected = conditionType == "STREAK",
++                            onClick = { conditionType = "STREAK" },
++                            label = { Text(if (language == "de") "Streak (Tage)" else "Streak (Days)") },
++                            colors = FilterChipDefaults.filterChipColors(
++                                selectedContainerColor = PrimaryViolet,
++                                selectedLabelColor = Color.White
++                            )
++                        )
++                        FilterChip(
++                            selected = conditionType == "COMPLETIONS",
++                            onClick = { conditionType = "COMPLETIONS" },
++                            label = { Text(if (language == "de") "Gesamt (Mal)" else "Total (Times)") },
++                            colors = FilterChipDefaults.filterChipColors(
++                                selectedContainerColor = PrimaryViolet,
++                                selectedLabelColor = Color.White
++                            )
++                        )
++                    }
++                    
++                    OutlinedTextField(
++                        value = conditionValueStr,
++                        onValueChange = { conditionValueStr = it.filter { ch -> ch.isDigit() } },
++                        label = { Text(if (language == "de") "Ziel-Wert" else "Target Value", color = TextSecondary) },
++                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
++                        colors = OutlinedTextFieldDefaults.colors(
++                            focusedBorderColor = PrimaryViolet,
++                            unfocusedBorderColor = DarkBorder,
++                            focusedTextColor = TextPrimary,
++                            unfocusedTextColor = TextPrimary
++                        ),
++                        modifier = Modifier.fillMaxWidth(),
++                        shape = RoundedCornerShape(12.dp)
++                    )
++                } else {
++                    Text(
++                        text = if (language == "de") "Trophäe:" else "Trophy:",
++                        color = TextPrimary,
++                        fontWeight = FontWeight.Bold
++                    )
++                    Box(modifier = Modifier.fillMaxWidth()) {
++                        OutlinedButton(
++                            onClick = { isDropdownExpanded = true },
++                            modifier = Modifier.fillMaxWidth(),
++                            colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
++                            border = BorderStroke(1.dp, DarkBorder)
++                        ) {
++                            Text(standardTrophies.find { it.first == selectedTrophyId }?.second ?: "")
++                        }
++                        DropdownMenu(
++                            expanded = isDropdownExpanded,
++                            onDismissRequest = { isDropdownExpanded = false },
++                            modifier = Modifier.background(DarkCard)
++                        ) {
++                            standardTrophies.forEach { (id, label) ->
++                                DropdownMenuItem(
++                                    text = { Text(label, color = TextPrimary) },
++                                    onClick = {
++                                        selectedTrophyId = id
++                                        isDropdownExpanded = false
++                                    }
++                                )
++                            }
++                        }
++                    }
++                }
+             }
+         },
+         confirmButton = {
+             Button(
+                 onClick = {
+-                    if (rewardText.isNotBlank() && conditionValueStr.isNotBlank()) {
+-                        val condVal = conditionValueStr.toIntOrNull() ?: 1
+-                        onAdd(com.example.data.MilestoneReward(
+-                            habitId = 0, // Gets set when saving
+-                            rewardText = rewardText.trim(),
+-                            conditionType = conditionType,
+-                            conditionValue = condVal
+-                        ))
++                    if (rewardText.isNotBlank()) {
++                        if (mode == "CUSTOM" && conditionValueStr.isNotBlank()) {
++                            val condVal = conditionValueStr.toIntOrNull() ?: 1
++                            onAdd(com.example.data.MilestoneReward(
++                                habitId = 0,
++                                rewardText = rewardText.trim(),
++                                conditionType = conditionType,
++                                conditionValue = condVal
++                            ))
++                        } else if (mode == "TROPHY") {
++                            onAdd(com.example.data.MilestoneReward(
++                                habitId = 0,
++                                rewardText = rewardText.trim(),
++                                conditionType = "TROPHY_COUPLED",
++                                conditionValue = 0,
++                                trophyId = selectedTrophyId
++                            ))
++                        }
+                     }
+                 },
+                 colors = ButtonDefaults.buttonColors(containerColor = PrimaryViolet),
+-                enabled = rewardText.isNotBlank() && conditionValueStr.isNotBlank()
++                enabled = rewardText.isNotBlank() && (mode == "TROPHY" || conditionValueStr.isNotBlank())
+             ) {
+                 Text(if (language == "de") "Hinzufügen" else "Add", fontWeight = FontWeight.Bold)
+             }
+         },

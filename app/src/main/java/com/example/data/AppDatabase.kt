@@ -63,7 +63,40 @@ val MIGRATION_7_8 = object : Migration(7, 8) {
     }
 }
 
-@Database(entities = [Habit::class, HabitLog::class, DailyNote::class], version = 8, exportSchema = false)
+val MIGRATION_8_9 = object : Migration(8, 9) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS `time_capsule_notes` (
+                `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, 
+                `type` TEXT NOT NULL, 
+                `targetPeriod` TEXT NOT NULL, 
+                `content` TEXT NOT NULL, 
+                `createdAt` INTEGER NOT NULL
+            )
+        """.trimIndent())
+    }
+}
+
+val MIGRATION_9_10 = object : Migration(9, 10) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS `milestone_rewards` (
+                `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, 
+                `habitId` INTEGER NOT NULL, 
+                `rewardText` TEXT NOT NULL, 
+                `isRedeemed` INTEGER NOT NULL, 
+                `unlockedAt` INTEGER NOT NULL, 
+                `conditionType` TEXT NOT NULL, 
+                `conditionValue` INTEGER NOT NULL, 
+                `trophyId` TEXT NOT NULL, 
+                FOREIGN KEY(`habitId`) REFERENCES `habits`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+            )
+        """.trimIndent())
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_milestone_rewards_habitId` ON `milestone_rewards` (`habitId`)")
+    }
+}
+
+@Database(entities = [Habit::class, HabitLog::class, DailyNote::class, TimeCapsuleNote::class, MilestoneReward::class], version = 10, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun habitDao(): HabitDao
 
@@ -85,7 +118,9 @@ abstract class AppDatabase : RoomDatabase() {
                     MIGRATION_4_5,
                     MIGRATION_5_6,
                     MIGRATION_6_7,
-                    MIGRATION_7_8
+                    MIGRATION_7_8,
+                    MIGRATION_8_9,
+                    MIGRATION_9_10
                 )
                 .fallbackToDestructiveMigration()
                 .build()

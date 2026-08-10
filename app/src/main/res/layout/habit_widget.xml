@@ -6,30 +6,53 @@
     android:orientation="vertical"
     android:padding="12dp">
 
-    <!-- Top Date Header -->
-    <TextView
-        android:id="@+id/widget_date_title"
+    <!-- Header Row: Daily progress bar on the left, Streak counter on the right -->
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:visibility="gone"
-        android:gravity="center"
-        android:text="Heute"
-        android:textColor="#FFFFFF"
-        android:textSize="15sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="0dp" />
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="10dp">
 
-    <!-- Rounded daily progress bar matching the app's style -->
-    <ProgressBar
-        android:id="@+id/widget_progress_bar"
-        style="?android:attr/progressBarStyleHorizontal"
-        android:layout_width="match_parent"
-        android:layout_height="8dp"
-        android:layout_marginBottom="12dp"
-        android:indeterminate="false"
-        android:max="100"
-        android:progress="0"
-        android:progressDrawable="@drawable/widget_progress_bar_custom" />
+        <ProgressBar
+            android:id="@+id/widget_progress_bar"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="0dp"
+            android:layout_height="12dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="10dp"
+            android:indeterminate="false"
+            android:max="100"
+            android:progress="0"
+            android:progressDrawable="@drawable/widget_progress_bar_custom" />
+
+        <LinearLayout
+            android:id="@+id/widget_streak_container"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/widget_streak_bg"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="4dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+            
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🔥"
+                android:textSize="12sp" />
+                
+            <TextView
+                android:id="@+id/widget_streak_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0"
+                android:textColor="#FF9800"
+                android:textStyle="bold"
+                android:textSize="13sp"
+                android:layout_marginStart="4dp" />
+        </LinearLayout>
+    </LinearLayout>
 
     <!-- Scrollable Habits List -->
     <ListView

@@ -4,7 +4,7 @@
     <item android:id="@android:id/background">
         <shape>
             <corners android:radius="16dp" />
-            <solid android:color="#201D35" />
+            <solid android:color="#242432" />
         </shape>
     </item>
     <!-- Progress / Fill -->
@@ -14,7 +14,7 @@
             android:gravity="left">
             <shape>
                 <corners android:radius="16dp" />
-                <solid android:color="#7356FF" />
+                <solid android:color="#783CFA" />
             </shape>
         </clip>
     </item>

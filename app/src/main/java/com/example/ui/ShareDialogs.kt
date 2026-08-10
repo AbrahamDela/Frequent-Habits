@@ -52,9 +52,7 @@ import java.time.LocalDate
 fun isNewYearReviewPeriod(): Boolean {
     val today = LocalDate.now()
     val month = today.monthValue
-    val day = today.dayOfMonth
-    // Banner appears around New Year: Dec 25 to Jan 15
-    return (month == 12 && day >= 25) || (month == 1 && day <= 15)
+    return month == 1
 }
 
 fun isNewYearPopupPeriod(): Boolean {

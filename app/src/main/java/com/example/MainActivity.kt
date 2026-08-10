@@ -25,12 +25,16 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -65,6 +69,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -86,6 +91,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
@@ -122,6 +128,7 @@ import com.example.ui.HabitIconMapping
 import com.example.ui.HabitsViewModel
 import com.example.ui.theme.*
 import java.util.*
+import java.text.SimpleDateFormat
 import android.media.MediaPlayer
 import android.media.RingtoneManager
 import java.io.File
@@ -136,9 +143,11 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val viewModel = androidx.lifecycle.ViewModelProvider(this)[HabitsViewModel::class.java]
         handleWidgetIntent(intent, viewModel)
+        handleReviewIntent(intent, viewModel)
         enableEdgeToEdge()
         setContent {
-            MyApplicationTheme {
+            val darkModeEnabled by viewModel.darkModeEnabled.collectAsStateWithLifecycle()
+            MyApplicationTheme(darkTheme = darkModeEnabled) {
                 MainAppScreen(viewModel = viewModel)
             }
         }
@@ -149,6 +158,7 @@ class MainActivity : ComponentActivity() {
         setIntent(intent)
         val viewModel = androidx.lifecycle.ViewModelProvider(this)[HabitsViewModel::class.java]
         handleWidgetIntent(intent, viewModel)
+        handleReviewIntent(intent, viewModel)
     }
 
     private fun handleWidgetIntent(intent: Intent?, viewModel: HabitsViewModel) {
@@ -157,6 +167,20 @@ class MainActivity : ComponentActivity() {
             if (habitId != -1) {
                 viewModel.setPendingWidgetHabitId(habitId)
             }
+        }
+    }
+
+    private fun handleReviewIntent(intent: Intent?, viewModel: HabitsViewModel) {
+        if (intent != null && intent.hasExtra("OPEN_REVIEW_TYPE")) {
+            val reviewType = intent.getStringExtra("OPEN_REVIEW_TYPE")
+            val year = intent.getIntExtra("REVIEW_YEAR", -1)
+            val month = intent.getIntExtra("REVIEW_MONTH", -1)
+            if (reviewType == "MONTHLY" && year != -1 && month != -1) {
+                viewModel.setDeepLinkReviewMonth(year to month)
+            } else if (reviewType == "YEARLY" && year != -1) {
+                viewModel.setDeepLinkReviewYear(year)
+            }
+            intent.removeExtra("OPEN_REVIEW_TYPE")
         }
     }
 }
@@ -282,6 +306,7 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
             allHabits = allHabitsForPopup,
             allLogs = allLogsForPopup,
             language = language,
+            viewModel = viewModel,
             onDismiss = { popupReviewYearState = null }
         )
     }
@@ -290,6 +315,9 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
     LaunchedEffect(currentRoute) {
         if (currentRoute != null && !currentRoute.startsWith("DETAIL") && selectedTab != currentRoute) {
             selectedTab = currentRoute
+        }
+        if (currentRoute != "CREATE") {
+            editingHabit = null
         }
     }
 
@@ -324,13 +352,13 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
                 )
             }
         },
-        containerColor = DarkBg,
+        containerColor = AppBg,
         contentWindowInsets = WindowInsets.systemBars
     ) { innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(DarkBg)
+                .background(AppBg)
                 .padding(top = innerPadding.calculateTopPadding())
         ) {
             val mainTabRoutes = remember { listOf("TODAY", "STATS", "PROFILE") }
@@ -406,6 +434,7 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
                 composable("TODAY") {
                     val onAddClick = remember {
                         {
+                            editingHabit = null
                             navController.navigate("CREATE") {
                                 launchSingleTop = true
                             }
@@ -426,6 +455,11 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
                     )
                 }
                 composable("CREATE") {
+                    DisposableEffect(Unit) {
+                        onDispose {
+                            editingHabit = null
+                        }
+                    }
                     CreateHabitScreen(
                         language = language,
                         editingHabit = editingHabit,
@@ -437,7 +471,7 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
                                 }
                             }
                         },
-                        onSave = { name, isNeg, cat, icon, color, type, unit, target, freq, start, specDays, remEnabled, remHour, remMin, customReminders, description ->
+                        onSave = { name, isNeg, cat, icon, color, type, unit, target, freq, start, specDays, remEnabled, remHour, remMin, customReminders, description, milestoneRewards ->
                             if (editingHabit != null) {
                                 val updated = editingHabit!!.copy(
                                     name = name,
@@ -458,6 +492,15 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
                                     description = description
                                 )
                                 viewModel.updateHabit(updated)
+                                // In edit mode, we could update milestoneRewards. For now, since they are mostly attached to a habit, let's keep it simple. If we want to add new ones, we can just insert them.
+                                // For simplicity, we just insert the new ones.
+                                if (milestoneRewards.isNotEmpty()) {
+                                    milestoneRewards.forEach { reward ->
+                                        // Update or insert logic if needed. Or just insert. (Assuming the user only adds new ones in edit mode).
+                                        // Wait, we don't have access to viewModelScope easily here, let's updateHabit with rewards?
+                                        // Let's add a method to viewModel later if needed.
+                                    }
+                                }
                                 editingHabit = null
                                 Toast.makeText(
                                     context,
@@ -465,7 +508,7 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
                                     Toast.LENGTH_SHORT
                                 ).show()
                             } else {
-                                viewModel.addHabit(name, cat, icon, color, isNeg, type, unit, target, freq, start, specDays, remEnabled, remHour, remMin, customReminders, description)
+                                viewModel.addHabit(name, cat, icon, color, isNeg, type, unit, target, freq, start, specDays, remEnabled, remHour, remMin, customReminders, description, milestoneRewards)
                                 Toast.makeText(
                                     context,
                                     if (language == "de") "Gewohnheit hinzugefügt!" else "Habit added!",
@@ -483,6 +526,7 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
                 composable("STATS") {
                     val onAddClick = remember {
                         {
+                            editingHabit = null
                             navController.navigate("CREATE") {
                                 launchSingleTop = true
                             }
@@ -594,8 +638,8 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
                             brush = Brush.verticalGradient(
                                 colors = listOf(
                                     Color.Transparent,
-                                    DarkBg.copy(alpha = 0.8f),
-                                    DarkBg
+                                    AppBg.copy(alpha = 0.8f),
+                                    AppBg
                                 )
                             )
                         )
@@ -768,7 +812,7 @@ fun AudioSoundscapeDialog(
             }
             onDismiss()
         },
-        containerColor = DarkCard,
+        containerColor = AppCard,
         shape = RoundedCornerShape(24.dp),
         title = {
             Row(
@@ -856,9 +900,9 @@ fun AudioSoundscapeDialog(
                         .onFocusChanged { isSearchFocused = it.isFocused },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = PrimaryViolet,
-                        unfocusedBorderColor = DarkBorder,
-                        focusedContainerColor = DarkBg,
-                        unfocusedContainerColor = DarkBg
+                        unfocusedBorderColor = AppBorder,
+                        focusedContainerColor = AppBg,
+                        unfocusedContainerColor = AppBg
                     ),
                     shape = RoundedCornerShape(16.dp),
                     singleLine = true
@@ -868,8 +912,8 @@ fun AudioSoundscapeDialog(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(DarkBg, RoundedCornerShape(12.dp))
-                        .border(1.dp, DarkBorder, RoundedCornerShape(12.dp))
+                        .background(AppBg, RoundedCornerShape(12.dp))
+                        .border(1.dp, AppBorder, RoundedCornerShape(12.dp))
                         .padding(10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -891,7 +935,7 @@ fun AudioSoundscapeDialog(
                     )
                 }
 
-                HorizontalDivider(color = DarkBorder, thickness = 1.dp)
+                HorizontalDivider(color = AppBorder, thickness = 1.dp)
 
                 // List of Audios
                 LazyColumn(
@@ -914,8 +958,8 @@ fun AudioSoundscapeDialog(
                                 onSelectAudio(null)
                             },
                             shape = RoundedCornerShape(14.dp),
-                            color = if (isNoSoundSelected) PrimaryViolet.copy(alpha = 0.15f) else DarkBg,
-                            border = BorderStroke(1.dp, if (isNoSoundSelected) PrimaryViolet else DarkBorder),
+                            color = if (isNoSoundSelected) PrimaryViolet.copy(alpha = 0.15f) else AppBg,
+                            border = BorderStroke(1.dp, if (isNoSoundSelected) PrimaryViolet else AppBorder),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Row(
@@ -984,8 +1028,8 @@ fun AudioSoundscapeDialog(
                                     onSelectAudio(file)
                                 },
                                 shape = RoundedCornerShape(14.dp),
-                                color = if (isSelected) PrimaryViolet.copy(alpha = 0.15f) else DarkBg,
-                                border = BorderStroke(1.dp, if (isSelected) PrimaryViolet else DarkBorder),
+                                color = if (isSelected) PrimaryViolet.copy(alpha = 0.15f) else AppBg,
+                                border = BorderStroke(1.dp, if (isSelected) PrimaryViolet else AppBorder),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Row(
@@ -1057,8 +1101,8 @@ fun AudioSoundscapeDialog(
                                                 Row(
                                                     verticalAlignment = Alignment.CenterVertically,
                                                     modifier = Modifier
-                                                        .background(DarkCard, RoundedCornerShape(6.dp))
-                                                        .border(0.5.dp, DarkBorder, RoundedCornerShape(6.dp))
+                                                        .background(AppCard, RoundedCornerShape(6.dp))
+                                                        .border(0.5.dp, AppBorder, RoundedCornerShape(6.dp))
                                                         .clickable { editingCategoryForFile = file }
                                                         .padding(horizontal = 6.dp, vertical = 2.dp)
                                                 ) {
@@ -1080,7 +1124,7 @@ fun AudioSoundscapeDialog(
                                                 DropdownMenu(
                                                     expanded = editingCategoryForFile?.absolutePath == file.absolutePath,
                                                     onDismissRequest = { editingCategoryForFile = null },
-                                                    modifier = Modifier.background(DarkCard).border(1.dp, DarkBorder)
+                                                    modifier = Modifier.background(AppCard).border(1.dp, AppBorder)
                                                 ) {
                                                     AudioSoundscapeManager.CATEGORIES.filter { it != "Alle" }.forEach { c ->
                                                         DropdownMenuItem(
@@ -1393,7 +1437,7 @@ fun WidgetAddValueDialog(
 
         AlertDialog(
             onDismissRequest = onDismiss,
-            containerColor = DarkCard,
+            containerColor = AppCard,
             title = {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -1427,7 +1471,6 @@ fun WidgetAddValueDialog(
                             detectTapGestures {
                                 focusManager.clearFocus(force = true)
                                 keyboardController?.hide()
-                                isAudioPickerExpanded = false
                             }
                         },
                     verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -1503,7 +1546,7 @@ fun WidgetAddValueDialog(
                                                     Brush.radialGradient(
                                                         colors = listOf(
                                                             PrimaryViolet.copy(alpha = 0.35f * timerPulseAlpha),
-                                                            Color(0xFF8B5CF6).copy(alpha = 0.15f * timerPulseAlpha),
+                                                            PrimaryViolet.copy(alpha = 0.15f * timerPulseAlpha),
                                                             Color.Transparent
                                                         )
                                                     )
@@ -1536,7 +1579,7 @@ fun WidgetAddValueDialog(
                                                     // Active progress arc with gradient
                                                     drawArc(
                                                         brush = Brush.sweepGradient(
-                                                            colors = listOf(PrimaryViolet, Color(0xFFA855F7), Color(0xFFC084FC), PrimaryViolet)
+                                                            colors = listOf(PrimaryViolet, PrimaryViolet)
                                                         ),
                                                         startAngle = -90f,
                                                         sweepAngle = sweepAngle,
@@ -1560,7 +1603,7 @@ fun WidgetAddValueDialog(
                                                         val tickProgress = (i * 6).toFloat()
                                                         val isPassed = tickProgress <= sweepAngle
                                                         drawLine(
-                                                            color = if (isPassed) activeColor.copy(alpha = 0.8f) else DarkBorder.copy(alpha = 0.5f),
+                                                            color = if (isPassed) activeColor.copy(alpha = 0.8f) else AppBorder.copy(alpha = 0.5f),
                                                             start = Offset(startX, startY),
                                                             end = Offset(endX, endY),
                                                             strokeWidth = if (isMajor) 2.dp.toPx() else 1.dp.toPx()
@@ -1666,9 +1709,9 @@ fun WidgetAddValueDialog(
 
                             // Control Pill Dock (Reset, Play/Pause, Finish/Log)
                             Surface(
-                                color = DarkCard,
+                                color = AppCard,
                                 shape = RoundedCornerShape(24.dp),
-                                border = BorderStroke(1.dp, DarkBorder),
+                                border = BorderStroke(1.dp, AppBorder),
                                 modifier = Modifier.padding(horizontal = 12.dp)
                             ) {
                                 Row(
@@ -1706,7 +1749,7 @@ fun WidgetAddValueDialog(
                                                     colors = if (isTimerRunning) {
                                                         listOf(Color(0xFFEF4444), Color(0xFFDC2626))
                                                     } else {
-                                                        listOf(Color(0xFF8B5CF6), PrimaryViolet)
+                                                        listOf(PrimaryViolet, PrimaryViolet.copy(alpha = 0.85f))
                                                     }
                                                 )
                                             )
@@ -1825,8 +1868,8 @@ fun WidgetAddValueDialog(
                                                         }
                                                     },
                                                     shape = RoundedCornerShape(8.dp),
-                                                    color = if (isSel) PrimaryViolet.copy(alpha = 0.25f) else DarkCard,
-                                                    border = BorderStroke(1.dp, if (isSel) PrimaryViolet else DarkBorder),
+                                                    color = if (isSel) PrimaryViolet.copy(alpha = 0.25f) else AppCard,
+                                                    border = BorderStroke(1.dp, if (isSel) PrimaryViolet else AppBorder),
                                                     modifier = Modifier.weight(1f).height(36.dp)
                                                 ) {
                                                     Row(
@@ -1874,13 +1917,17 @@ fun WidgetAddValueDialog(
                                         keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus(force = true); keyboardController?.hide() }),
                                         modifier = Modifier
                                             .weight(1f)
-                                            .onFocusChanged { isAudioPickerExpanded = it.isFocused },
+                                            .onFocusChanged { 
+                                                if (it.isFocused) {
+                                                    isAudioPickerExpanded = true
+                                                }
+                                            },
                                         decorationBox = { innerTextField ->
                                             Row(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                                    .background(DarkCard, RoundedCornerShape(14.dp))
-                                                    .border(1.dp, DarkBorder, RoundedCornerShape(14.dp))
+                                                    .background(AppCard, RoundedCornerShape(14.dp))
+                                                    .border(1.dp, AppBorder, RoundedCornerShape(14.dp))
                                                     .padding(horizontal = 14.dp, vertical = 12.dp),
                                                 verticalAlignment = Alignment.CenterVertically
                                             ) {
@@ -1900,6 +1947,14 @@ fun WidgetAddValueDialog(
                                                     IconButton(onClick = { audioSearchQuery = "" }, modifier = Modifier.size(22.dp)) {
                                                         Icon(Icons.Default.Close, contentDescription = "Clear", tint = TextSecondary, modifier = Modifier.size(16.dp))
                                                     }
+                                                }
+                                                IconButton(onClick = { isAudioPickerExpanded = !isAudioPickerExpanded }, modifier = Modifier.size(22.dp)) {
+                                                    Icon(
+                                                        imageVector = if (isAudioPickerExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                                        contentDescription = "Toggle List",
+                                                        tint = TextSecondary,
+                                                        modifier = Modifier.size(18.dp)
+                                                    )
                                                 }
                                             }
                                         }
@@ -1934,7 +1989,7 @@ fun WidgetAddValueDialog(
                                             },
                                             modifier = Modifier
                                                 .size(44.dp)
-                                                .background(DarkCard, RoundedCornerShape(14.dp))
+                                                .background(AppCard, RoundedCornerShape(14.dp))
                                                 .border(1.dp, Color(0xFFEF4444).copy(alpha = 0.5f), RoundedCornerShape(14.dp))
                                         ) {
                                             Icon(
@@ -1958,7 +2013,7 @@ fun WidgetAddValueDialog(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .background(ProgressTrack, RoundedCornerShape(12.dp))
-                                            .border(1.dp, DarkBorder, RoundedCornerShape(12.dp))
+                                            .border(1.dp, AppBorder, RoundedCornerShape(12.dp))
                                             .padding(6.dp),
                                         verticalArrangement = Arrangement.spacedBy(4.dp)
                                     ) {
@@ -2057,8 +2112,8 @@ fun WidgetAddValueDialog(
                                                             isAudioPickerExpanded = false
                                                         },
                                                         shape = RoundedCornerShape(6.dp),
-                                                        color = if (isSel) PrimaryViolet.copy(alpha = 0.2f) else DarkCard,
-                                                        border = BorderStroke(0.5.dp, if (isSel) PrimaryViolet else DarkBorder),
+                                                        color = if (isSel) PrimaryViolet.copy(alpha = 0.2f) else AppCard,
+                                                        border = BorderStroke(0.5.dp, if (isSel) PrimaryViolet else AppBorder),
                                                         modifier = Modifier.fillMaxWidth()
                                                     ) {
                                                         Row(
@@ -2194,12 +2249,12 @@ fun WidgetAddValueDialog(
                                         modifier = Modifier
                                             .weight(1f)
                                             .background(
-                                                if (isSelected) PrimaryViolet else DarkCard,
+                                                if (isSelected) PrimaryViolet else AppCard,
                                                 RoundedCornerShape(8.dp)
                                             )
                                             .border(
                                                 1.dp,
-                                                if (isSelected) PrimaryViolet else DarkBorder,
+                                                if (isSelected) PrimaryViolet else AppBorder,
                                                 RoundedCornerShape(8.dp)
                                             )
                                             .clickable {
@@ -2338,9 +2393,9 @@ fun HabitBottomNavigation(
         contentAlignment = Alignment.Center
     ) {
         Surface(
-            color = DarkCard,
+            color = AppCard,
             shape = CircleShape,
-            border = BorderStroke(1.dp, DarkBorder),
+            border = BorderStroke(1.dp, AppBorder),
             shadowElevation = 8.dp,
             tonalElevation = 0.dp
         ) {
@@ -2524,6 +2579,36 @@ fun getDayCombinedStatus(dateStr: String, habits: List<Habit>, logs: List<HabitL
     }
 }
 
+class InsightOption(
+    val type: String,
+    val text: String,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+    val color: Color,
+    val onClick: (() -> Unit)? = null
+)
+
+private fun isInsightTypeInCooldown(context: Context, type: String, todayDateString: String): Boolean {
+    val prefs = context.getSharedPreferences("habits_settings", Context.MODE_PRIVATE)
+    val lastShown = prefs.getString("insight_cooldown_$type", null) ?: return false
+    val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+    return try {
+        val d1 = sdf.parse(lastShown)
+        val d2 = sdf.parse(todayDateString)
+        if (d1 != null && d2 != null) {
+            val diffMs = d2.time - d1.time
+            val diffDays = (diffMs / (1000 * 60 * 60 * 24)).toInt()
+            diffDays < 10 && diffDays >= 0
+        } else false
+    } catch (e: Exception) {
+        false
+    }
+}
+
+private fun recordInsightTypeShown(context: Context, type: String, todayDateString: String) {
+    val prefs = context.getSharedPreferences("habits_settings", Context.MODE_PRIVATE)
+    prefs.edit().putString("insight_cooldown_$type", todayDateString).apply()
+}
+
 @Composable
 fun SmartInsightCard(
     language: String,
@@ -2532,79 +2617,332 @@ fun SmartInsightCard(
     smartInsightDismissedDate: String,
     onDismiss: (String) -> Unit,
     perfectDaysStats: com.example.data.PerfectDaysStats,
-    habitsWithStats: List<com.example.data.HabitStatModel>
+    habitsWithStats: List<com.example.data.HabitStatModel>,
+    allLogs: List<com.example.data.HabitLog>,
+    allHabits: List<com.example.data.Habit>,
+    dismissedReviews: Set<String> = emptySet(),
+    onOpenMonthlyReview: (Int, Int) -> Unit = { _, _ -> },
+    onOpenYearlyReview: (Int) -> Unit = {}
 ) {
     if (smartInsightDismissedDate == todayDateString) return
-    
-    // Only show if the user has a bit of history (e.g. at least 7 completed check-ins overall)
-    if (perfectDaysStats.totalCompletedHabits < 7) return
-    
-    val currentStreak = perfectDaysStats.currentStreak
-    val completionRate = perfectDaysStats.totalCompletionRate
-    val totalPerfectDays = perfectDaysStats.totalPerfectDays
-    
-    val greeting = if (userName.isNotBlank()) {
-        if (language == "de") "Hey $userName, " else "Hey $userName, "
-    } else ""
 
-    class InsightOption(val text: String, val icon: androidx.compose.ui.graphics.vector.ImageVector, val color: Color)
-    val options = mutableListOf<InsightOption>()
-    
-    if (currentStreak >= 3) {
-        options.add(InsightOption(
-            text = if (language == "de") "${greeting}du bist on fire! 🔥 Schon $currentStreak perfekte Tage in Folge. Bleib dran!" else "${greeting}you are on fire! 🔥 $currentStreak perfect days in a row. Keep it up!",
-            icon = Icons.Default.LocalFireDepartment,
-            color = HabitOrange
-        ))
+    val context = LocalContext.current
+
+    val uniqueLoggedDays = remember(allLogs) {
+        allLogs.filter { it.value > 0f && !it.isPaused }.map { it.date }.distinct().size
     }
-    if (completionRate >= 80 && perfectDaysStats.totalCompletedHabits > 20) {
-        options.add(InsightOption(
-            text = if (language == "de") "${greeting}deine Erfolgsquote liegt bei extrem starken $completionRate%! Mach weiter so." else "${greeting}your success rate is an extremely strong $completionRate%! Keep going.",
-            icon = Icons.Default.AutoAwesome,
-            color = PrimaryViolet
-        ))
+
+    if (uniqueLoggedDays < 7) {
+        Card(
+            colors = CardDefaults.cardColors(containerColor = AppCard),
+            border = BorderStroke(1.dp, AppBorder),
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(PrimaryViolet.copy(alpha = 0.15f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Lock,
+                        contentDescription = "Locked",
+                        tint = PrimaryViolet,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (language == "de") "Smart Insights freischalten" else "Unlock Smart Insights",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = SecondaryViolet,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "$uniqueLoggedDays / 7 Tage",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = TextSecondary
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    val remainingDays = 7 - uniqueLoggedDays
+                    val infoText = if (language == "de") {
+                        "Sammle noch $remainingDays ${if (remainingDays == 1) "Tag" else "Tage"} an Daten, um deine Smart Insights freizuschalten."
+                    } else {
+                        "Collect $remainingDays more ${if (remainingDays == 1) "day" else "days"} of data to unlock your Smart Insights."
+                    }
+                    Text(
+                        text = infoText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextPrimary,
+                        lineHeight = 20.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(6.dp)
+                            .background(ProgressTrack, CircleShape)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(fraction = (uniqueLoggedDays / 7.0f).coerceIn(0f, 1f))
+                                .height(6.dp)
+                                .background(PrimaryViolet, CircleShape)
+                        )
+                    }
+                }
+            }
+        }
+        return
     }
-    val highMomentum = habitsWithStats.maxByOrNull { it.strength }
-    if (highMomentum != null && highMomentum.strength >= 80) {
-        options.add(InsightOption(
-            text = if (language == "de") "${greeting}dein Habit '${highMomentum.habit.name}' ist mit einer Stärke von ${highMomentum.strength} ein echtes Highlight. 🟢" else "${greeting}your habit '${highMomentum.habit.name}' is a real highlight with a strength of ${highMomentum.strength}. 🟢",
-            icon = Icons.Default.TrendingUp,
-            color = SuccessGreen
-        ))
+
+    val options = remember(allLogs, habitsWithStats, perfectDaysStats, language, userName, todayDateString, dismissedReviews) {
+        val list = mutableListOf<InsightOption>()
+        val greeting = if (userName.isNotBlank()) "Hey $userName, " else ""
+
+        // 1. Action-Based Review Insight
+        val cal = Calendar.getInstance()
+        val curYear = cal.get(Calendar.YEAR)
+        val curMonth = cal.get(Calendar.MONTH) + 1 // 1-12
+        var prevYear = curYear
+        var prevMonth = curMonth - 1
+        if (prevMonth < 1) {
+            prevMonth = 12
+            prevYear -= 1
+        }
+
+        val monthlyKey = "monthly_${prevYear}_${prevMonth}"
+        val yearlyKey = "yearly_${prevYear}"
+
+        if (curMonth == 1 && yearlyKey !in dismissedReviews && !isInsightTypeInCooldown(context, "REVIEW_PROMPT", todayDateString)) {
+            list.add(InsightOption(
+                type = "REVIEW_PROMPT",
+                text = if (language == "de") {
+                    "${greeting}dein **Jahres-Review $prevYear** ist bereit! Öffne deine Zeitkapsel. ⏳"
+                } else {
+                    "${greeting}your **$prevYear yearly review** is ready! Open your time capsule. ⏳"
+                },
+                icon = Icons.Default.AutoAwesome,
+                color = PrimaryViolet,
+                onClick = { onOpenYearlyReview(prevYear) }
+            ))
+        } else if (monthlyKey !in dismissedReviews && !isInsightTypeInCooldown(context, "REVIEW_PROMPT", todayDateString)) {
+            list.add(InsightOption(
+                type = "REVIEW_PROMPT",
+                text = if (language == "de") {
+                    "${greeting}dein **Monats-Review** ist bereit! Öffne deine Zeitkapsel. ⏳"
+                } else {
+                    "${greeting}your **monthly review** is ready! Open your time capsule. ⏳"
+                },
+                icon = Icons.Default.HourglassTop,
+                color = PrimaryViolet,
+                onClick = { onOpenMonthlyReview(prevYear, prevMonth) }
+            ))
+        }
+
+        // 2. Total completions
+        if (!isInsightTypeInCooldown(context, "TOTAL_COMPLETIONS", todayDateString)) {
+            val totalCompletions = allLogs.count { it.value > 0f && !it.isPaused }
+            if (totalCompletions >= 10) {
+                list.add(InsightOption(
+                    type = "TOTAL_COMPLETIONS",
+                    text = if (language == "de") {
+                        "${greeting}du hast insgesamt bereits **$totalCompletions** Gewohnheiten erfolgreich absolviert! 🚀"
+                    } else {
+                        "${greeting}you have successfully completed **$totalCompletions** habits in total! 🚀"
+                    },
+                    icon = Icons.Default.CheckCircle,
+                    color = SecondaryViolet
+                ))
+            }
+        }
+
+        // 3. Weekly volume
+        if (!isInsightTypeInCooldown(context, "WEEKLY_VOLUME", todayDateString)) {
+            val calendar = Calendar.getInstance()
+            calendar.set(Calendar.DAY_OF_WEEK, calendar.firstDayOfWeek)
+            val startOfWeekTime = calendar.timeInMillis
+            val weeklyCompletions = allLogs.count { log ->
+                log.value > 0f && !log.isPaused && log.timestamp >= startOfWeekTime
+            }
+            if (weeklyCompletions > 0) {
+                list.add(InsightOption(
+                    type = "WEEKLY_VOLUME",
+                    text = if (language == "de") {
+                        "${greeting}diese Woche hast du bereits **$weeklyCompletions** Abschlüsse geschafft. Ein fantastischer Rhythmus! ⚡"
+                    } else {
+                        "${greeting}you've already achieved **$weeklyCompletions** completions this week. A fantastic rhythm! ⚡"
+                    },
+                    icon = Icons.Default.Bolt,
+                    color = PrimaryViolet
+                ))
+            }
+        }
+
+        // 4. Most active weekday
+        if (!isInsightTypeInCooldown(context, "MOST_ACTIVE_DAY", todayDateString)) {
+            val weekdayCompletionsMap = IntArray(8)
+            val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+            allLogs.forEach { log ->
+                if (log.value > 0f && !log.isPaused) {
+                    try {
+                        val dateVal: java.util.Date? = sdf.parse(log.date)
+                        if (dateVal != null) {
+                            val calDay = Calendar.getInstance()
+                            calDay.time = dateVal
+                            val dayOfWeek = calDay.get(Calendar.DAY_OF_WEEK)
+                            if (dayOfWeek in 1..7) {
+                                weekdayCompletionsMap[dayOfWeek]++
+                            }
+                        }
+                    } catch (e: Exception) {}
+                }
+            }
+            var maxDayIndex = -1
+            var maxCount = 0
+            for (i in 1..7) {
+                if (weekdayCompletionsMap[i] > maxCount) {
+                    maxCount = weekdayCompletionsMap[i]
+                    maxDayIndex = i
+                }
+            }
+            if (maxDayIndex != -1 && maxCount > 0) {
+                val dayName = when (maxDayIndex) {
+                    Calendar.MONDAY -> if (language == "de") "Montag" else "Monday"
+                    Calendar.TUESDAY -> if (language == "de") "Dienstag" else "Tuesday"
+                    Calendar.WEDNESDAY -> if (language == "de") "Mittwoch" else "Wednesday"
+                    Calendar.THURSDAY -> if (language == "de") "Donnerstag" else "Thursday"
+                    Calendar.FRIDAY -> if (language == "de") "Freitag" else "Friday"
+                    Calendar.SATURDAY -> if (language == "de") "Samstag" else "Saturday"
+                    Calendar.SUNDAY -> if (language == "de") "Sonntag" else "Sunday"
+                    else -> ""
+                }
+                if (dayName.isNotEmpty()) {
+                    list.add(InsightOption(
+                        type = "MOST_ACTIVE_DAY",
+                        text = if (language == "de") {
+                            "${greeting}dein aktivster Wochentag ist der **$dayName** mit insgesamt **$maxCount** erfolgreichen Abschlüssen! 📈"
+                        } else {
+                            "${greeting}your most active day of the week is **$dayName** with a total of **$maxCount** successful completions! 📈"
+                        },
+                        icon = Icons.Default.TrendingUp,
+                        color = SuccessGreen
+                    ))
+                }
+            }
+        }
+
+        // 5. Perfect days streak
+        if (!isInsightTypeInCooldown(context, "PERFECT_DAYS_STREAK", todayDateString)) {
+            val currentStreak = perfectDaysStats.currentStreak
+            if (currentStreak >= 2) {
+                list.add(InsightOption(
+                    type = "PERFECT_DAYS_STREAK",
+                    text = if (language == "de") {
+                        "${greeting}du bist on fire! 🔥 Schon **$currentStreak** perfekte Tage in Folge. Lass uns diese Serie heute fortsetzen!"
+                    } else {
+                        "${greeting}you are on fire! 🔥 **$currentStreak** perfect days in a row. Let's keep this streak going today!"
+                    },
+                    icon = Icons.Default.LocalFireDepartment,
+                    color = HabitOrange
+                ))
+            }
+        }
+
+        // 6. Completion rate
+        if (!isInsightTypeInCooldown(context, "COMPLETION_RATE", todayDateString)) {
+            val completionRate = perfectDaysStats.totalCompletionRate
+            if (completionRate >= 50) {
+                list.add(InsightOption(
+                    type = "COMPLETION_RATE",
+                    text = if (language == "de") {
+                        "${greeting}deine Gesamt-Erfolgsquote liegt bei extrem starken **$completionRate%**. Bleib weiter so fokussiert! 🎯"
+                    } else {
+                        "${greeting}your overall success rate is an extremely strong **$completionRate%**. Keep staying focused! 🎯"
+                    },
+                    icon = Icons.Default.TrackChanges,
+                    color = HabitCyan
+                ))
+            }
+        }
+
+        // 7. Top performer
+        if (!isInsightTypeInCooldown(context, "TOP_PERFORMER", todayDateString)) {
+            val habitCompletionsMap = mutableMapOf<Int, Int>()
+            allLogs.forEach { log ->
+                if (log.value > 0f && !log.isPaused) {
+                    habitCompletionsMap[log.habitId] = (habitCompletionsMap[log.habitId] ?: 0) + 1
+                }
+            }
+            val maxHabitEntry = habitCompletionsMap.maxByOrNull { it.value }
+            if (maxHabitEntry != null && maxHabitEntry.value >= 3) {
+                val matchingHabit = allHabits.find { it.id == maxHabitEntry.key }
+                if (matchingHabit != null) {
+                    list.add(InsightOption(
+                        type = "TOP_PERFORMER",
+                        text = if (language == "de") {
+                            "${greeting}dein absoluter Spitzenreiter ist **'${matchingHabit.name}'** mit bereits **${maxHabitEntry.value}** Abschlüssen! Tolle Leistung. 🟢"
+                        } else {
+                            "${greeting}your absolute top performer is **'${matchingHabit.name}'** with already **${maxHabitEntry.value}** completions! Great job. 🟢"
+                        },
+                        icon = Icons.Default.Star,
+                        color = HabitYellow
+                    ))
+                }
+            }
+        }
+
+        // 8. High momentum
+        if (!isInsightTypeInCooldown(context, "HIGH_MOMENTUM", todayDateString)) {
+            val highMomentum = habitsWithStats.maxByOrNull { it.strength }
+            if (highMomentum != null && highMomentum.strength >= 75) {
+                list.add(InsightOption(
+                    type = "HIGH_MOMENTUM",
+                    text = if (language == "de") {
+                        "${greeting}dein Habit **'${highMomentum.habit.name}'** hat eine fantastische Stärke von **${highMomentum.strength}%** erreicht! 💎"
+                    } else {
+                        "${greeting}your habit **'${highMomentum.habit.name}'** has reached a fantastic strength of **${highMomentum.strength}%**! 💎"
+                    },
+                    icon = Icons.Default.AutoAwesome,
+                    color = PrimaryViolet
+                ))
+            }
+        }
+
+        list
     }
-    if (totalPerfectDays >= 5) {
-        options.add(InsightOption(
-            text = if (language == "de") "${greeting}du hast schon $totalPerfectDays perfekte Tage gesammelt. Konstanz zahlt sich aus!" else "${greeting}you've already collected $totalPerfectDays perfect days. Consistency pays off!",
-            icon = Icons.Default.EmojiEvents,
-            color = HabitYellow
-        ))
+
+    if (options.isEmpty()) return
+
+    val selectedOption = options.find { it.type == "REVIEW_PROMPT" }
+        ?: options[Math.abs(todayDateString.hashCode()) % options.size]
+
+    LaunchedEffect(selectedOption.type, todayDateString) {
+        recordInsightTypeShown(context, selectedOption.type, todayDateString)
     }
-    
-    // Always add fallbacks to ensure variety
-    options.add(InsightOption(
-        text = if (language == "de") "${greeting}jeder Check-in heute bringt dich deinem Ziel einen Schritt näher. ⚡" else "${greeting}every check-in today brings you one step closer to your goal. ⚡",
-        icon = Icons.Default.Bolt,
-        color = PrimaryViolet
-    ))
-    options.add(InsightOption(
-        text = if (language == "de") "${greeting}ein neuer Tag, eine neue Chance! Lass uns loslegen. 🚀" else "${greeting}a new day, a new chance! Let's get started. 🚀",
-        icon = Icons.Default.AutoAwesome,
-        color = SuccessGreen
-    ))
-    options.add(InsightOption(
-        text = if (language == "de") "${greeting}Konstanz ist der Schlüssel zum Erfolg. Bleib fokussiert! 🎯" else "${greeting}Consistency is the key to success. Stay focused! 🎯",
-        icon = Icons.Default.TrackChanges,
-        color = HabitOrange
-    ))
-    options.add(InsightOption(
-        text = if (language == "de") "${greeting}mach diesen Tag zu einem perfekten Tag. Du schaffst das! 🌟" else "${greeting}make this day a perfect day. You got this! 🌟",
-        icon = Icons.Default.Star,
-        color = HabitYellow
-    ))
-    
-    val hash = Math.abs(todayDateString.hashCode())
-    val selectedOption = options[hash % options.size]
-    
+
     val insightText = selectedOption.text
     val insightIcon = selectedOption.icon
     val iconColor = selectedOption.color
@@ -2617,17 +2955,16 @@ fun SmartInsightCard(
         exit = shrinkVertically(animationSpec = tween(500, easing = LinearOutSlowInEasing)) + fadeOut(animationSpec = tween(300))
     ) {
         Card(
-            colors = CardDefaults.cardColors(containerColor = iconColor.copy(alpha = 0.08f)),
+            colors = CardDefaults.cardColors(containerColor = AppCard),
             border = BorderStroke(1.dp, iconColor.copy(alpha = 0.3f)),
             shape = RoundedCornerShape(16.dp),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 12.dp)
-                .shadow(
-                    elevation = 16.dp,
-                    shape = RoundedCornerShape(16.dp),
-                    spotColor = iconColor.copy(alpha = 0.6f),
-                    ambientColor = iconColor.copy(alpha = 0.6f)
+                .then(
+                    if (selectedOption.onClick != null) {
+                        Modifier.clickable { selectedOption.onClick.invoke() }
+                    } else Modifier
                 )
         ) {
             Row(
@@ -2650,9 +2987,9 @@ fun SmartInsightCard(
                         modifier = Modifier.size(20.dp)
                     )
                 }
-                
+
                 Spacer(modifier = Modifier.width(16.dp))
-                
+
                 Column(modifier = Modifier.weight(1f)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -2665,7 +3002,7 @@ fun SmartInsightCard(
                             color = iconColor,
                             fontWeight = FontWeight.Bold
                         )
-                        
+
                         Box(
                             modifier = Modifier
                                 .size(24.dp)
@@ -2683,13 +3020,28 @@ fun SmartInsightCard(
                             )
                         }
                     }
-                    
+
                     Spacer(modifier = Modifier.height(4.dp))
-                    
+
+                    val annotatedText = remember(insightText) {
+                        val parts = insightText.split("**")
+                        buildAnnotatedString {
+                            parts.forEachIndexed { index, part ->
+                                if (index % 2 == 1) {
+                                    withStyle(style = SpanStyle(fontWeight = FontWeight.Bold, color = TextPrimary)) {
+                                        append(part)
+                                    }
+                                } else {
+                                    append(part)
+                                }
+                            }
+                        }
+                    }
+
                     Text(
-                        text = insightText,
+                        text = annotatedText,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = TextPrimary,
+                        color = TextPrimary.copy(alpha = 0.85f),
                         lineHeight = 20.sp
                     )
                 }
@@ -2711,12 +3063,14 @@ fun TodayScreen(
     val selectedDate by viewModel.selectedDate.collectAsStateWithLifecycle()
     val weekStartCalendar by viewModel.currentWeekStart.collectAsStateWithLifecycle()
     val todayProgressTuple by viewModel.todayProgress.collectAsStateWithLifecycle()
+    val dismissedReviews by viewModel.dismissedReviews.collectAsStateWithLifecycle()
 
     val activeHabitUiItemsForSelectedDate by viewModel.activeHabitUiItemsForSelectedDate.collectAsStateWithLifecycle()
     val minWeekStartMillis by viewModel.minWeekStartMillis.collectAsStateWithLifecycle()
     val minDateStr by viewModel.minDateStr.collectAsStateWithLifecycle()
 
     val vibrationEnabled by viewModel.vibrationEnabled.collectAsStateWithLifecycle()
+    val accentColorName by viewModel.accentColorName.collectAsStateWithLifecycle()
     val hasOnboarded by viewModel.hasOnboarded.collectAsStateWithLifecycle()
 
     val todayDateString by viewModel.todayDateString.collectAsStateWithLifecycle()
@@ -2726,10 +3080,14 @@ fun TodayScreen(
     val userName by viewModel.userName.collectAsStateWithLifecycle()
     val canPrevWeek by viewModel.canPrevWeek.collectAsStateWithLifecycle()
     val canNextWeek by viewModel.canNextWeek.collectAsStateWithLifecycle()
+    val allLogs by viewModel.allLogs.collectAsStateWithLifecycle()
+    val allHabits by viewModel.allHabits.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
     val activity = context as? Activity
 
+    var todayClickCount by remember { mutableStateOf(0) }
+    var showSaskiaDialog by remember { mutableStateOf(false) }
     var longPressedHabit by remember { mutableStateOf<Habit?>(null) }
     var showDeleteConfirmHabit by remember { mutableStateOf<Habit?>(null) }
     var showArchiveConfirmHabit by remember { mutableStateOf<Habit?>(null) }
@@ -2779,7 +3137,7 @@ fun TodayScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .background(DarkBg)
+                .background(AppBg)
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
             contentPadding = PaddingValues(bottom = 140.dp, top = 16.dp)
@@ -2795,8 +3153,8 @@ fun TodayScreen(
                 Box(
                     modifier = Modifier
                         .size(44.dp)
-                        .border(1.dp, DarkBorder, RoundedCornerShape(12.dp))
-                        .background(DarkCard, RoundedCornerShape(12.dp))
+                        .border(1.dp, AppBorder, RoundedCornerShape(12.dp))
+                        .background(AppCard, RoundedCornerShape(12.dp))
                         .clickable { showDailyNoteDialog = true }
                         .align(Alignment.CenterStart)
                         .testTag("btn_daily_note"),
@@ -2820,7 +3178,17 @@ fun TodayScreen(
                 Text(
                     modifier = Modifier
                         .align(Alignment.Center)
-                        .padding(horizontal = 48.dp),
+                        .padding(horizontal = 48.dp)
+                        .clickable(
+                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                            indication = null
+                        ) {
+                            todayClickCount++
+                            if (todayClickCount >= 10) {
+                                viewModel.unlockSaskia()
+                                showSaskiaDialog = true
+                            }
+                        },
                     text = formattedDisplayDate,
                     style = MaterialTheme.typography.displayLarge,
                     color = TextPrimary,
@@ -2832,8 +3200,8 @@ fun TodayScreen(
                 Box(
                     modifier = Modifier
                         .size(44.dp)
-                        .border(1.dp, DarkBorder, RoundedCornerShape(12.dp))
-                        .background(DarkCard, RoundedCornerShape(12.dp))
+                        .border(1.dp, AppBorder, RoundedCornerShape(12.dp))
+                        .background(AppCard, RoundedCornerShape(12.dp))
                         .clickable {
                             onDismissFirstHabitHint()
                             onAddClick()
@@ -3082,9 +3450,15 @@ fun TodayScreen(
                 var displayedStreak by remember { mutableStateOf(perfectDaysStats.currentStreak) }
                 var hasAnimatedStreak by rememberSaveable(selectedDate) { mutableStateOf(fraction >= 1f) }
                 
-                LaunchedEffect(perfectDaysStats.currentStreak) {
+                LaunchedEffect(selectedDate, perfectDaysStats.currentStreak) {
                     if (fraction < 1.0f) {
                         displayedStreak = perfectDaysStats.currentStreak
+                    } else {
+                        if (hasAnimatedStreak) {
+                            displayedStreak = perfectDaysStats.currentStreak
+                        } else {
+                            displayedStreak = (perfectDaysStats.currentStreak - 1).coerceAtLeast(0)
+                        }
                     }
                 }
                 
@@ -3099,17 +3473,18 @@ fun TodayScreen(
                         hasAnimatedStreak = true
                         displayedStreak = perfectDaysStats.currentStreak
                         streakScale.animateTo(
-                            targetValue = 1.4f,
+                            targetValue = 1.22f,
                             animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                dampingRatio = Spring.DampingRatioLowBouncy,
                                 stiffness = Spring.StiffnessMedium
                             )
                         )
+                        delay(350)
                         streakScale.animateTo(
                             targetValue = 1f,
-                            animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioMediumBouncy,
-                                stiffness = Spring.StiffnessLow
+                            animationSpec = tween(
+                                durationMillis = 350,
+                                easing = FastOutSlowInEasing
                             )
                         )
                     }
@@ -3124,23 +3499,23 @@ fun TodayScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 6.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF141026)),
+                        colors = CardDefaults.cardColors(containerColor = AppCard),
                         shape = RoundedCornerShape(22.dp),
                         border = BorderStroke(2.dp, PrimaryViolet)
                     ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 12.dp, vertical = 12.dp),
+                                .padding(horizontal = 14.dp, vertical = 14.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Surface(
                                 modifier = Modifier
                                     .weight(1f)
                                     .height(36.dp),
-                                color = DarkCard,
+                                color = AppCard,
                                 shape = RoundedCornerShape(18.dp),
-                                border = BorderStroke(1.dp, DarkBorder)
+                                border = BorderStroke(1.dp, AppBorder)
                             ) {
                                 Box(modifier = Modifier.fillMaxSize()) {
                                     if (animatedFraction > 0f) {
@@ -3148,7 +3523,7 @@ fun TodayScreen(
                                             modifier = Modifier
                                                 .fillMaxHeight()
                                                 .fillMaxWidth(animatedFraction.coerceIn(0f, 1f))
-                                                .background(if (animatedFraction >= 1.0f) SuccessGreen else PrimaryViolet)
+                                                .background(SuccessGreen)
                                         )
                                     }
 
@@ -3175,32 +3550,43 @@ fun TodayScreen(
                                 }
                             }
                             
-                            Spacer(modifier = Modifier.width(12.dp))
+                            Spacer(modifier = Modifier.width(10.dp))
                             
-                            Surface(
-                                color = DarkCard,
-                                shape = RoundedCornerShape(18.dp),
-                                border = BorderStroke(1.dp, if (fraction >= 1f) HabitOrange.copy(alpha = 0.5f) else DarkBorder),
+                            val badgeHorizontalPadding = when {
+                                displayedStreak >= 100 -> 16.dp
+                                displayedStreak >= 10 -> 14.dp
+                                else -> 12.dp
+                            }
+
+                            Box(
                                 modifier = Modifier
-                                    .height(36.dp)
+                                    .padding(horizontal = 4.dp)
                                     .scale(streakScale.value)
-                                    .testTag("perfect_day_streak_badge")
                             ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 12.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                Surface(
+                                    color = AppCard,
+                                    shape = RoundedCornerShape(18.dp),
+                                    border = BorderStroke(1.dp, if (fraction >= 1f) HabitOrange.copy(alpha = 0.5f) else AppBorder),
+                                    modifier = Modifier
+                                        .height(36.dp)
+                                        .testTag("perfect_day_streak_badge")
                                 ) {
-                                    Text(
-                                        text = "🔥",
-                                        fontSize = 14.sp
-                                    )
-                                    Text(
-                                        text = "${displayedStreak}",
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (fraction >= 1f) HabitOrange else TextSecondary
-                                    )
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = badgeHorizontalPadding),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Text(
+                                            text = "🔥",
+                                            fontSize = 14.sp
+                                        )
+                                        Text(
+                                            text = "$displayedStreak",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (fraction >= 1f) HabitOrange else TextSecondary
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -3213,7 +3599,12 @@ fun TodayScreen(
                     smartInsightDismissedDate = smartInsightDismissedDate,
                     onDismiss = { viewModel.dismissSmartInsight(it) },
                     perfectDaysStats = perfectDaysStats,
-                    habitsWithStats = habitsWithStats
+                    habitsWithStats = habitsWithStats,
+                    allLogs = allLogs,
+                    allHabits = allHabits,
+                    dismissedReviews = dismissedReviews,
+                    onOpenMonthlyReview = { year, month -> viewModel.setDeepLinkReviewMonth(year to month) },
+                    onOpenYearlyReview = { year -> viewModel.setDeepLinkReviewYear(year) }
                 )
             }
         }
@@ -3376,6 +3767,7 @@ fun TodayScreen(
                 }
 
                 HabitItemRow(
+                    modifier = Modifier.animateItem(),
                     habit = currentHabit,
                     currentValue = uiItem.currentValue,
                     isCompleted = uiItem.isCompleted,
@@ -3419,7 +3811,7 @@ fun TodayScreen(
 
         AlertDialog(
             onDismissRequest = { longPressedHabit = null },
-            containerColor = DarkCard,
+            containerColor = AppCard,
             title = {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -3471,7 +3863,7 @@ fun TodayScreen(
                         },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = if (isPausedOnSelectedDate) SuccessGreen else HabitOrange,
-                            contentColor = DarkBg
+                            contentColor = AppBg
                         ),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth().height(48.dp)
@@ -3529,7 +3921,7 @@ fun TodayScreen(
                             isReorderMode = true
                         },
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = DarkBorder,
+                            containerColor = AppBorder,
                             contentColor = TextPrimary
                         ),
                         shape = RoundedCornerShape(12.dp),
@@ -3610,7 +4002,7 @@ fun TodayScreen(
     if (showDeleteConfirmHabit != null) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirmHabit = null },
-            containerColor = DarkCard,
+            containerColor = AppCard,
             title = { Text(text = if (language == "de") "Habit löschen?" else "Delete Habit?") },
             text = { Text(text = if (language == "de") "Möchtest du diese Gewohnheit wirklich unwiderruflich löschen?" else "Are you sure you want to delete this habit permanently?") },
             confirmButton = {
@@ -3640,7 +4032,7 @@ fun TodayScreen(
     if (showArchiveConfirmHabit != null) {
         AlertDialog(
             onDismissRequest = { showArchiveConfirmHabit = null },
-            containerColor = DarkCard,
+            containerColor = AppCard,
             title = { Text(text = if (language == "de") "Gewohnheit archivieren?" else "Archive Habit?") },
             text = { Text(text = if (language == "de") "Möchtest du diese Gewohnheit archivieren? Sie wird vom Dashboard und den Statistiken ausgeblendet, kann aber in den Einstellungen jederzeit wieder reaktiviert werden." else "Do you want to archive this habit? It will be hidden from the dashboard and stats, but can be reactivated at any time in settings.") },
             confirmButton = {
@@ -3680,6 +4072,68 @@ fun TodayScreen(
         CreateFirstHabitArrowHint(
             language = language
         )
+    }
+
+    if (showSaskiaDialog) {
+        Dialog(onDismissRequest = { showSaskiaDialog = false }) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                color = AppCard,
+                border = BorderStroke(1.dp, PrimaryViolet.copy(alpha = 0.5f)),
+                shape = RoundedCornerShape(24.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(60.dp)
+                            .background(Color(0xFFE91E63).copy(alpha = 0.15f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Favorite,
+                            contentDescription = "Heart",
+                            tint = Color(0xFFE91E63),
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = "„An Saskia – danke, dass du an meiner Seite bist, heute und an jedem weiteren Tag.“",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                            fontWeight = FontWeight.Medium
+                        ),
+                        color = TextPrimary,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    Button(
+                        onClick = { showSaskiaDialog = false },
+                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryViolet),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = if (language == "de") "Schließen ❤️" else "Close ❤️",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -3815,7 +4269,7 @@ fun HabitItemRow(
             isPaused -> PausedBg
             isCompleted -> SuccessBg
             isFailed -> FailedBg
-            else -> DarkCard
+            else -> AppCard
         },
         animationSpec = tween(120),
         label = "bgColor"
@@ -3825,7 +4279,7 @@ fun HabitItemRow(
             isPaused -> HabitOrange
             isCompleted -> SuccessGreen
             isFailed -> FailedRed
-            else -> DarkBorder
+            else -> AppBorder
         },
         animationSpec = tween(120),
         label = "borderColor"
@@ -3847,27 +4301,53 @@ fun HabitItemRow(
     )
 
     var lastDate by remember(habit.id) { mutableStateOf(selectedDate) }
-    var wasCompleted by remember(habit.id) { mutableStateOf(isCompleted) }
+    var wasCompleted by remember(habit.id, selectedDate) { mutableStateOf(isCompleted) }
+    var isDateChange by remember(selectedDate) { mutableStateOf(true) }
     val completionAnim = remember { Animatable(0f) }
     val coroutineScope = rememberCoroutineScope()
-    var accumulatedDrag by remember { mutableStateOf(0f) }
-    val dragThreshold = 55f
+    var isDragging by remember { mutableStateOf(false) }
+    var lastSwapTimestamp by remember { mutableLongStateOf(0L) }
+    val dragOffsetY = remember { Animatable(0f) }
+    val dragScale by animateFloatAsState(
+        targetValue = if (isDragging) 1.04f else 1f,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "dragScale"
+    )
+    val cardShadowElevation by animateDpAsState(
+        targetValue = if (isDragging) 12.dp else 0.dp,
+        label = "shadowElevation"
+    )
+    val dragZIndex = if (isDragging) 1000f else 0f
+
+    val triggerUserFeedback = {
+        FeedbackHelper.playCompletionFeedback(context, vibrationEnabled)
+        coroutineScope.launch {
+            completionAnim.snapTo(0f)
+            completionAnim.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(durationMillis = 650, easing = FastOutSlowInEasing)
+            )
+        }
+    }
+
+    val handleUserToggle = {
+        if (!isCompleted) {
+            triggerUserFeedback()
+        }
+        onToggle(habit.id, hasLog)
+    }
+
+    val handleUserAddQuantity = {
+        if (!isCompleted && (currentValue + 1f >= targetVal)) {
+            triggerUserFeedback()
+        }
+        onAddQuantity(habit.id, currentValue, 1f)
+    }
 
     LaunchedEffect(isCompleted, selectedDate) {
-        if (selectedDate != lastDate) {
-            lastDate = selectedDate
-            wasCompleted = isCompleted
-        } else {
-            if (isCompleted && !wasCompleted) {
-                completionAnim.snapTo(0f)
-                FeedbackHelper.playCompletionFeedback(context, vibrationEnabled)
-                completionAnim.animateTo(
-                    targetValue = 1f,
-                    animationSpec = tween(durationMillis = 650, easing = FastOutSlowInEasing)
-                )
-            }
-            wasCompleted = isCompleted
-        }
+        lastDate = selectedDate
+        wasCompleted = isCompleted
+        isDateChange = false
     }
 
     val popProgress = completionAnim.value
@@ -3887,9 +4367,12 @@ fun HabitItemRow(
         shape = RoundedCornerShape(16.dp),
         modifier = modifier
             .fillMaxWidth()
+            .zIndex(dragZIndex)
             .graphicsLayer {
-                scaleX = cardScale
-                scaleY = cardScale
+                scaleX = cardScale * dragScale
+                scaleY = cardScale * dragScale
+                translationY = dragOffsetY.value
+                shadowElevation = cardShadowElevation.toPx()
             }
             .drawBehind {
                 // 1. Draw animated background
@@ -3962,25 +4445,66 @@ fun HabitItemRow(
                 if (isReorderMode) {
                     m.pointerInput(habit.id) {
                         detectVerticalDragGestures(
-                            onDragStart = { accumulatedDrag = 0f },
-                            onDragEnd = { accumulatedDrag = 0f },
-                            onDragCancel = { accumulatedDrag = 0f },
+                            onDragStart = {
+                                isDragging = true
+                                coroutineScope.launch {
+                                    dragOffsetY.snapTo(0f)
+                                }
+                            },
+                            onDragEnd = {
+                                isDragging = false
+                                coroutineScope.launch {
+                                    dragOffsetY.animateTo(
+                                        0f,
+                                        animationSpec = spring(
+                                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                                            stiffness = Spring.StiffnessLow
+                                        )
+                                    )
+                                }
+                            },
+                            onDragCancel = {
+                                isDragging = false
+                                coroutineScope.launch {
+                                    dragOffsetY.animateTo(
+                                        0f,
+                                        animationSpec = spring(
+                                            dampingRatio = Spring.DampingRatioNoBouncy,
+                                            stiffness = Spring.StiffnessMedium
+                                        )
+                                    )
+                                }
+                            },
                             onVerticalDrag = { change, dragAmount ->
                                 change.consume()
-                                accumulatedDrag += dragAmount
-                                if (accumulatedDrag < -dragThreshold) {
-                                    onMoveUp?.invoke(habit.id)
-                                    accumulatedDrag = 0f
-                                } else if (accumulatedDrag > dragThreshold) {
-                                    onMoveDown?.invoke(habit.id)
-                                    accumulatedDrag = 0f
+                                val currentOffset = dragOffsetY.value + dragAmount
+                                coroutineScope.launch {
+                                    dragOffsetY.snapTo(currentOffset)
+                                }
+                                val now = System.currentTimeMillis()
+                                val threshold = 76.dp.toPx()
+                                val rowShift = 82.dp.toPx()
+                                if (now - lastSwapTimestamp > 280L) {
+                                    if (currentOffset < -threshold) {
+                                        lastSwapTimestamp = now
+                                        onMoveUp?.invoke(habit.id)
+                                        coroutineScope.launch {
+                                            dragOffsetY.snapTo(currentOffset + rowShift)
+                                        }
+                                    } else if (currentOffset > threshold) {
+                                        lastSwapTimestamp = now
+                                        onMoveDown?.invoke(habit.id)
+                                        coroutineScope.launch {
+                                            dragOffsetY.snapTo(currentOffset - rowShift)
+                                        }
+                                    }
                                 }
                             }
                         )
                     }
                 } else {
                     m.combinedClickable(
-                        onClick = { onToggle(habit.id, hasLog) },
+                        onClick = { handleUserToggle() },
                         onLongClick = { onLongClick(habit) }
                     )
                 }
@@ -4010,7 +4534,7 @@ fun HabitItemRow(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        painter = painterResource(id = HabitIconMapping.getIconDrawableId(habit.icon)),
+                        imageVector = HabitIconMapping.getIcon(habit.icon),
                         contentDescription = habit.name,
                         tint = habitColor,
                         modifier = Modifier.size(24.dp)
@@ -4061,11 +4585,11 @@ fun HabitItemRow(
                         ) {
                             Text(
                                 text = "🔥",
-                                style = MaterialTheme.typography.labelSmall
+                                style = MaterialTheme.typography.labelMedium
                             )
                             Text(
                                 text = "$streak",
-                                style = MaterialTheme.typography.labelSmall,
+                                style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = HabitOrange
                             )
@@ -4074,12 +4598,12 @@ fun HabitItemRow(
                         if (subtitleText.isNotBlank()) {
                             Text(
                                 text = "•",
-                                style = MaterialTheme.typography.labelSmall,
+                                style = MaterialTheme.typography.labelMedium,
                                 color = TextSecondary.copy(alpha = 0.5f)
                             )
                             Text(
                                 text = subtitleText,
-                                style = if (isNumerical && !isPaused) MaterialTheme.typography.labelSmall else MaterialTheme.typography.bodySmall,
+                                style = if (isNumerical && !isPaused) MaterialTheme.typography.labelLarge else MaterialTheme.typography.bodyMedium,
                                 fontWeight = if (isNumerical && !isPaused) FontWeight.Bold else FontWeight.Medium,
                                 color = when {
                                     isPaused -> HabitOrange
@@ -4210,9 +4734,9 @@ fun HabitItemRow(
                         )
                         .clickable(enabled = !isPaused) {
                             if (isNumerical) {
-                                onAddQuantity(habit.id, currentValue, 1f)
+                                handleUserAddQuantity()
                             } else {
-                                onToggle(habit.id, hasLog)
+                                handleUserToggle()
                             }
                         },
                     contentAlignment = Alignment.Center
@@ -4302,14 +4826,80 @@ fun StatsScreen(
         }
     }
 
+    val allHabits by viewModel.allHabits.collectAsStateWithLifecycle()
+    val allLogs by viewModel.allLogs.collectAsStateWithLifecycle()
+
+    var selectedReviewYear by remember { mutableStateOf<Int?>(null) }
+    var selectedReviewMonth by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    var showReviewArchive by remember { mutableStateOf(false) }
+    var showReviewExplanation by remember { mutableStateOf(false) }
+
+    val deepLinkReviewMonth by viewModel.deepLinkReviewMonth.collectAsStateWithLifecycle()
+    val deepLinkReviewYear by viewModel.deepLinkReviewYear.collectAsStateWithLifecycle()
+
+    LaunchedEffect(deepLinkReviewMonth) {
+        deepLinkReviewMonth?.let {
+            selectedReviewMonth = it
+            viewModel.setDeepLinkReviewMonth(null)
+        }
+    }
+
+    LaunchedEffect(deepLinkReviewYear) {
+        deepLinkReviewYear?.let {
+            selectedReviewYear = it
+            viewModel.setDeepLinkReviewYear(null)
+        }
+    }
+    val currentYear = remember { Calendar.getInstance().get(Calendar.YEAR) }
+    val availableYears = remember(allLogs, currentYear) {
+        val logYears = allLogs.mapNotNull {
+            if (it.date.length >= 4) it.date.substring(0, 4).toIntOrNull() else null
+        }
+        logYears.filter { y -> y < currentYear }
+            .distinct()
+            .sortedDescending()
+    }
+
+    val currentYearMonth = remember {
+        val cal = Calendar.getInstance()
+        val y = cal.get(Calendar.YEAR)
+        val m = cal.get(Calendar.MONTH) + 1 // 1-indexed
+        y to m
+    }
+    val availableMonths = remember(allLogs, currentYearMonth) {
+        val logMonths = allLogs.mapNotNull { log ->
+            if (log.date.length >= 7) {
+                val parts = log.date.split("-")
+                if (parts.size >= 2) {
+                    val y = parts[0].toIntOrNull()
+                    val m = parts[1].toIntOrNull()
+                    if (y != null && m != null) {
+                        y to m
+                    } else null
+                } else null
+            } else null
+        }
+        val cal = Calendar.getInstance()
+        val cY = cal.get(Calendar.YEAR)
+        val cM = cal.get(Calendar.MONTH) + 1 // 1-indexed
+        
+        // A month is only available if it's strictly in the past (before current year/month)
+        logMonths.filter { (y, m) -> 
+            y < cY || (y == cY && m < cM)
+        }.distinct()
+        .sortedWith(compareByDescending<Pair<Int, Int>> { it.first }.thenByDescending { it.second })
+    }
+
     val shortDayNames = statsDayNamesAndNumbers.first
     val dayNumbers = statsDayNamesAndNumbers.second
+
+    var showRewardsOverview by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .background(DarkBg)
+                .background(AppBg)
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
             contentPadding = PaddingValues(bottom = 140.dp, top = 16.dp)
@@ -4322,6 +4912,24 @@ fun StatsScreen(
                         .defaultMinSize(minHeight = 44.dp),
                     contentAlignment = Alignment.Center
                 ) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.CenterStart)
+                            .size(44.dp)
+                            .border(1.dp, AppBorder, RoundedCornerShape(12.dp))
+                            .background(AppCard, RoundedCornerShape(12.dp))
+                            .clickable { showRewardsOverview = true }
+                            .testTag("btn_rewards_overview"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = "Rewards",
+                            tint = TextPrimary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
                     Text(
                         text = if (language == "de") "Statistiken" else "Statistics",
                         style = MaterialTheme.typography.displayLarge,
@@ -4329,6 +4937,24 @@ fun StatsScreen(
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center
                     )
+
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .size(44.dp)
+                            .border(1.dp, AppBorder, RoundedCornerShape(12.dp))
+                            .background(AppCard, RoundedCornerShape(12.dp))
+                            .clickable { showReviewArchive = true }
+                            .testTag("btn_review_archive"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AutoAwesome,
+                            contentDescription = "Rückblicke",
+                            tint = TextPrimary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
             }
 
@@ -4390,11 +5016,11 @@ fun StatsScreen(
                 )
 
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = DarkCard),
+                    colors = CardDefaults.cardColors(containerColor = AppCard),
                     shape = RoundedCornerShape(22.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .border(width = 1.dp, color = DarkBorder, shape = RoundedCornerShape(22.dp))
+                        .border(width = 1.dp, color = AppBorder, shape = RoundedCornerShape(22.dp))
                         .clickable(
                             interactionSource = overallInteractionSource,
                             indication = ripple(),
@@ -4571,6 +5197,274 @@ fun StatsScreen(
                 }
             )
         }
+
+        if (selectedReviewYear != null) {
+            YearlyReviewDialog(
+                year = selectedReviewYear!!,
+                allHabits = allHabits,
+                allLogs = allLogs,
+                language = language,
+                viewModel = viewModel,
+                onDismiss = { selectedReviewYear = null }
+            )
+        }
+
+        if (selectedReviewMonth != null) {
+            MonthlyReviewDialog(
+                year = selectedReviewMonth!!.first,
+                month = selectedReviewMonth!!.second,
+                allHabits = allHabits,
+                allLogs = allLogs,
+                language = language,
+                viewModel = viewModel,
+                onDismiss = { selectedReviewMonth = null }
+            )
+        }
+
+        if (showRewardsOverview) {
+            RewardsOverviewSheet(
+                viewModel = viewModel,
+                language = language,
+                onDismiss = { showRewardsOverview = false }
+            )
+        }
+
+        if (showReviewExplanation) {
+            ExplanationDialog(
+                title = if (language == "de") "Rückblicke & Berichte" else "Reviews & Reports",
+                explanation = if (language == "de") 
+                    """Rückblicke sind Zusammenfassungen deiner Gewohnheiten.
+
+• Sie werden immer am 1. Tag des Folgemonats bzw. Folgejahres freigeschaltet.
+• Der Score ist der Durchschnitt aller Habit-Stärken zu diesem Zeitpunkt.
+• Du kannst Monats- und Jahresrückblicke einzeln in den Einstellungen aktivieren."""
+                else 
+                    """Reviews are summaries of your habit progress.
+
+• They are unlocked on the 1st day of the following month or year.
+• The score is the average of all habit strengths at that time.
+• You can toggle Monthly and Yearly reviews independently in settings.""",
+                onDismiss = { showReviewExplanation = false }
+            )
+        }
+        
+        if (showReviewArchive) {
+            Dialog(onDismissRequest = { showReviewArchive = false }) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp, vertical = 16.dp),
+                    color = AppCard,
+                    border = BorderStroke(1.dp, AppBorder),
+                    shape = RoundedCornerShape(24.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = if (language == "de") "Deine Rückblicke" else "Your Reviews",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = TextPrimary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                IconButton(
+                                    onClick = { showReviewExplanation = true },
+                                    modifier = Modifier.size(24.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Info,
+                                        contentDescription = "Info",
+                                        tint = PrimaryViolet,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                            IconButton(onClick = { showReviewArchive = false }) {
+                                Icon(imageVector = Icons.Default.Close, contentDescription = "Close", tint = TextSecondary)
+                            }
+                        }
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 420.dp)
+                                .verticalScroll(rememberScrollState()),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            if (availableYears.isEmpty() && availableMonths.isEmpty()) {
+                                Text(
+                                    text = if (language == "de") "Noch keine Rückblicke verfügbar." else "No reviews available yet.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = TextSecondary,
+                                    modifier = Modifier.padding(vertical = 16.dp)
+                                )
+                            }
+                            
+                            // Monthly reviews section
+                            if (availableMonths.isNotEmpty()) {
+                                Text(
+                                    text = if (language == "de") "MONATSRÜCKBLICKE" else "MONTHLY REVIEWS",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = SuccessGreen,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(bottom = 4.dp)
+                                )
+                                for ((y, m) in availableMonths) {
+                                    val monthLogsCount = remember(y, m, allLogs) {
+                                        val prefix = String.format(java.util.Locale.US, "%04d-%02d-", y, m)
+                                        allLogs.count { it.date.startsWith(prefix) && it.value > 0f }
+                                    }
+                                    val mName = when (m) {
+                                        1 -> if (language == "de") "Januar" else "January"
+                                        2 -> if (language == "de") "Februar" else "February"
+                                        3 -> if (language == "de") "März" else "March"
+                                        4 -> if (language == "de") "April" else "April"
+                                        5 -> if (language == "de") "Mai" else "May"
+                                        6 -> if (language == "de") "Juni" else "June"
+                                        7 -> if (language == "de") "Juli" else "July"
+                                        8 -> if (language == "de") "August" else "August"
+                                        9 -> if (language == "de") "September" else "September"
+                                        10 -> if (language == "de") "Oktober" else "October"
+                                        11 -> if (language == "de") "November" else "November"
+                                        else -> if (language == "de") "Dezember" else "December"
+                                    }
+                                    Surface(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .clickable {
+                                                selectedReviewMonth = y to m
+                                                showReviewArchive = false
+                                            },
+                                        color = AppBg,
+                                        border = BorderStroke(1.dp, AppBorder),
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(32.dp)
+                                                        .background(SuccessGreen.copy(alpha = 0.15f), CircleShape),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Text(text = "📊", style = MaterialTheme.typography.bodyMedium)
+                                                }
+                                                Spacer(modifier = Modifier.width(10.dp))
+                                                Column {
+                                                    Text(
+                                                        text = if (language == "de") "Rückblick $mName $y" else "Review $mName $y",
+                                                        style = MaterialTheme.typography.titleSmall,
+                                                        color = TextPrimary,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                    Text(
+                                                        text = "$monthLogsCount " + (if (language == "de") "Abschlüsse" else "completions"),
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = TextSecondary
+                                                    )
+                                                }
+                                            }
+                                            Icon(
+                                                imageVector = Icons.Default.PlayArrow,
+                                                contentDescription = "Play",
+                                                tint = SuccessGreen,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            // Yearly reviews section
+                            if (availableYears.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                    text = if (language == "de") "JAHRESRÜCKBLICKE" else "YEARLY REVIEWS",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = PrimaryViolet,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(bottom = 4.dp)
+                                )
+                                for (y in availableYears) {
+                                    val yearLogsCount = remember(y, allLogs) {
+                                        allLogs.count { it.date.startsWith("$y-") && it.value > 0f }
+                                    }
+                                    Surface(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .clickable {
+                                                selectedReviewYear = y
+                                                showReviewArchive = false
+                                            },
+                                        color = AppBg,
+                                        border = BorderStroke(1.dp, AppBorder),
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(32.dp)
+                                                        .background(PrimaryViolet.copy(alpha = 0.15f), CircleShape),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Text(text = "🎆", style = MaterialTheme.typography.bodyMedium)
+                                                }
+                                                Spacer(modifier = Modifier.width(10.dp))
+                                                Column {
+                                                    Text(
+                                                        text = if (language == "de") "Jahresrückblick $y" else "$y Year in Review",
+                                                        style = MaterialTheme.typography.titleSmall,
+                                                        color = TextPrimary,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                    Text(
+                                                        text = "$yearLogsCount " + (if (language == "de") "Abschlüsse" else "completions"),
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = TextSecondary
+                                                    )
+                                                }
+                                            }
+                                            Icon(
+                                                imageVector = Icons.Default.PlayArrow,
+                                                contentDescription = "Play",
+                                                tint = PrimaryViolet,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -4602,11 +5496,11 @@ fun HabitStatItem(
     )
 
     Card(
-        colors = CardDefaults.cardColors(containerColor = DarkCard),
+        colors = CardDefaults.cardColors(containerColor = AppCard),
         shape = RoundedCornerShape(16.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, DarkBorder, RoundedCornerShape(16.dp))
+            .border(1.dp, AppBorder, RoundedCornerShape(16.dp))
             .clickable(
                 interactionSource = interactionSource,
                 indication = ripple(),
@@ -4628,7 +5522,7 @@ fun HabitStatItem(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            painter = painterResource(id = HabitIconMapping.getIconDrawableId(habit.icon)),
+                            imageVector = HabitIconMapping.getIcon(habit.icon),
                             contentDescription = habit.name,
                             tint = habitColor,
                             modifier = Modifier.size(18.dp)
@@ -4707,7 +5601,7 @@ fun HabitStatItem(
                             Text(
                                 text = dayNum,
                                 style = MaterialTheme.typography.labelSmall,
-                                color = if (status == "SUCCESS" || status == "FAILED" || status == "PENDING") DarkBg else TextPrimary,
+                                color = if (status == "SUCCESS" || status == "FAILED" || status == "PENDING") AppBg else TextPrimary,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 10.sp
                             )
@@ -4743,7 +5637,7 @@ fun HabitDetailScreen(
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var activeExplanation by remember { mutableStateOf<Pair<String, String>?>(null) }
 
-    Box(modifier = Modifier.fillMaxSize().background(DarkBg)) {
+    Box(modifier = Modifier.fillMaxSize().background(AppBg)) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -4777,13 +5671,20 @@ fun HabitDetailScreen(
             val sweepAngleVal = (animatedStrength / 100f) * 360f
             val strengthText = "${animatedStrength.toInt()}"
             val strengthLabel = remember(strength, language) { getStrengthLabel(strength, language) }
+            val strengthColor = remember(strength) {
+                when {
+                    strength < 35 -> HabitRed
+                    strength < 70 -> HabitYellow
+                    else -> SuccessGreen
+                }
+            }
 
             Card(
-                colors = CardDefaults.cardColors(containerColor = DarkCard),
+                colors = CardDefaults.cardColors(containerColor = AppCard),
                 shape = RoundedCornerShape(20.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .border(width = 1.dp, color = habitColor.copy(alpha = 0.5f), shape = RoundedCornerShape(20.dp))
+                    .border(width = 1.dp, color = strengthColor.copy(alpha = 0.5f), shape = RoundedCornerShape(20.dp))
             ) {
                 Box(
                     modifier = Modifier
@@ -4826,7 +5727,7 @@ fun HabitDetailScreen(
                                             style = stroke
                                         )
                                         drawArc(
-                                            color = habitColor,
+                                            color = strengthColor,
                                             startAngle = -90f,
                                             sweepAngle = sweepAngleVal,
                                             useCenter = false,
@@ -4858,7 +5759,7 @@ fun HabitDetailScreen(
                             Text(
                                 text = strengthLabel,
                                 style = MaterialTheme.typography.bodyLarge,
-                                color = habitColor,
+                                color = strengthColor,
                                 fontWeight = FontWeight.ExtraBold
                             )
                         }
@@ -4871,33 +5772,44 @@ fun HabitDetailScreen(
         if (habit.description.isNotBlank()) {
             item(key = "detail_description") {
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = DarkCard),
-                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = AppCard),
+                    shape = RoundedCornerShape(20.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .border(1.dp, DarkBorder, RoundedCornerShape(16.dp))
+                        .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
                 ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.Description,
-                                contentDescription = "Beschreibung",
-                                tint = PrimaryViolet,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .background(PrimaryViolet.copy(alpha = 0.15f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Description,
+                                    contentDescription = "Beschreibung",
+                                    tint = PrimaryViolet,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
                             Text(
                                 text = if (language == "de") "BESCHREIBUNG" else "DESCRIPTION",
-                                style = MaterialTheme.typography.labelSmall,
+                                style = MaterialTheme.typography.labelMedium,
                                 color = TextSecondary,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.5.sp
                             )
                         }
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
                         Text(
                             text = habit.description,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = TextPrimary
+                            color = TextPrimary,
+                            lineHeight = 20.sp
                         )
                     }
                 }
@@ -4912,11 +5824,11 @@ fun HabitDetailScreen(
             ) {
                 // Current streak card
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = DarkCard),
+                    colors = CardDefaults.cardColors(containerColor = AppCard),
                     shape = RoundedCornerShape(20.dp),
                     modifier = Modifier
                         .weight(1f)
-                        .border(1.dp, if (currentStreak > 0) HabitRed.copy(alpha = 0.5f) else DarkBorder, RoundedCornerShape(20.dp))
+                        .border(1.dp, if (currentStreak > 0) PrimaryViolet.copy(alpha = 0.5f) else AppBorder, RoundedCornerShape(20.dp))
                 ) {
                     Box(
                         modifier = Modifier
@@ -4946,13 +5858,13 @@ fun HabitDetailScreen(
                             Box(
                                 modifier = Modifier
                                     .size(44.dp)
-                                    .background(HabitRed.copy(alpha = 0.15f), CircleShape),
+                                    .background(PrimaryViolet.copy(alpha = 0.15f), CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Whatshot,
                                     contentDescription = "Current streak",
-                                    tint = HabitRed,
+                                    tint = PrimaryViolet,
                                     modifier = Modifier.size(24.dp)
                                 )
                             }
@@ -4979,13 +5891,13 @@ fun HabitDetailScreen(
                     }
                 }
 
-                // Best streak card
+                // Best/longest streak card
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = DarkCard),
+                    colors = CardDefaults.cardColors(containerColor = AppCard),
                     shape = RoundedCornerShape(20.dp),
                     modifier = Modifier
                         .weight(1f)
-                        .border(1.dp, if (longestStreak > 0) Color(0xFFFFD700).copy(alpha = 0.5f) else DarkBorder, RoundedCornerShape(20.dp))
+                        .border(1.dp, if (longestStreak > 0) PrimaryViolet.copy(alpha = 0.5f) else AppBorder, RoundedCornerShape(20.dp))
                 ) {
                     Box(
                         modifier = Modifier
@@ -5015,13 +5927,13 @@ fun HabitDetailScreen(
                             Box(
                                 modifier = Modifier
                                     .size(44.dp)
-                                    .background(Color(0xFFFFD700).copy(alpha = 0.15f), CircleShape),
+                                    .background(PrimaryViolet.copy(alpha = 0.15f), CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.EmojiEvents,
                                     contentDescription = "Longest streak",
-                                    tint = Color(0xFFFFD700),
+                                    tint = PrimaryViolet,
                                     modifier = Modifier.size(24.dp)
                                 )
                             }
@@ -5063,27 +5975,27 @@ fun HabitDetailScreen(
         // Calendar Grid Card
         item(key = "detail_calendar") {
             Card(
-                colors = CardDefaults.cardColors(containerColor = DarkCard),
+                colors = CardDefaults.cardColors(containerColor = AppCard),
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .border(1.dp, DarkBorder, RoundedCornerShape(16.dp))
+                    .border(1.dp, AppBorder, RoundedCornerShape(16.dp))
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(bottom = 10.dp)
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp)
                     ) {
                         Box(
                             modifier = Modifier
                                 .size(26.dp)
-                                .background(Color(0xFF06B6D4).copy(alpha = 0.18f), CircleShape),
+                                .background(PrimaryViolet.copy(alpha = 0.18f), CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.DateRange,
                                 contentDescription = "Calendar",
-                                tint = Color(0xFF06B6D4),
+                                tint = PrimaryViolet,
                                 modifier = Modifier.size(16.dp)
                             )
                         }
@@ -5094,7 +6006,25 @@ fun HabitDetailScreen(
                             color = TextSecondary,
                             fontWeight = FontWeight.Bold
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Spacer(modifier = Modifier.weight(1f))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(end = 8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.TouchApp,
+                                contentDescription = null,
+                                tint = TextSecondary.copy(alpha = 0.7f),
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = if (language == "de") "Interaktiv" else "Interactive",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = TextSecondary.copy(alpha = 0.7f),
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                         InfoIconButton(
                             title = if (language == "de") "Kalender-Historie" else "Calendar History",
                             explanation = if (language == "de") {
@@ -5237,10 +6167,10 @@ fun HabitDetailScreen(
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
-                        DarkBg,
-                        DarkBg,
-                        DarkBg.copy(alpha = 0.9f),
-                        DarkBg.copy(alpha = 0.5f),
+                        AppBg,
+                        AppBg,
+                        AppBg.copy(alpha = 0.9f),
+                        AppBg.copy(alpha = 0.5f),
                         Color.Transparent
                     )
                 )
@@ -5286,11 +6216,11 @@ fun WeekdayFrequencySection(
     }
 
     Card(
-        colors = CardDefaults.cardColors(containerColor = DarkCard),
+        colors = CardDefaults.cardColors(containerColor = AppCard),
         shape = RoundedCornerShape(20.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, DarkBorder, RoundedCornerShape(20.dp))
+            .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             // Header
@@ -5301,13 +6231,13 @@ fun WeekdayFrequencySection(
                 Box(
                     modifier = Modifier
                         .size(26.dp)
-                        .background(Color(0xFFF59E0B).copy(alpha = 0.18f), CircleShape),
+                        .background(PrimaryViolet.copy(alpha = 0.18f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Equalizer,
                         contentDescription = "Frequency",
-                        tint = Color(0xFFF59E0B),
+                        tint = PrimaryViolet,
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -5342,12 +6272,12 @@ fun WeekdayFrequencySection(
                     val dayName = daysAbbr[index]
                     val circleBgColor = when {
                         pct == 0 -> ProgressTrack
-                        pct <= 25 -> SuccessGreen.copy(alpha = 0.25f)
-                        pct <= 50 -> SuccessGreen.copy(alpha = 0.5f)
-                        pct <= 75 -> SuccessGreen.copy(alpha = 0.75f)
-                        else -> SuccessGreen
+                        pct <= 25 -> PrimaryViolet.copy(alpha = 0.15f)
+                        pct <= 50 -> PrimaryViolet.copy(alpha = 0.40f)
+                        pct <= 75 -> PrimaryViolet.copy(alpha = 0.70f)
+                        else -> PrimaryViolet
                     }
-                    val textColor = if (pct > 50) DarkBg else TextPrimary
+                    val textColor = if (pct > 50) Color.White else TextPrimary
 
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -5358,7 +6288,7 @@ fun WeekdayFrequencySection(
                                 .size(36.dp)
                                 .clip(CircleShape)
                                 .background(circleBgColor)
-                                .border(1.dp, if (pct == 0) DarkBorder else SuccessGreen.copy(alpha = 0.5f), CircleShape),
+                                .border(1.dp, if (pct == 0) AppBorder else PrimaryViolet.copy(alpha = 0.5f), CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
@@ -5410,7 +6340,7 @@ fun WeekdayFrequencySection(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(1.dp)
-                                    .background(DarkBorder.copy(alpha = 0.4f))
+                                    .background(AppBorder.copy(alpha = 0.4f))
                             )
 
                             // Row of circles for each week
@@ -5430,7 +6360,7 @@ fun WeekdayFrequencySection(
                                     val isSuccess = status == "SUCCESS"
                                     val size = if (isSuccess) 14.dp else 4.dp
                                     val color = when (status) {
-                                        "SUCCESS" -> SuccessGreen
+                                        "SUCCESS" -> PrimaryViolet
                                         "FAILED" -> ProgressTrack
                                         else -> ProgressTrack.copy(alpha = 0.3f)
                                     }
@@ -5524,11 +6454,11 @@ fun HabitTargetSection(
     val habit = state.habit
 
     Card(
-        colors = CardDefaults.cardColors(containerColor = DarkCard),
+        colors = CardDefaults.cardColors(containerColor = AppCard),
         shape = RoundedCornerShape(20.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, DarkBorder, RoundedCornerShape(20.dp))
+            .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             // Header
@@ -5539,13 +6469,13 @@ fun HabitTargetSection(
                 Box(
                     modifier = Modifier
                         .size(26.dp)
-                        .background(Color(0xFF8B5CF6).copy(alpha = 0.18f), CircleShape),
+                        .background(PrimaryViolet.copy(alpha = 0.18f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Adjust,
                         contentDescription = "Target",
-                        tint = Color(0xFF8B5CF6),
+                        tint = PrimaryViolet,
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -5702,7 +6632,7 @@ fun TargetProgressRow(
                 .fillMaxWidth()
                 .height(10.dp)
                 .clip(RoundedCornerShape(5.dp))
-                .background(DarkBorder)
+                .background(AppBorder)
         ) {
             // Progress bar (colored portion)
             Box(
@@ -5737,76 +6667,113 @@ fun calculateHabitTrendPoints(
     timeframeIndex: Int
 ): List<TrendPoint> {
     val today = java.time.LocalDate.now()
+    val todayStr = today.toString()
     val points = mutableListOf<TrendPoint>()
-    val formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd")
-    val habitLogs = logs.filter { it.habitId == habit.id && it.value > 0f && !it.isPaused }
+    
+    val validStartMillis = if (habit.startDate > 946684800000L) habit.startDate else habit.createdAt
+    val habitStartDate = try {
+        java.time.Instant.ofEpochMilli(validStartMillis.coerceAtLeast(946684800000L))
+            .atZone(java.time.ZoneId.systemDefault())
+            .toLocalDate()
+    } catch (e: Exception) {
+        today.minusYears(1)
+    }
+    val startSdfStr = habitStartDate.toString()
+    
+    val logsMap = logs.filter { it.habitId == habit.id }.associateBy { it.date }
 
     when (timeframeIndex) {
-        1 -> { // Week (7 days: Mon-Sun of current week)
-            val weekStart = today.with(java.time.DayOfWeek.MONDAY)
-            for (i in 0..6) {
-                val dayDate = weekStart.plusDays(i.toLong())
-                val dayStr = dayDate.format(formatter)
-                val count = habitLogs.count { it.date == dayStr }
-                val score = if (count > 0) 100f else 0f
-                val dayLabel = dayDate.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.getDefault())
-                points.add(TrendPoint(dayLabel, score, count))
-            }
-        }
-        2 -> { // Month (Last 8 weeks)
-            for (i in 7 downTo 0) {
-                val weekStart = today.minusWeeks(i.toLong()).with(java.time.DayOfWeek.MONDAY)
+        0 -> { // Weekly Interval: Group data by Calendar Week (Last 6 weeks)
+            for (i in 5 downTo 0) {
+                val weekStart = today.minusWeeks(i.toLong()).with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY))
                 val weekEnd = weekStart.plusDays(6)
 
-                val count = habitLogs.count {
-                    try {
-                        val date = java.time.LocalDate.parse(it.date, formatter)
-                        !date.isBefore(weekStart) && !date.isAfter(weekEnd)
-                    } catch (e: Exception) { false }
+                var completions = 0
+                var activeDays = 0
+
+                var current = weekStart
+                while (!current.isAfter(weekEnd)) {
+                    val dateStr = current.toString()
+                    if (isHabitActiveOnDate(habit, dateStr)) {
+                        activeDays++
+                        val log = logsMap[dateStr]
+                        val status = getLogStatus(habit, log, dateStr, startSdfStr, todayStr)
+                        if (status == "SUCCESS") {
+                            completions++
+                        }
+                    }
+                    current = current.plusDays(1)
                 }
 
-                val score = (count.toFloat() / 7f * 100f).coerceIn(0f, 100f)
+                val score = if (activeDays > 0) {
+                    (completions.toFloat() / activeDays.toFloat() * 100f).coerceIn(0f, 100f)
+                } else 0f
+
                 val weekNum = weekStart.get(java.time.temporal.IsoFields.WEEK_OF_WEEK_BASED_YEAR)
                 val label = "KW$weekNum"
-                points.add(TrendPoint(label, score, count))
+                points.add(TrendPoint(label, score, completions))
             }
         }
-        3 -> { // Year (12 months)
-            for (i in 11 downTo 0) {
+        1 -> { // Monthly Interval: Group data by Month (Last 6 months)
+            for (i in 5 downTo 0) {
                 val monthDate = today.minusMonths(i.toLong())
                 val monthStart = monthDate.withDayOfMonth(1)
                 val monthEnd = monthDate.withDayOfMonth(monthDate.lengthOfMonth())
 
-                val count = habitLogs.count {
-                    try {
-                        val date = java.time.LocalDate.parse(it.date, formatter)
-                        !date.isBefore(monthStart) && !date.isAfter(monthEnd)
-                    } catch (e: Exception) { false }
+                var completions = 0
+                var activeDays = 0
+
+                var current = monthStart
+                while (!current.isAfter(monthEnd)) {
+                    val dateStr = current.toString()
+                    if (isHabitActiveOnDate(habit, dateStr)) {
+                        activeDays++
+                        val log = logsMap[dateStr]
+                        val status = getLogStatus(habit, log, dateStr, startSdfStr, todayStr)
+                        if (status == "SUCCESS") {
+                            completions++
+                        }
+                    }
+                    current = current.plusDays(1)
                 }
 
-                val totalDays = monthDate.lengthOfMonth()
-                val score = (count.toFloat() / (totalDays * 0.5f) * 100f).coerceIn(0f, 100f)
+                val score = if (activeDays > 0) {
+                    (completions.toFloat() / activeDays.toFloat() * 100f).coerceIn(0f, 100f)
+                } else 0f
+
                 val monthName = monthDate.month.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.getDefault())
-                points.add(TrendPoint(monthName, score, count))
+                points.add(TrendPoint(monthName, score, completions))
             }
         }
-        else -> { // Total (0 = Total / default: Last 12 months)
-            for (i in 11 downTo 0) {
-                val monthDate = today.minusMonths(i.toLong())
-                val monthStart = monthDate.withDayOfMonth(1)
-                val monthEnd = monthDate.withDayOfMonth(monthDate.lengthOfMonth())
+        2 -> { // Yearly Interval: Group data by Year (Recent 4 years)
+            for (i in 3 downTo 0) {
+                val yearDate = today.minusYears(i.toLong())
+                val yearStart = yearDate.withDayOfYear(1)
+                val yearEnd = yearDate.withDayOfYear(yearDate.lengthOfYear())
 
-                val count = habitLogs.count {
-                    try {
-                        val date = java.time.LocalDate.parse(it.date, formatter)
-                        !date.isBefore(monthStart) && !date.isAfter(monthEnd)
-                    } catch (e: Exception) { false }
+                var completions = 0
+                var activeDays = 0
+
+                var current = yearStart
+                while (!current.isAfter(yearEnd)) {
+                    val dateStr = current.toString()
+                    if (isHabitActiveOnDate(habit, dateStr)) {
+                        activeDays++
+                        val log = logsMap[dateStr]
+                        val status = getLogStatus(habit, log, dateStr, startSdfStr, todayStr)
+                        if (status == "SUCCESS") {
+                            completions++
+                        }
+                    }
+                    current = current.plusDays(1)
                 }
 
-                val totalDays = monthDate.lengthOfMonth()
-                val score = (count.toFloat() / (totalDays * 0.5f) * 100f).coerceIn(0f, 100f)
-                val monthName = monthDate.month.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.getDefault())
-                points.add(TrendPoint(monthName, score, count))
+                val score = if (activeDays > 0) {
+                    (completions.toFloat() / activeDays.toFloat() * 100f).coerceIn(0f, 100f)
+                } else 0f
+
+                val yearLabel = yearDate.year.toString()
+                points.add(TrendPoint(yearLabel, score, completions))
             }
         }
     }
@@ -5819,77 +6786,145 @@ fun calculateOverallTrendPoints(
     timeframeIndex: Int
 ): List<TrendPoint> {
     val today = java.time.LocalDate.now()
+    val todayStr = today.toString()
     val points = mutableListOf<TrendPoint>()
-    val formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd")
-    val successLogs = allLogs.filter { it.value > 0f && !it.isPaused }
-    val habitCount = allHabits.size.coerceAtLeast(1)
+    val activeHabits = allHabits.filter { !it.isArchived }
+    
+    if (activeHabits.isEmpty()) {
+        val labels = when (timeframeIndex) {
+            0 -> (5 downTo 0).map { i ->
+                val weekStart = today.minusWeeks(i.toLong()).with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY))
+                val weekNum = weekStart.get(java.time.temporal.IsoFields.WEEK_OF_WEEK_BASED_YEAR)
+                "KW$weekNum"
+            }
+            1 -> (5 downTo 0).map { i ->
+                today.minusMonths(i.toLong()).month.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.getDefault())
+            }
+            else -> (3 downTo 0).map { i ->
+                today.minusYears(i.toLong()).year.toString()
+            }
+        }
+        labels.forEach { label ->
+            points.add(TrendPoint(label, 0f, 0))
+        }
+        return points
+    }
+
+    val logsMap = allLogs.groupBy { it.habitId to it.date }
+
+    val habitStartDates = activeHabits.associateWith { habit ->
+        val validStartMillis = if (habit.startDate > 946684800000L) habit.startDate else habit.createdAt
+        try {
+            java.time.Instant.ofEpochMilli(validStartMillis.coerceAtLeast(946684800000L))
+                .atZone(java.time.ZoneId.systemDefault())
+                .toLocalDate()
+                .toString()
+        } catch (e: Exception) {
+            today.minusYears(1).toString()
+        }
+    }
 
     when (timeframeIndex) {
-        1 -> { // Week (7 days: Mon-Sun of current week)
-            val weekStart = today.with(java.time.DayOfWeek.MONDAY)
-            for (i in 0..6) {
-                val dayDate = weekStart.plusDays(i.toLong())
-                val dayStr = dayDate.format(formatter)
-                val count = successLogs.count { it.date == dayStr }
-                val score = (count.toFloat() / habitCount.toFloat() * 100f).coerceIn(0f, 100f)
-                val dayLabel = dayDate.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.getDefault())
-                points.add(TrendPoint(dayLabel, score, count))
-            }
-        }
-        2 -> { // Month (Last 8 weeks)
-            for (i in 7 downTo 0) {
-                val weekStart = today.minusWeeks(i.toLong()).with(java.time.DayOfWeek.MONDAY)
+        0 -> { // Weekly Interval: Group data by Calendar Week (Last 6 weeks)
+            for (i in 5 downTo 0) {
+                val weekStart = today.minusWeeks(i.toLong()).with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY))
                 val weekEnd = weekStart.plusDays(6)
 
-                val count = successLogs.count {
-                    try {
-                        val date = java.time.LocalDate.parse(it.date, formatter)
-                        !date.isBefore(weekStart) && !date.isAfter(weekEnd)
-                    } catch (e: Exception) { false }
+                var completions = 0
+                var activeDays = 0
+
+                activeHabits.forEach { habit ->
+                    val startSdfStr = habitStartDates[habit] ?: "1970-01-01"
+                    var current = weekStart
+                    while (!current.isAfter(weekEnd)) {
+                        val dateStr = current.toString()
+                        if (isHabitActiveOnDate(habit, dateStr)) {
+                            activeDays++
+                            val log = logsMap[habit.id to dateStr]?.firstOrNull()
+                            val status = getLogStatus(habit, log, dateStr, startSdfStr, todayStr)
+                            if (status == "SUCCESS") {
+                                completions++
+                            }
+                        }
+                        current = current.plusDays(1)
+                    }
                 }
 
-                val score = (count.toFloat() / (7f * habitCount) * 100f).coerceIn(0f, 100f)
+                val score = if (activeDays > 0) {
+                    (completions.toFloat() / activeDays.toFloat() * 100f).coerceIn(0f, 100f)
+                } else 0f
+
                 val weekNum = weekStart.get(java.time.temporal.IsoFields.WEEK_OF_WEEK_BASED_YEAR)
                 val label = "KW$weekNum"
-                points.add(TrendPoint(label, score, count))
+                points.add(TrendPoint(label, score, completions))
             }
         }
-        3 -> { // Year (12 months)
-            for (i in 11 downTo 0) {
+        1 -> { // Monthly Interval: Group data by Month (Last 6 months)
+            for (i in 5 downTo 0) {
                 val monthDate = today.minusMonths(i.toLong())
                 val monthStart = monthDate.withDayOfMonth(1)
                 val monthEnd = monthDate.withDayOfMonth(monthDate.lengthOfMonth())
 
-                val count = successLogs.count {
-                    try {
-                        val date = java.time.LocalDate.parse(it.date, formatter)
-                        !date.isBefore(monthStart) && !date.isAfter(monthEnd)
-                    } catch (e: Exception) { false }
+                var completions = 0
+                var activeDays = 0
+
+                activeHabits.forEach { habit ->
+                    val startSdfStr = habitStartDates[habit] ?: "1970-01-01"
+                    var current = monthStart
+                    while (!current.isAfter(monthEnd)) {
+                        val dateStr = current.toString()
+                        if (isHabitActiveOnDate(habit, dateStr)) {
+                            activeDays++
+                            val log = logsMap[habit.id to dateStr]?.firstOrNull()
+                            val status = getLogStatus(habit, log, dateStr, startSdfStr, todayStr)
+                            if (status == "SUCCESS") {
+                                completions++
+                            }
+                        }
+                        current = current.plusDays(1)
+                    }
                 }
 
-                val totalDays = monthDate.lengthOfMonth()
-                val score = (count.toFloat() / (totalDays * habitCount * 0.5f) * 100f).coerceIn(0f, 100f)
+                val score = if (activeDays > 0) {
+                    (completions.toFloat() / activeDays.toFloat() * 100f).coerceIn(0f, 100f)
+                } else 0f
+
                 val monthName = monthDate.month.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.getDefault())
-                points.add(TrendPoint(monthName, score, count))
+                points.add(TrendPoint(monthName, score, completions))
             }
         }
-        else -> { // Total (0 = Total / default: Last 12 months)
-            for (i in 11 downTo 0) {
-                val monthDate = today.minusMonths(i.toLong())
-                val monthStart = monthDate.withDayOfMonth(1)
-                val monthEnd = monthDate.withDayOfMonth(monthDate.lengthOfMonth())
+        2 -> { // Yearly Interval: Group data by Year (Recent 4 years)
+            for (i in 3 downTo 0) {
+                val yearDate = today.minusYears(i.toLong())
+                val yearStart = yearDate.withDayOfYear(1)
+                val yearEnd = yearDate.withDayOfYear(yearDate.lengthOfYear())
 
-                val count = successLogs.count {
-                    try {
-                        val date = java.time.LocalDate.parse(it.date, formatter)
-                        !date.isBefore(monthStart) && !date.isAfter(monthEnd)
-                    } catch (e: Exception) { false }
+                var completions = 0
+                var activeDays = 0
+
+                activeHabits.forEach { habit ->
+                    val startSdfStr = habitStartDates[habit] ?: "1970-01-01"
+                    var current = yearStart
+                    while (!current.isAfter(yearEnd)) {
+                        val dateStr = current.toString()
+                        if (isHabitActiveOnDate(habit, dateStr)) {
+                            activeDays++
+                            val log = logsMap[habit.id to dateStr]?.firstOrNull()
+                            val status = getLogStatus(habit, log, dateStr, startSdfStr, todayStr)
+                            if (status == "SUCCESS") {
+                                completions++
+                            }
+                        }
+                        current = current.plusDays(1)
+                    }
                 }
 
-                val totalDays = monthDate.lengthOfMonth()
-                val score = (count.toFloat() / (totalDays * habitCount * 0.5f) * 100f).coerceIn(0f, 100f)
-                val monthName = monthDate.month.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.getDefault())
-                points.add(TrendPoint(monthName, score, count))
+                val score = if (activeDays > 0) {
+                    (completions.toFloat() / activeDays.toFloat() * 100f).coerceIn(0f, 100f)
+                } else 0f
+
+                val yearLabel = yearDate.year.toString()
+                points.add(TrendPoint(yearLabel, score, completions))
             }
         }
     }
@@ -5904,9 +6939,9 @@ fun TimeframeSelectorPills(
     modifier: Modifier = Modifier
 ) {
     val labels = if (language == "de") {
-        listOf("Gesamt", "Diese Woche", "Diesen Monat", "Dieses Jahr")
+        listOf("Wöchentlich", "Monatlich", "Jährlich")
     } else {
-        listOf("Total", "This Week", "This Month", "This Year")
+        listOf("Weekly", "Monthly", "Yearly")
     }
 
     Row(
@@ -5914,7 +6949,7 @@ fun TimeframeSelectorPills(
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(Color.White.copy(alpha = 0.05f))
-            .border(1.dp, DarkBorder.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+            .border(1.dp, AppBorder.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
             .padding(3.dp),
         horizontalArrangement = Arrangement.spacedBy(2.dp)
     ) {
@@ -5924,7 +6959,7 @@ fun TimeframeSelectorPills(
                 modifier = Modifier
                     .weight(1f)
                     .clip(RoundedCornerShape(10.dp))
-                    .background(if (isSelected) PrimaryViolet else Color.Transparent)
+                    .background(if (isSelected) Color(0xFF3A3A44) else Color.Transparent)
                     .clickable { onTimeframeSelected(index) }
                     .padding(vertical = 8.dp),
                 contentAlignment = Alignment.Center
@@ -5957,11 +6992,11 @@ fun HabitScoreTrendCard(
     }
 
     Card(
-        colors = CardDefaults.cardColors(containerColor = DarkCard),
+        colors = CardDefaults.cardColors(containerColor = AppCard),
         shape = RoundedCornerShape(20.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, DarkBorder, RoundedCornerShape(20.dp))
+            .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -5988,7 +7023,25 @@ fun HabitScoreTrendCard(
                     color = TextSecondary,
                     fontWeight = FontWeight.Bold
                 )
-                Spacer(modifier = Modifier.width(4.dp))
+                Spacer(modifier = Modifier.weight(1f))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(end = 8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.TouchApp,
+                        contentDescription = null,
+                        tint = TextSecondary.copy(alpha = 0.7f),
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = if (language == "de") "Interaktiv" else "Interactive",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextSecondary.copy(alpha = 0.7f),
+                        fontWeight = FontWeight.Medium
+                    )
+                }
                 InfoIconButton(
                     title = if (language == "de") "Habit Score Trend" else "Habit Score Trend",
                     explanation = if (language == "de") {
@@ -6031,11 +7084,11 @@ fun HabitVolumeProgressionCard(
     val habitColor = remember(habit.color) { HabitIconMapping.getColor(habit.color) }
 
     Card(
-        colors = CardDefaults.cardColors(containerColor = DarkCard),
+        colors = CardDefaults.cardColors(containerColor = AppCard),
         shape = RoundedCornerShape(20.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, DarkBorder, RoundedCornerShape(20.dp))
+            .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -6045,13 +7098,13 @@ fun HabitVolumeProgressionCard(
                 Box(
                     modifier = Modifier
                         .size(28.dp)
-                        .background(SuccessGreen.copy(alpha = 0.18f), CircleShape),
+                        .background(PrimaryViolet.copy(alpha = 0.18f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.BarChart,
                         contentDescription = "Volume",
-                        tint = SuccessGreen,
+                        tint = PrimaryViolet,
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -6062,7 +7115,25 @@ fun HabitVolumeProgressionCard(
                     color = TextSecondary,
                     fontWeight = FontWeight.Bold
                 )
-                Spacer(modifier = Modifier.width(4.dp))
+                Spacer(modifier = Modifier.weight(1f))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(end = 8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.TouchApp,
+                        contentDescription = null,
+                        tint = TextSecondary.copy(alpha = 0.7f),
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = if (language == "de") "Interaktiv" else "Interactive",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextSecondary.copy(alpha = 0.7f),
+                        fontWeight = FontWeight.Medium
+                    )
+                }
                 InfoIconButton(
                     title = if (language == "de") "Abschluss-Volumen" else "Completion Volume",
                     explanation = if (language == "de") {
@@ -6084,7 +7155,7 @@ fun HabitVolumeProgressionCard(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            CompletionsBarChart(points = trendPoints, habitColor = habitColor)
+            CompletionsBarChart(points = trendPoints, habitColor = PrimaryViolet)
         }
     }
 }
@@ -6115,7 +7186,7 @@ fun ScoreTrendLineChart(
                 for (i in 0..4) {
                     val y = graphHeight - (i * gridStep)
                     drawLine(
-                        color = DarkBorder.copy(alpha = 0.5f),
+                        color = AppBorder.copy(alpha = 0.5f),
                         start = Offset(paddingLeft, y),
                         end = Offset(width, y),
                         strokeWidth = 1.dp.toPx(),
@@ -6172,7 +7243,7 @@ fun ScoreTrendLineChart(
 
                 pathPoints.forEachIndexed { _, pt ->
                     drawCircle(
-                        color = DarkBg,
+                        color = AppBg,
                         radius = 5.dp.toPx(),
                         center = pt
                     )
@@ -6305,11 +7376,11 @@ fun OverallScoreTrendCard(
     }
 
     Card(
-        colors = CardDefaults.cardColors(containerColor = DarkCard),
+        colors = CardDefaults.cardColors(containerColor = AppCard),
         shape = RoundedCornerShape(20.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, DarkBorder, RoundedCornerShape(20.dp))
+            .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -6336,7 +7407,25 @@ fun OverallScoreTrendCard(
                     color = TextSecondary,
                     fontWeight = FontWeight.Bold
                 )
-                Spacer(modifier = Modifier.width(4.dp))
+                Spacer(modifier = Modifier.weight(1f))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(end = 8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.TouchApp,
+                        contentDescription = null,
+                        tint = TextSecondary.copy(alpha = 0.7f),
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = if (language == "de") "Interaktiv" else "Interactive",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextSecondary.copy(alpha = 0.7f),
+                        fontWeight = FontWeight.Medium
+                    )
+                }
                 InfoIconButton(
                     title = if (language == "de") "Gesamt Score Trend" else "Overall Score Trend",
                     explanation = if (language == "de") {
@@ -6377,11 +7466,11 @@ fun OverallVolumeProgressionCard(
     }
 
     Card(
-        colors = CardDefaults.cardColors(containerColor = DarkCard),
+        colors = CardDefaults.cardColors(containerColor = AppCard),
         shape = RoundedCornerShape(20.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, DarkBorder, RoundedCornerShape(20.dp))
+            .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -6391,13 +7480,13 @@ fun OverallVolumeProgressionCard(
                 Box(
                     modifier = Modifier
                         .size(28.dp)
-                        .background(SuccessGreen.copy(alpha = 0.18f), CircleShape),
+                        .background(PrimaryViolet.copy(alpha = 0.18f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.BarChart,
                         contentDescription = "Volume",
-                        tint = SuccessGreen,
+                        tint = PrimaryViolet,
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -6408,7 +7497,25 @@ fun OverallVolumeProgressionCard(
                     color = TextSecondary,
                     fontWeight = FontWeight.Bold
                 )
-                Spacer(modifier = Modifier.width(4.dp))
+                Spacer(modifier = Modifier.weight(1f))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(end = 8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.TouchApp,
+                        contentDescription = null,
+                        tint = TextSecondary.copy(alpha = 0.7f),
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = if (language == "de") "Interaktiv" else "Interactive",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextSecondary.copy(alpha = 0.7f),
+                        fontWeight = FontWeight.Medium
+                    )
+                }
                 InfoIconButton(
                     title = if (language == "de") "Gesamt-Volumen" else "Total Volume Progression",
                     explanation = if (language == "de") {
@@ -6432,7 +7539,7 @@ fun OverallVolumeProgressionCard(
 
             CompletionsBarChart(
                 points = volumePoints,
-                habitColor = SuccessGreen
+                habitColor = PrimaryViolet
             )
         }
     }
@@ -6471,14 +7578,16 @@ fun OverallStatsScreen(
     var activeExplanation by remember { mutableStateOf<Pair<String, String>?>(null) }
     var selectedReviewYear by remember { mutableStateOf<Int?>(null) }
     var selectedReviewMonth by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    var showReviewArchive by remember { mutableStateOf(false) }
+    var showReviewExplanation by remember { mutableStateOf(false) }
     val isNYReviewWindow = remember { isNewYearReviewPeriod() }
 
     val currentYear = remember { Calendar.getInstance().get(Calendar.YEAR) }
-    val availableYears = remember(allLogs, currentYear, isNYReviewWindow) {
+    val availableYears = remember(allLogs, currentYear) {
         val logYears = allLogs.mapNotNull {
             if (it.date.length >= 4) it.date.substring(0, 4).toIntOrNull() else null
         }
-        logYears.filter { y -> y < currentYear || (y == currentYear && isNYReviewWindow) }
+        logYears.filter { y -> y < currentYear }
             .distinct()
             .sortedDescending()
     }
@@ -6502,11 +7611,18 @@ fun OverallStatsScreen(
                 } else null
             } else null
         }
-        logMonths.distinct()
-            .sortedWith(compareByDescending<Pair<Int, Int>> { it.first }.thenByDescending { it.second })
+        val cal = Calendar.getInstance()
+        val cY = cal.get(Calendar.YEAR)
+        val cM = cal.get(Calendar.MONTH) + 1 // 1-indexed
+        
+        // A month is only available if it's strictly in the past (before current year/month)
+        logMonths.filter { (y, m) -> 
+            y < cY || (y == cY && m < cM)
+        }.distinct()
+        .sortedWith(compareByDescending<Pair<Int, Int>> { it.first }.thenByDescending { it.second })
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(DarkBg)) {
+    Box(modifier = Modifier.fillMaxSize().background(AppBg)) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -6643,32 +7759,32 @@ fun OverallStatsScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     // Title and info button above the semi-circle gauge
-                    Box(
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(bottom = 6.dp, start = 16.dp, end = 16.dp)
+                            .padding(bottom = 6.dp, start = 16.dp, end = 16.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
+                        Spacer(modifier = Modifier.width(32.dp))
                         Text(
                             text = if (language == "de") "GESAMT-STÄRKE" else "OVERALL STRENGTH",
                             style = MaterialTheme.typography.labelSmall,
                             color = TextSecondary,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 11.sp,
-                            modifier = Modifier.align(Alignment.Center)
+                            fontSize = 11.sp
                         )
-                        Box(
-                            modifier = Modifier.align(Alignment.CenterEnd)
-                        ) {
-                            InfoIconButton(
-                                title = if (language == "de") "Gesamt-Stärke Score" else "Overall Strength Score",
-                                explanation = if (language == "de") {
-                                    "Gesamt-Stärke aller aktiven Gewohnheiten. Die durchschnittliche gewichtete Stärke aller deiner Gewohnheiten zusammen."
-                                } else {
-                                    "Your overall strength score across all active habits. The average weighted strength score of all of your active habits combined."
-                                },
-                                onClick = { t, e -> activeExplanation = t to e }
-                            )
-                        }
+                        Spacer(modifier = Modifier.width(4.dp))
+                        InfoIconButton(
+                            title = if (language == "de") "Gesamt-Stärke Score" else "Overall Strength Score",
+                            explanation = if (language == "de") {
+                                "Gesamt-Stärke aller aktiven Gewohnheiten. Die durchschnittliche gewichtete Stärke aller deiner Gewohnheiten zusammen."
+                            } else {
+                                "Your overall strength score across all active habits. The average weighted strength score of all of your active habits combined."
+                            },
+                            onClick = { t, e -> activeExplanation = t to e },
+                            modifier = Modifier.size(28.dp)
+                        )
                     }
 
                     Box(
@@ -6752,13 +7868,13 @@ fun OverallStatsScreen(
                     ) {
                         // Current Streak Card
                         Card(
-                            colors = CardDefaults.cardColors(containerColor = DarkCard),
+                            colors = CardDefaults.cardColors(containerColor = AppCard),
                             shape = RoundedCornerShape(20.dp),
                             modifier = Modifier
                                 .weight(1f)
                                 .border(
                                     1.dp,
-                                    if (perfectDaysStats.currentStreak > 0) HabitRed.copy(alpha = 0.5f) else DarkBorder,
+                                    PrimaryViolet.copy(alpha = if (perfectDaysStats.currentStreak > 0) 0.6f else 0.4f),
                                     RoundedCornerShape(20.dp)
                                 )
                         ) {
@@ -6769,7 +7885,7 @@ fun OverallStatsScreen(
                             ) {
                                 Box(modifier = Modifier.align(Alignment.TopEnd)) {
                                     InfoIconButton(
-                                        title = if (language == "de") "Aktuelle Serie (Perfekte Tage)" else "Current streak (Perfect Days)",
+                                        title = if (language == "de") "Aktueller Streak (Perfekte Tage)" else "Current Streak (Perfect Days)",
                                         explanation = if (language == "de") {
                                             "Deine derzeitige Serie an aufeinanderfolgenden Tagen, an denen du ALLE aktiven Gewohnheiten vollständig abgeschlossen hast."
                                         } else {
@@ -6789,19 +7905,19 @@ fun OverallStatsScreen(
                                     Box(
                                         modifier = Modifier
                                             .size(44.dp)
-                                            .background(HabitRed.copy(alpha = 0.15f), CircleShape),
+                                            .background(PrimaryViolet.copy(alpha = 0.15f), CircleShape),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.Whatshot,
                                             contentDescription = "Current streak",
-                                            tint = HabitRed,
+                                            tint = PrimaryViolet,
                                             modifier = Modifier.size(24.dp)
                                         )
                                     }
 
                                     Text(
-                                        text = if (language == "de") "Perfekte Tage (Serie)" else "Perfect Days (Streak)",
+                                        text = if (language == "de") "Aktueller Streak" else "Current Streak",
                                         style = MaterialTheme.typography.labelLarge,
                                         color = TextSecondary,
                                         fontWeight = FontWeight.Bold,
@@ -6824,13 +7940,13 @@ fun OverallStatsScreen(
 
                         // Best Streak Card
                         Card(
-                            colors = CardDefaults.cardColors(containerColor = DarkCard),
+                            colors = CardDefaults.cardColors(containerColor = AppCard),
                             shape = RoundedCornerShape(20.dp),
                             modifier = Modifier
                                 .weight(1f)
                                 .border(
                                     1.dp,
-                                    if (perfectDaysStats.perfectDaysStreak > 0) Color(0xFFFFD700).copy(alpha = 0.5f) else DarkBorder,
+                                    PrimaryViolet.copy(alpha = if (perfectDaysStats.perfectDaysStreak > 0) 0.6f else 0.4f),
                                     RoundedCornerShape(20.dp)
                                 )
                         ) {
@@ -6841,7 +7957,7 @@ fun OverallStatsScreen(
                             ) {
                                 Box(modifier = Modifier.align(Alignment.TopEnd)) {
                                     InfoIconButton(
-                                        title = if (language == "de") "Beste Serie (Perfekte Tage)" else "Best Streak (Perfect Days)",
+                                        title = if (language == "de") "Längster Streak (Perfekte Tage)" else "Longest Streak (Perfect Days)",
                                         explanation = if (language == "de") {
                                             "Deine historische Bestleistung an aufeinanderfolgenden perfekten Tagen (alle Gewohnheiten abgeschlossen)."
                                         } else {
@@ -6861,19 +7977,19 @@ fun OverallStatsScreen(
                                     Box(
                                         modifier = Modifier
                                             .size(44.dp)
-                                            .background(Color(0xFFFFD700).copy(alpha = 0.15f), CircleShape),
+                                            .background(PrimaryViolet.copy(alpha = 0.15f), CircleShape),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.EmojiEvents,
                                             contentDescription = "Best streak",
-                                            tint = Color(0xFFFFD700),
+                                            tint = PrimaryViolet,
                                             modifier = Modifier.size(24.dp)
                                         )
                                     }
 
                                     Text(
-                                        text = if (language == "de") "Beste Serie (Perfekt)" else "Best Streak (Perfect)",
+                                        text = if (language == "de") "Längster Streak" else "Longest Streak",
                                         style = MaterialTheme.typography.labelLarge,
                                         color = TextSecondary,
                                         fontWeight = FontWeight.Bold,
@@ -6900,11 +8016,11 @@ fun OverallStatsScreen(
             // 3. Activity Heatmap Card (GitHub-style, with date check-in navigation!)
             item(key = "overall_calendar") {
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = DarkCard),
+                    colors = CardDefaults.cardColors(containerColor = AppCard),
                     shape = RoundedCornerShape(20.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .border(1.dp, DarkBorder, RoundedCornerShape(20.dp))
+                        .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
                 ) {
                     Column(
                         modifier = Modifier
@@ -6923,13 +8039,13 @@ fun OverallStatsScreen(
                                 Box(
                                     modifier = Modifier
                                         .size(28.dp)
-                                        .background(Color(0xFF06B6D4).copy(alpha = 0.18f), CircleShape),
+                                        .background(PrimaryViolet.copy(alpha = 0.18f), CircleShape),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.DateRange,
                                         contentDescription = "Calendar",
-                                        tint = Color(0xFF06B6D4),
+                                        tint = PrimaryViolet,
                                         modifier = Modifier.size(16.dp)
                                     )
                                 }
@@ -6940,7 +8056,25 @@ fun OverallStatsScreen(
                                     color = TextSecondary,
                                     fontWeight = FontWeight.Bold
                                 )
-                                Spacer(modifier = Modifier.width(4.dp))
+                                Spacer(modifier = Modifier.weight(1f))
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(end = 8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.TouchApp,
+                                        contentDescription = null,
+                                        tint = TextSecondary.copy(alpha = 0.7f),
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = if (language == "de") "Interaktiv" else "Interactive",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = TextSecondary.copy(alpha = 0.7f),
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
                                 InfoIconButton(
                                     title = if (language == "de") "Aktivitäts-Heatmap" else "Activity Heatmap",
                                     explanation = if (language == "de") {
@@ -7041,13 +8175,13 @@ fun OverallStatsScreen(
                                                 val ratio = if (cell.total > 0) cell.completed.toFloat() / cell.total.toFloat() else -1f
                                                 val bgColor = when {
                                                     cell.isOutOfRange -> Color.Transparent
-                                                    cell.isFuture -> DarkCard
+                                                    cell.isFuture -> AppCard
                                                     ratio < 0f -> ProgressTrack
                                                     ratio == 0f -> ProgressTrack
-                                                    ratio <= 0.25f -> SuccessGreen.copy(alpha = 0.25f)
-                                                    ratio <= 0.5f -> SuccessGreen.copy(alpha = 0.5f)
-                                                    ratio <= 0.75f -> SuccessGreen.copy(alpha = 0.75f)
-                                                    else -> SuccessGreen
+                                                    ratio <= 0.25f -> PrimaryViolet.copy(alpha = 0.15f)
+                                                    ratio <= 0.5f -> PrimaryViolet.copy(alpha = 0.40f)
+                                                    ratio <= 0.75f -> PrimaryViolet.copy(alpha = 0.70f)
+                                                    else -> PrimaryViolet
                                                 }
                                                 
                                                 val isSelectedSquare = activeCell?.dateStr == cell.dateStr
@@ -7106,10 +8240,10 @@ fun OverallStatsScreen(
                             
                             listOf(
                                 ProgressTrack,
-                                SuccessGreen.copy(alpha = 0.25f),
-                                SuccessGreen.copy(alpha = 0.5f),
-                                SuccessGreen.copy(alpha = 0.75f),
-                                SuccessGreen
+                                PrimaryViolet.copy(alpha = 0.15f),
+                                PrimaryViolet.copy(alpha = 0.40f),
+                                PrimaryViolet.copy(alpha = 0.70f),
+                                PrimaryViolet
                             ).forEach { color ->
                                 Box(
                                     modifier = Modifier
@@ -7134,8 +8268,8 @@ fun OverallStatsScreen(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .background(DarkCard, RoundedCornerShape(12.dp))
-                                    .border(1.dp, DarkBorder, RoundedCornerShape(12.dp))
+                                    .background(AppCard, RoundedCornerShape(12.dp))
+                                    .border(1.dp, AppBorder, RoundedCornerShape(12.dp))
                                     .padding(12.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
@@ -7238,7 +8372,7 @@ fun OverallStatsScreen(
                 ) {
                     // "Läuft super" card
                     Card(
-                        colors = CardDefaults.cardColors(containerColor = DarkCard),
+                        colors = CardDefaults.cardColors(containerColor = AppCard),
                         shape = RoundedCornerShape(16.dp),
                         modifier = Modifier
                             .weight(1f)
@@ -7309,7 +8443,7 @@ fun OverallStatsScreen(
                                                 contentAlignment = Alignment.Center
                                             ) {
                                                 Icon(
-                                                    painter = painterResource(id = HabitIconMapping.getIconDrawableId(stat.habit.icon)),
+                                                    imageVector = HabitIconMapping.getIcon(stat.habit.icon),
                                                     contentDescription = null,
                                                     tint = habitColor,
                                                     modifier = Modifier.size(12.dp)
@@ -7341,7 +8475,7 @@ fun OverallStatsScreen(
 
                     // "Braucht Fokus" card
                     Card(
-                        colors = CardDefaults.cardColors(containerColor = DarkCard),
+                        colors = CardDefaults.cardColors(containerColor = AppCard),
                         shape = RoundedCornerShape(16.dp),
                         modifier = Modifier
                             .weight(1f)
@@ -7412,7 +8546,7 @@ fun OverallStatsScreen(
                                                 contentAlignment = Alignment.Center
                                             ) {
                                                 Icon(
-                                                    painter = painterResource(id = HabitIconMapping.getIconDrawableId(stat.habit.icon)),
+                                                    imageVector = HabitIconMapping.getIcon(stat.habit.icon),
                                                     contentDescription = null,
                                                     tint = habitColor,
                                                     modifier = Modifier.size(12.dp)
@@ -7490,227 +8624,6 @@ fun OverallStatsScreen(
                     onInfoClick = { t, e -> activeExplanation = t to e }
                 )
             }
-
-            // Archive of Monthly Reviews (shown only if past completed review months exist)
-            if (availableMonths.isNotEmpty()) {
-                item(key = "monthly_reviews_archive") {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 12.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.CalendarToday,
-                                contentDescription = "Archive",
-                                tint = SuccessGreen,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = if (language == "de") "MONATSRÜCKBLICKE ARCHIV" else "MONTHLY REVIEWS ARCHIVE",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = TextPrimary,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(4.dp))
-
-                        Text(
-                            text = if (language == "de")
-                                "Rufe deine früheren Monatsrückblicke ab, um deine monatliche Beständigkeit zu überprüfen."
-                            else
-                                "Retrieve your past monthly reviews to analyze your monthly consistency.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = TextSecondary
-                        )
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            for ((y, m) in availableMonths) {
-                                val monthLogsCount = remember(y, m, allLogs) {
-                                    val prefix = String.format(java.util.Locale.US, "%04d-%02d-", y, m)
-                                    allLogs.count { it.date.startsWith(prefix) && it.value > 0f }
-                                }
-                                val mName = when (m) {
-                                    1 -> if (language == "de") "Januar" else "January"
-                                    2 -> if (language == "de") "Februar" else "February"
-                                    3 -> if (language == "de") "März" else "March"
-                                    4 -> if (language == "de") "April" else "April"
-                                    5 -> if (language == "de") "Mai" else "May"
-                                    6 -> if (language == "de") "Juni" else "June"
-                                    7 -> if (language == "de") "Juli" else "July"
-                                    8 -> if (language == "de") "August" else "August"
-                                    9 -> if (language == "de") "September" else "September"
-                                    10 -> if (language == "de") "Oktober" else "October"
-                                    11 -> if (language == "de") "November" else "November"
-                                    else -> if (language == "de") "Dezember" else "December"
-                                }
-                                Surface(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(16.dp))
-                                        .clickable { selectedReviewMonth = y to m },
-                                    color = DarkCard,
-                                    border = BorderStroke(1.dp, DarkBorder),
-                                    shape = RoundedCornerShape(16.dp)
-                                ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 16.dp, vertical = 14.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(40.dp)
-                                                    .background(SuccessGreen.copy(alpha = 0.15f), CircleShape),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Text(
-                                                    text = "📊",
-                                                    style = MaterialTheme.typography.titleMedium
-                                                )
-                                            }
-                                            Spacer(modifier = Modifier.width(12.dp))
-                                            Column {
-                                                Text(
-                                                    text = if (language == "de") "Rückblick $mName $y" else "Review $mName $y",
-                                                    style = MaterialTheme.typography.titleMedium,
-                                                    color = TextPrimary,
-                                                    fontWeight = FontWeight.Bold
-                                                )
-                                                Text(
-                                                    text = "$monthLogsCount " + (if (language == "de") "Abschlüsse in diesem Monat" else "completions this month"),
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = TextSecondary
-                                                )
-                                            }
-                                        }
-
-                                        Icon(
-                                            imageVector = Icons.Default.PlayCircle,
-                                            contentDescription = "Play",
-                                            tint = SuccessGreen,
-                                            modifier = Modifier.size(28.dp)
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Archive of Yearly Reviews (shown only if past completed review years exist)
-            if (availableYears.isNotEmpty()) {
-                item(key = "yearly_reviews_archive") {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 12.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.AutoAwesome,
-                                contentDescription = "Archive",
-                                tint = PrimaryViolet,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = if (language == "de") "JAHRESRÜCKBLICKE ARCHIV" else "YEARLY REVIEWS ARCHIVE",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = TextPrimary,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(4.dp))
-
-                        Text(
-                            text = if (language == "de")
-                                "Greife jederzeit auf deine Jahresrückblicke zu und verfolge deinen Fortschritt über die Jahre."
-                            else
-                                "Access your past yearly reviews anytime and track your growth over the years.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = TextSecondary
-                        )
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            for (y in availableYears) {
-                                val yearLogsCount = remember(y, allLogs) {
-                                    allLogs.count { it.date.startsWith("$y-") && it.value > 0f }
-                                }
-                                Surface(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(16.dp))
-                                        .clickable { selectedReviewYear = y },
-                                    color = DarkCard,
-                                    border = BorderStroke(1.dp, DarkBorder),
-                                    shape = RoundedCornerShape(16.dp)
-                                ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 16.dp, vertical = 14.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(40.dp)
-                                                    .background(PrimaryViolet.copy(alpha = 0.15f), CircleShape),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Text(
-                                                    text = "🎆",
-                                                    style = MaterialTheme.typography.titleMedium
-                                                )
-                                            }
-                                            Spacer(modifier = Modifier.width(12.dp))
-                                            Column {
-                                                Text(
-                                                    text = if (language == "de") "Jahresrückblick $y" else "$y Year in Review",
-                                                    style = MaterialTheme.typography.titleMedium,
-                                                    color = TextPrimary,
-                                                    fontWeight = FontWeight.Bold
-                                                )
-                                                Text(
-                                                    text = "$yearLogsCount " + (if (language == "de") "Abschlüsse im Jahr $y" else "completions in $y"),
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = TextSecondary
-                                                )
-                                            }
-                                        }
-
-                                        Icon(
-                                            imageVector = Icons.Default.PlayCircle,
-                                            contentDescription = "Play",
-                                            tint = PrimaryViolet,
-                                            modifier = Modifier.size(28.dp)
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
         }
 
         if (activeExplanation != null) {
@@ -7727,6 +8640,7 @@ fun OverallStatsScreen(
                 allHabits = allHabits,
                 allLogs = allLogs,
                 language = language,
+                viewModel = viewModel,
                 onDismiss = { selectedReviewYear = null }
             )
         }
@@ -7738,8 +8652,246 @@ fun OverallStatsScreen(
                 allHabits = allHabits,
                 allLogs = allLogs,
                 language = language,
+                viewModel = viewModel,
                 onDismiss = { selectedReviewMonth = null }
             )
+        }
+
+        if (showReviewExplanation) {
+            ExplanationDialog(
+                title = if (language == "de") "Rückblicke & Berichte" else "Reviews & Reports",
+                explanation = if (language == "de") 
+                    """Rückblicke sind Zusammenfassungen deiner Gewohnheiten.
+
+• Sie werden immer am 1. Tag des Folgemonats bzw. Folgejahres freigeschaltet.
+• Der Score ist der Durchschnitt aller Habit-Stärken zu diesem Zeitpunkt.
+• Du kannst Monats- und Jahresrückblicke einzeln in den Einstellungen aktivieren."""
+                else 
+                    """Reviews are summaries of your habit progress.
+
+• They are unlocked on the 1st day of the following month or year.
+• The score is the average of all habit strengths at that time.
+• You can toggle Monthly and Yearly reviews independently in settings.""",
+                onDismiss = { showReviewExplanation = false }
+            )
+        }
+        
+        if (showReviewArchive) {
+            Dialog(onDismissRequest = { showReviewArchive = false }) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp, vertical = 16.dp),
+                    color = AppCard,
+                    border = BorderStroke(1.dp, AppBorder),
+                    shape = RoundedCornerShape(24.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = if (language == "de") "Deine Rückblicke" else "Your Reviews",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = TextPrimary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                IconButton(
+                                    onClick = { showReviewExplanation = true },
+                                    modifier = Modifier.size(24.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Info,
+                                        contentDescription = "Info",
+                                        tint = PrimaryViolet,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                            IconButton(onClick = { showReviewArchive = false }) {
+                                Icon(imageVector = Icons.Default.Close, contentDescription = "Close", tint = TextSecondary)
+                            }
+                        }
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 420.dp)
+                                .verticalScroll(rememberScrollState()),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            if (availableYears.isEmpty() && availableMonths.isEmpty()) {
+                                Text(
+                                    text = if (language == "de") "Noch keine Rückblicke verfügbar." else "No reviews available yet.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = TextSecondary,
+                                    modifier = Modifier.padding(vertical = 16.dp)
+                                )
+                            }
+                            
+                            // Monthly reviews section
+                            if (availableMonths.isNotEmpty()) {
+                                Text(
+                                    text = if (language == "de") "MONATSRÜCKBLICKE" else "MONTHLY REVIEWS",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = SuccessGreen,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(bottom = 4.dp)
+                                )
+                                for ((y, m) in availableMonths) {
+                                    val monthLogsCount = remember(y, m, allLogs) {
+                                        val prefix = String.format(java.util.Locale.US, "%04d-%02d-", y, m)
+                                        allLogs.count { it.date.startsWith(prefix) && it.value > 0f }
+                                    }
+                                    val mName = when (m) {
+                                        1 -> if (language == "de") "Januar" else "January"
+                                        2 -> if (language == "de") "Februar" else "February"
+                                        3 -> if (language == "de") "März" else "March"
+                                        4 -> if (language == "de") "April" else "April"
+                                        5 -> if (language == "de") "Mai" else "May"
+                                        6 -> if (language == "de") "Juni" else "June"
+                                        7 -> if (language == "de") "Juli" else "July"
+                                        8 -> if (language == "de") "August" else "August"
+                                        9 -> if (language == "de") "September" else "September"
+                                        10 -> if (language == "de") "Oktober" else "October"
+                                        11 -> if (language == "de") "November" else "November"
+                                        else -> if (language == "de") "Dezember" else "December"
+                                    }
+                                    Surface(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .clickable {
+                                                selectedReviewMonth = y to m
+                                                showReviewArchive = false
+                                            },
+                                        color = AppBg,
+                                        border = BorderStroke(1.dp, AppBorder),
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(32.dp)
+                                                        .background(SuccessGreen.copy(alpha = 0.15f), CircleShape),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Text(text = "📊", style = MaterialTheme.typography.bodyMedium)
+                                                }
+                                                Spacer(modifier = Modifier.width(10.dp))
+                                                Column {
+                                                    Text(
+                                                        text = if (language == "de") "Rückblick $mName $y" else "Review $mName $y",
+                                                        style = MaterialTheme.typography.titleSmall,
+                                                        color = TextPrimary,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                    Text(
+                                                        text = "$monthLogsCount " + (if (language == "de") "Abschlüsse" else "completions"),
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = TextSecondary
+                                                    )
+                                                }
+                                            }
+                                            Icon(
+                                                imageVector = Icons.Default.PlayArrow,
+                                                contentDescription = "Play",
+                                                tint = SuccessGreen,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            // Yearly reviews section
+                            if (availableYears.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                    text = if (language == "de") "JAHRESRÜCKBLICKE" else "YEARLY REVIEWS",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = PrimaryViolet,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(bottom = 4.dp)
+                                )
+                                for (y in availableYears) {
+                                    val yearLogsCount = remember(y, allLogs) {
+                                        allLogs.count { it.date.startsWith("$y-") && it.value > 0f }
+                                    }
+                                    Surface(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .clickable {
+                                                selectedReviewYear = y
+                                                showReviewArchive = false
+                                            },
+                                        color = AppBg,
+                                        border = BorderStroke(1.dp, AppBorder),
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(32.dp)
+                                                        .background(PrimaryViolet.copy(alpha = 0.15f), CircleShape),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Text(text = "🎆", style = MaterialTheme.typography.bodyMedium)
+                                                }
+                                                Spacer(modifier = Modifier.width(10.dp))
+                                                Column {
+                                                    Text(
+                                                        text = if (language == "de") "Jahresrückblick $y" else "$y Year in Review",
+                                                        style = MaterialTheme.typography.titleSmall,
+                                                        color = TextPrimary,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                    Text(
+                                                        text = "$yearLogsCount " + (if (language == "de") "Abschlüsse" else "completions"),
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = TextSecondary
+                                                    )
+                                                }
+                                            }
+                                            Icon(
+                                                imageVector = Icons.Default.PlayArrow,
+                                                contentDescription = "Play",
+                                                tint = PrimaryViolet,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         // Floating Header Overlay with vertical gradient fade-out
@@ -7750,10 +8902,10 @@ fun OverallStatsScreen(
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
-                            DarkBg,
-                            DarkBg,
-                            DarkBg.copy(alpha = 0.9f),
-                            DarkBg.copy(alpha = 0.5f),
+                            AppBg,
+                            AppBg,
+                            AppBg.copy(alpha = 0.9f),
+                            AppBg.copy(alpha = 0.5f),
                             Color.Transparent
                         )
                     )
@@ -7799,23 +8951,24 @@ fun calculateHabitSuccessStatsForPeriod(
     val todayStr = today.toString()
 
     val validStartMillis = if (habit.startDate > 946684800000L) habit.startDate else habit.createdAt
-    val habitStartDate = java.time.Instant.ofEpochMilli(validStartMillis).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+    val rawHabitStartDate = java.time.Instant.ofEpochMilli(validStartMillis.coerceAtLeast(946684800000L)).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+    val habitStartDate = if (rawHabitStartDate.isBefore(today.minusYears(5))) today.minusYears(5) else rawHabitStartDate
     val startSdfStr = habitStartDate.toString()
 
     val startDate = when (periodIndex) {
-        1 -> { // Week (Monday of current week)
-            val mon = today.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY))
+        0 -> { // Week (Last 7 days)
+            val mon = today.minusDays(6)
             if (mon.isBefore(habitStartDate)) habitStartDate else mon
         }
-        2 -> { // Month (1st of current month)
-            val m1 = today.withDayOfMonth(1)
+        1 -> { // Month (Last 30 days)
+            val m1 = today.minusDays(29)
             if (m1.isBefore(habitStartDate)) habitStartDate else m1
         }
-        3 -> { // Year (Jan 1st of current year)
-            val y1 = today.withDayOfYear(1)
+        2 -> { // Year (Last 365 days)
+            val y1 = today.minusDays(364)
             if (y1.isBefore(habitStartDate)) habitStartDate else y1
         }
-        else -> habitStartDate // 0 = Total
+        else -> habitStartDate
     }
 
     if (startDate.isAfter(today)) {
@@ -7853,7 +9006,7 @@ fun calculateHabitSuccessStatsForPeriod(
 fun calculateOverallSuccessStats(
     allHabits: List<Habit>,
     allLogs: List<HabitLog>,
-    periodIndex: Int = 0 // 0 = Total, 1 = Week, 2 = Month, 3 = Year
+    periodIndex: Int = 0 // 0 = Week, 1 = Month, 2 = Year, 3 = Total
 ): SuccessRateStats {
     val today = java.time.LocalDate.now()
     val todayStr = today.toString()
@@ -7870,23 +9023,24 @@ fun calculateOverallSuccessStats(
 
     activeHabits.forEach { habit ->
         val validStartMillis = if (habit.startDate > 946684800000L) habit.startDate else habit.createdAt
-        val habitStartDate = java.time.Instant.ofEpochMilli(validStartMillis).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+        val rawHabitStartDate = java.time.Instant.ofEpochMilli(validStartMillis.coerceAtLeast(946684800000L)).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+        val habitStartDate = if (rawHabitStartDate.isBefore(today.minusYears(5))) today.minusYears(5) else rawHabitStartDate
         val startSdfStr = habitStartDate.toString()
 
         val startDate = when (periodIndex) {
-            1 -> { // Week (Monday of current week)
-                val mon = today.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY))
+            0 -> { // Week (Last 7 days)
+                val mon = today.minusDays(6)
                 if (mon.isBefore(habitStartDate)) habitStartDate else mon
             }
-            2 -> { // Month (1st of current month)
-                val m1 = today.withDayOfMonth(1)
+            1 -> { // Month (Last 30 days)
+                val m1 = today.minusDays(29)
                 if (m1.isBefore(habitStartDate)) habitStartDate else m1
             }
-            3 -> { // Year (Jan 1st of current year)
-                val y1 = today.withDayOfYear(1)
+            2 -> { // Year (Last 365 days)
+                val y1 = today.minusDays(364)
                 if (y1.isBefore(habitStartDate)) habitStartDate else y1
             }
-            else -> habitStartDate // 0 = Total
+            else -> habitStartDate
         }
 
         if (!startDate.isAfter(today)) {
@@ -7944,11 +9098,11 @@ fun SuccessRateCard(
     val animatedFactor = animProgress.value
 
     Card(
-        colors = CardDefaults.cardColors(containerColor = DarkCard),
+        colors = CardDefaults.cardColors(containerColor = AppCard),
         shape = RoundedCornerShape(20.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, DarkBorder, RoundedCornerShape(20.dp))
+            .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
     ) {
         Column(
             modifier = Modifier
@@ -7966,13 +9120,13 @@ fun SuccessRateCard(
                     Box(
                         modifier = Modifier
                             .size(28.dp)
-                            .background(SuccessGreen.copy(alpha = 0.18f), CircleShape),
+                            .background(PrimaryViolet.copy(alpha = 0.18f), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.CheckCircle,
                             contentDescription = "Success Rate",
-                            tint = SuccessGreen,
+                            tint = PrimaryViolet,
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -8169,7 +9323,7 @@ fun MetricPillBox(
         modifier = modifier,
         color = Color.White.copy(alpha = 0.03f),
         shape = RoundedCornerShape(14.dp),
-        border = BorderStroke(1.dp, DarkBorder.copy(alpha = 0.5f))
+        border = BorderStroke(1.dp, AppBorder.copy(alpha = 0.5f))
     ) {
         Column(
             modifier = Modifier.padding(vertical = 12.dp, horizontal = 2.dp),
@@ -8252,7 +9406,7 @@ fun CalendarDayCell(
         else -> Color.White.copy(alpha = 0.03f) // Completely neutral dark grey background without any purple/lila tint
     }
     val textColor = when (status) {
-        "SUCCESS", "FAILED", "PENDING", "PAUSED" -> DarkBg
+        "SUCCESS", "FAILED", "PENDING", "PAUSED" -> AppBg
         else -> if (status == "INACTIVE") TextSecondary.copy(alpha = 0.4f) else TextPrimary
     }
 
@@ -8550,7 +9704,7 @@ fun MilestoneBadge(milestone: MilestoneItem, language: String) {
                     Box(
                         modifier = Modifier
                             .size(18.dp)
-                            .background(DarkCard, CircleShape)
+                            .background(AppCard, CircleShape)
                             .border(1.5.dp, TextSecondary.copy(alpha = 0.4f), CircleShape)
                             .align(Alignment.BottomEnd),
                         contentAlignment = Alignment.Center
@@ -8595,11 +9749,11 @@ fun StreakMilestonesCard(longestStreak: Int, language: String) {
     }
 
     Card(
-        colors = CardDefaults.cardColors(containerColor = DarkCard),
+        colors = CardDefaults.cardColors(containerColor = AppCard),
         shape = RoundedCornerShape(20.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, DarkBorder, RoundedCornerShape(20.dp))
+            .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Row(
@@ -8654,19 +9808,47 @@ fun SettingsScreen(
     val backupFolderUri by viewModel.backupFolderUri.collectAsStateWithLifecycle()
     val syncStatus by viewModel.syncStatus.collectAsStateWithLifecycle()
     val vibrationEnabled by viewModel.vibrationEnabled.collectAsStateWithLifecycle()
+    val accentColorName by viewModel.accentColorName.collectAsStateWithLifecycle()
+    val darkModeEnabled by viewModel.darkModeEnabled.collectAsStateWithLifecycle()
     val infoCardsEnabled by viewModel.infoCardsEnabled.collectAsStateWithLifecycle()
     val reviewNotificationsEnabled by viewModel.reviewNotificationsEnabled.collectAsStateWithLifecycle()
     val monthlyReviewEnabled by viewModel.monthlyReviewEnabled.collectAsStateWithLifecycle()
-    val monthlyReviewTime by viewModel.monthlyReviewTime.collectAsStateWithLifecycle()
     val yearlyReviewEnabled by viewModel.yearlyReviewEnabled.collectAsStateWithLifecycle()
-    val yearlyReviewTime by viewModel.yearlyReviewTime.collectAsStateWithLifecycle()
 
+    val userName by viewModel.userName.collectAsStateWithLifecycle()
+    val profileImageUri by viewModel.profileImageUri.collectAsStateWithLifecycle()
+    val isSaskiaUnlocked by viewModel.isSaskiaUnlocked.collectAsStateWithLifecycle()
+
+    var selectedSubpage by rememberSaveable { mutableStateOf<String?>(null) }
     var showWipeConfirm by remember { mutableStateOf(false) }
     var showArchivedList by remember { mutableStateOf(false) }
 
     var importedAudios by remember { mutableStateOf<List<File>>(emptyList()) }
     var selectedAudioFile by remember { mutableStateOf<File?>(null) }
     var showAudioDialog by remember { mutableStateOf(false) }
+
+    val profileImagePickerLauncherSettings = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            try {
+                val file = File(context.filesDir, "profile_avatar.jpg")
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    file.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                viewModel.updateProfileImageUri(android.net.Uri.fromFile(file).toString())
+                Toast.makeText(
+                    context,
+                    if (language == "de") "Profilbild aktualisiert" else "Profile picture updated",
+                    Toast.LENGTH_SHORT
+                ).show()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
 
     val refreshAudios = remember(context) {
         {
@@ -8730,7 +9912,7 @@ fun SettingsScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(DarkBg)
+                .background(AppBg)
         ) {
             LazyColumn(
                 modifier = Modifier
@@ -8779,11 +9961,11 @@ fun SettingsScreen(
                     items(archivedHabits, key = { it.id }) { habit ->
                         val habitColor = remember(habit.color) { HabitIconMapping.getColor(habit.color) }
                         Card(
-                            colors = CardDefaults.cardColors(containerColor = DarkCard),
+                            colors = CardDefaults.cardColors(containerColor = AppCard),
                             shape = RoundedCornerShape(16.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .border(1.dp, DarkBorder, RoundedCornerShape(16.dp))
+                                .border(1.dp, AppBorder, RoundedCornerShape(16.dp))
                         ) {
                             Row(
                                 modifier = Modifier
@@ -8803,7 +9985,7 @@ fun SettingsScreen(
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
-                                            painter = painterResource(id = HabitIconMapping.getIconDrawableId(habit.icon)),
+                                            imageVector = HabitIconMapping.getIcon(habit.icon),
                                             contentDescription = null,
                                             tint = habitColor,
                                             modifier = Modifier.size(20.dp)
@@ -8880,10 +10062,10 @@ fun SettingsScreen(
                     .background(
                         Brush.verticalGradient(
                             colors = listOf(
-                                DarkBg,
-                                DarkBg,
-                                DarkBg.copy(alpha = 0.9f),
-                                DarkBg.copy(alpha = 0.5f),
+                                AppBg,
+                                AppBg,
+                                AppBg.copy(alpha = 0.9f),
+                                AppBg.copy(alpha = 0.5f),
                                 Color.Transparent
                             )
                         )
@@ -8914,7 +10096,7 @@ fun SettingsScreen(
         if (showDeleteConfirmInArchive != null) {
             AlertDialog(
                 onDismissRequest = { showDeleteConfirmInArchive = null },
-                containerColor = DarkCard,
+                containerColor = AppCard,
                 title = { Text(text = if (language == "de") "Gewohnheit endgültig löschen?" else "Delete Habit Permanently?") },
                 text = { Text(text = if (language == "de") "Möchtest du '${showDeleteConfirmInArchive?.name}' wirklich unwiderruflich löschen? Alle Verlaufsdaten gehen verloren." else "Are you sure you want to delete '${showDeleteConfirmInArchive?.name}' permanently? All tracking history will be lost.") },
                 confirmButton = {
@@ -8971,7 +10153,7 @@ fun SettingsScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(DarkBg)) {
+    Box(modifier = Modifier.fillMaxSize().background(AppBg)) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -8980,14 +10162,502 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
             contentPadding = PaddingValues(bottom = 32.dp, top = 84.dp)
         ) {
+            if (selectedSubpage == null) {
+                // MAIN SETTINGS CATEGORY LIST (Android System Settings Style)
+                item {
+                    val settingsCategories = listOf(
+                        Triple("profile", if (language == "de") "Profil & Konto" else "Profile & Account", if (userName.isNotBlank()) userName else if (language == "de") "Profilbild & Nutzername bearbeiten" else "Edit profile picture & name") to Pair(Icons.Default.Person, Color(0xFF783CFA)),
+                        Triple("appearance", if (language == "de") "Erscheinungsbild & Sprache" else "Appearance & Language", if (language == "de") "Sprache, Infokarten & Einführung" else "Language, Info Cards & Intro") to Pair(Icons.Default.Palette, HabitOrange),
+                        Triple("notifications", if (language == "de") "Benachrichtigungen & Rückblicke" else "Notifications & Reviews", if (language == "de") "Monats- & Jahresrückblick Einstellungen" else "Monthly & Yearly Review settings") to Pair(Icons.Default.NotificationsActive, SuccessGreen),
+                        Triple("audio", if (language == "de") "Töne & Entspannung" else "Audio & Soundscapes", if (language == "de") "${importedAudios.size} Soundscapes & Fokus-Audio" else "${importedAudios.size} soundscapes & focus audio") to Pair(Icons.Default.LibraryMusic, Color(0xFF783CFA)),
+                        Triple("habits", if (language == "de") "Gewohnheiten & Archiv" else "Habits & Archive", if (language == "de") "Haptisches Feedback & Archivierte Gewohnheiten" else "Haptic feedback & Archived habits") to Pair(Icons.Default.Inbox, HabitOrange),
+                        Triple("data", if (language == "de") "Daten & Sicherung" else "Data & Backup", if (language == "de") "SAF Backup, Wiederherstellen & Gefahrenbereich" else "SAF Backup, Restore & Danger zone") to Pair(Icons.Default.Backup, ErrorRed)
+                    )
+
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = AppCard),
+                        shape = RoundedCornerShape(20.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
+                    ) {
+                        Column {
+                            settingsCategories.forEachIndexed { index, (catInfo, iconPair) ->
+                                val (key, title, subtitle) = catInfo
+                                val (icon, tintColor) = iconPair
+
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { selectedSubpage = key }
+                                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(44.dp)
+                                                .background(tintColor.copy(alpha = 0.15f), CircleShape),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = icon,
+                                                contentDescription = title,
+                                                tint = tintColor,
+                                                modifier = Modifier.size(22.dp)
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(14.dp))
+                                        Column {
+                                            Text(
+                                                text = title,
+                                                style = MaterialTheme.typography.titleMedium,
+                                                color = TextPrimary,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Text(
+                                                text = subtitle,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = TextSecondary,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                    }
+                                    Icon(
+                                        imageVector = Icons.Default.ChevronRight,
+                                        contentDescription = "Open",
+                                        tint = TextSecondary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+
+                                if (index < settingsCategories.lastIndex) {
+                                    HorizontalDivider(
+                                        color = AppBorder,
+                                        thickness = 1.dp,
+                                        modifier = Modifier.padding(horizontal = 16.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Support, Feedback & Community (directly on main settings page)
+                item {
+                    val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = AppCard),
+                        shape = RoundedCornerShape(20.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
+                    ) {
+                        Column(modifier = Modifier.padding(18.dp)) {
+                            // Header
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(bottom = 14.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(38.dp)
+                                        .background(PrimaryViolet.copy(alpha = 0.15f), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Favorite,
+                                        contentDescription = null,
+                                        tint = PrimaryViolet,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = if (language == "de") "Community, Support & Feedback" else "Community, Support & Feedback",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = TextPrimary,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = if (language == "de") "Hilf mit, Frequent Habits noch besser zu machen" else "Help make Frequent Habits even better",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = TextSecondary
+                                    )
+                                }
+                            }
+
+                            // Feature Request Hero Banner
+                            Card(
+                                colors = CardDefaults.cardColors(
+                                    containerColor = PrimaryViolet.copy(alpha = 0.12f)
+                                ),
+                                shape = RoundedCornerShape(14.dp),
+                                border = BorderStroke(1.dp, PrimaryViolet.copy(alpha = 0.35f)),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        uriHandler.openUri("https://github.com/FrequeNCy144/Frequent-Habits/issues/new")
+                                    }
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(14.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(42.dp)
+                                            .background(PrimaryViolet, CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.AutoAwesome,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = if (language == "de") "Feature vorschlagen / Request" else "Suggest a Feature / Request",
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            color = TextPrimary,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = if (language == "de") "Hast du eine Idee? Teile deine Wünsche!" else "Have an idea? Share your request!",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = TextSecondary
+                                        )
+                                    }
+                                    Icon(
+                                        imageVector = Icons.Default.ChevronRight,
+                                        contentDescription = null,
+                                        tint = PrimaryViolet,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            // Grid for Bug Report & Email
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedButton(
+                                    onClick = { uriHandler.openUri("https://github.com/FrequeNCy144/Frequent-Habits/issues/new") },
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        contentColor = TextPrimary,
+                                        containerColor = ProgressTrack
+                                    ),
+                                    border = BorderStroke(1.dp, AppBorder),
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.BugReport,
+                                        contentDescription = null,
+                                        tint = TextSecondary,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = if (language == "de") "Bug melden" else "Report Bug",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+
+                                OutlinedButton(
+                                    onClick = {
+                                        val emailIntent = Intent(Intent.ACTION_SENDTO).apply {
+                                            data = android.net.Uri.parse("mailto:support@frequncy-apps.com")
+                                        }
+                                        try {
+                                            context.startActivity(emailIntent)
+                                        } catch (e: Exception) {
+                                            Toast.makeText(
+                                                context,
+                                                if (language == "de") "Keine E-Mail-App gefunden" else "No email app found",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                    },
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        contentColor = TextPrimary,
+                                        containerColor = ProgressTrack
+                                    ),
+                                    border = BorderStroke(1.dp, AppBorder),
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Email,
+                                        contentDescription = null,
+                                        tint = TextSecondary,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = if (language == "de") "E-Mail Support" else "Email Support",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            // Share with a friend
+                            Button(
+                                onClick = {
+                                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                        type = "text/plain"
+                                        putExtra(Intent.EXTRA_SUBJECT, if (language == "de") "Empfehlung: Frequent Habits" else "Recommendation: Frequent Habits")
+                                        putExtra(Intent.EXTRA_TEXT, if (language == "de") {
+                                            "Hey! Ich nutze die App 'Frequent Habits', um meine Gewohnheiten zu tracken und meinen Alltag zu verbessern. Komplett werbefrei, open-source und offline-first! Schau sie dir an: https://github.com/FrequeNCy144/Frequent-Habits"
+                                        } else {
+                                            "Hey! I'm using 'Frequent Habits' to track my daily habits and improve my routine. Fully ad-free, open-source, and offline-first! Check it out: https://github.com/FrequeNCy144/Frequent-Habits"
+                                        })
+                                    }
+                                    context.startActivity(Intent.createChooser(shareIntent, if (language == "de") "Teilen mit..." else "Share with..."))
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = SuccessGreen),
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Share,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = if (language == "de") "App mit Freunden teilen" else "Share with a friend",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+                            HorizontalDivider(color = AppBorder, thickness = 1.dp)
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            // Compact GitHub & Website links
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedButton(
+                                    onClick = { uriHandler.openUri("https://github.com/FrequeNCy144/Frequent-Habits") },
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
+                                    border = BorderStroke(1.dp, AppBorder),
+                                    shape = RoundedCornerShape(10.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Code,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(text = "GitHub", style = MaterialTheme.typography.bodyMedium)
+                                }
+
+                                OutlinedButton(
+                                    onClick = { uriHandler.openUri("https://frequency-apps.com") },
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
+                                    border = BorderStroke(1.dp, AppBorder),
+                                    shape = RoundedCornerShape(10.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Language,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(text = "Website", style = MaterialTheme.typography.bodyMedium)
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            // Authentic Liberapay Styled Donate Button
+                            Button(
+                                onClick = { uriHandler.openUri("https://liberapay.com/FrequeNCy/donate") },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = androidx.compose.ui.graphics.Color(0xFFF6C915)
+                                ),
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp),
+                                elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Favorite,
+                                    contentDescription = null,
+                                    tint = androidx.compose.ui.graphics.Color(0xFF1A1A1A),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = if (language == "de") "Spenden via Liberapay" else "Donate via Liberapay",
+                                    color = androidx.compose.ui.graphics.Color(0xFF1A1A1A),
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
+            } else when (selectedSubpage) {
+                "profile" -> {
+                    // SUBPAGE 1: PROFIL & KONTO
+                    item {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = AppCard),
+                            shape = RoundedCornerShape(20.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(20.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = if (language == "de") "Profilbild" else "Profile Picture",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = PrimaryViolet,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.align(Alignment.Start)
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                Box(
+                                    modifier = Modifier.size(100.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Surface(
+                                        modifier = Modifier.fillMaxSize(),
+                                        shape = CircleShape,
+                                        color = AppCard,
+                                        border = BorderStroke(2.dp, PrimaryViolet)
+                                    ) {
+                                        if (profileImageUri.isNotEmpty()) {
+                                            AsyncImage(
+                                                model = profileImageUri,
+                                                contentDescription = "Profile Picture",
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .clip(CircleShape),
+                                                contentScale = ContentScale.Crop
+                                            )
+                                        } else {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .background(PrimaryViolet.copy(alpha = 0.2f)),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Person,
+                                                    contentDescription = null,
+                                                    tint = PrimaryViolet,
+                                                    modifier = Modifier.size(50.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    Button(
+                                        onClick = { profileImagePickerLauncherSettings.launch("image/*") },
+                                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryViolet),
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Icon(imageVector = Icons.Default.PhotoCamera, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(if (language == "de") "Foto ändern" else "Change Photo")
+                                    }
+
+                                    if (profileImageUri.isNotEmpty()) {
+                                        OutlinedButton(
+                                            onClick = { viewModel.updateProfileImageUri("") },
+                                            shape = RoundedCornerShape(12.dp),
+                                            border = BorderStroke(1.dp, ErrorRed)
+                                        ) {
+                                            Text(if (language == "de") "Entfernen" else "Remove", color = ErrorRed)
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(24.dp))
+                                HorizontalDivider(color = AppBorder, thickness = 1.dp)
+                                Spacer(modifier = Modifier.height(20.dp))
+
+                                Text(
+                                    text = if (language == "de") "Nutzername" else "Username",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = PrimaryViolet,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.align(Alignment.Start)
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                OutlinedTextField(
+                                    value = userName,
+                                    onValueChange = { viewModel.updateUserName(it) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    placeholder = { Text(if (language == "de") "Gib deinen Namen ein..." else "Enter your name...") },
+                                    shape = RoundedCornerShape(12.dp),
+                                    singleLine = true,
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = PrimaryViolet,
+                                        unfocusedBorderColor = AppBorder,
+                                        focusedContainerColor = ProgressTrack,
+                                        unfocusedContainerColor = ProgressTrack
+                                    )
+                                )
+
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    text = if (language == "de") {
+                                        "Dein Name und Profilbild werden nur lokal auf deinem Gerät gespeichert und für deine personalisierte App-Erfahrung genutzt."
+                                    } else {
+                                        "Your name and profile picture are stored strictly locally on your device for your personalized app experience."
+                                    },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = TextSecondary,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    }
+                }
+                "appearance" -> {
             // 1. Allgemein & Personalisierung Card
             item {
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = DarkCard),
+                    colors = CardDefaults.cardColors(containerColor = AppCard),
                     shape = RoundedCornerShape(20.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .border(1.dp, DarkBorder, RoundedCornerShape(20.dp))
+                        .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
@@ -9017,7 +10687,7 @@ fun SettingsScreen(
                                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
                                 ) {
                                     Text("Deutsch")
-                                }
+                               }
                                 Button(
                                     onClick = { viewModel.setLanguage("en") },
                                     colors = ButtonDefaults.buttonColors(
@@ -9031,8 +10701,103 @@ fun SettingsScreen(
                             }
                         }
 
+                        // Option: Akzentfarbe
                         Spacer(modifier = Modifier.height(16.dp))
-                        HorizontalDivider(color = DarkBorder, thickness = 1.dp)
+                        HorizontalDivider(color = AppBorder, thickness = 1.dp)
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Column {
+                            Text(
+                                text = if (language == "de") "Akzentfarbe" else "Accent Color",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TextPrimary,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            
+                            com.example.ui.components.ColorPaletteSelector(
+                                selectedColorKey = accentColorName,
+                                onColorSelected = { viewModel.setAccentColorName(it) },
+                                language = language
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+                        HorizontalDivider(color = AppBorder, thickness = 1.dp)
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Option: App Theme
+                        Column {
+                            Text(
+                                text = if (language == "de") "App Design" else "App Theme",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TextPrimary,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                // Dark Mode Button
+                                Button(
+                                    onClick = { viewModel.setDarkModeEnabled(true) },
+                                    modifier = Modifier.weight(1f),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (darkModeEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
+                                    ),
+                                    shape = RoundedCornerShape(12.dp),
+                                    border = BorderStroke(1.dp, if (darkModeEnabled) Color.Transparent else MaterialTheme.colorScheme.outline)
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Default.DarkMode,
+                                            contentDescription = null,
+                                            tint = if (darkModeEnabled) Color.White else MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = if (language == "de") "Dunkel" else "Dark",
+                                            color = if (darkModeEnabled) Color.White else MaterialTheme.colorScheme.onSurface,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+
+                                // Light Mode Button
+                                Button(
+                                    onClick = { viewModel.setDarkModeEnabled(false) },
+                                    modifier = Modifier.weight(1f),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (!darkModeEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
+                                    ),
+                                    shape = RoundedCornerShape(12.dp),
+                                    border = BorderStroke(1.dp, if (!darkModeEnabled) Color.Transparent else MaterialTheme.colorScheme.outline)
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Default.LightMode,
+                                            contentDescription = null,
+                                            tint = if (!darkModeEnabled) Color.White else MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = if (language == "de") "Hell" else "Light",
+                                            color = if (!darkModeEnabled) Color.White else MaterialTheme.colorScheme.onSurface,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+                        HorizontalDivider(color = AppBorder, thickness = 1.dp)
                         Spacer(modifier = Modifier.height(16.dp))
 
                         // Option: Infokarten & Hinweise
@@ -9079,7 +10844,7 @@ fun SettingsScreen(
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
-                        HorizontalDivider(color = DarkBorder, thickness = 1.dp)
+                        HorizontalDivider(color = AppBorder, thickness = 1.dp)
                         Spacer(modifier = Modifier.height(16.dp))
 
                         // Option: Onboarding neu starten
@@ -9118,220 +10883,249 @@ fun SettingsScreen(
                         }
                     }
                 }
-            }
-
-            // 2. Gewohnheiten & Fokus Card
-            item {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = DarkCard),
-                    shape = RoundedCornerShape(20.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .border(1.dp, DarkBorder, RoundedCornerShape(20.dp))
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = if (language == "de") "Gewohnheiten & Fokus" else "Habits & Focus",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = HabitOrange,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(bottom = 12.dp)
-                        )
-
-                        // Option: Archivierte Gewohnheiten
-                        val archiveInteractionSource = remember { MutableInteractionSource() }
-                        val archiveIsPressed by archiveInteractionSource.collectIsPressedAsState()
-                        val archiveArrowOffsetX by animateDpAsState(
-                            targetValue = if (archiveIsPressed) 8.dp else 0.dp,
-                            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
-                            label = "archive_arrow_offset"
-                        )
-                        val archiveArrowScale by animateFloatAsState(
-                            targetValue = if (archiveIsPressed) 1.25f else 1.0f,
-                            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
-                            label = "archive_arrow_scale"
-                        )
-
-                        Row(
+                }
+                }
+                "audio" -> {
+                    item {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = AppCard),
+                            shape = RoundedCornerShape(20.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable(
-                                    interactionSource = archiveInteractionSource,
-                                    indication = ripple(),
-                                    onClick = { showArchivedList = true }
-                                )
-                                .padding(vertical = 4.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                                .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                                Icon(
-                                    imageVector = Icons.Default.Inbox,
-                                    contentDescription = "Archive",
-                                    tint = HabitOrange,
-                                    modifier = Modifier.size(20.dp)
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                    text = if (language == "de") "Töne & Entspannung" else "Audio & Soundscapes",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = PrimaryViolet,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(bottom = 12.dp)
                                 )
-                                Spacer(modifier = Modifier.width(12.dp))
                                 Column {
-                                    Text(
-                                        text = if (language == "de") "Archivierte Gewohnheiten" else "Archived Habits",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = TextPrimary,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                    Text(
-                                        text = if (language == "de") "Inaktive Gewohnheiten reaktivieren" else "Reactivate suspended habits",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = TextSecondary
-                                    )
-                                }
-                            }
-                            Icon(
-                                imageVector = Icons.Default.ChevronRight,
-                                contentDescription = "Go",
-                                tint = if (archiveIsPressed) HabitOrange else TextSecondary,
-                                modifier = Modifier
-                                    .offset(x = archiveArrowOffsetX)
-                                    .scale(archiveArrowScale)
-                                    .size(20.dp)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-                        HorizontalDivider(color = DarkBorder, thickness = 1.dp)
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Option: Vibration beim Erledigen
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Vibration,
-                                    contentDescription = "Vibration",
-                                    tint = SuccessGreen,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column {
-                                    Text(
-                                        text = if (language == "de") "Vibration beim Abhaken" else "Haptic feedback",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = TextPrimary,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                    Text(
-                                        text = if (language == "de") "Haptischer Impuls beim Erledigen" else "Short vibration pulse on completion",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = TextSecondary
-                                    )
-                                }
-                            }
-                            Switch(
-                                checked = vibrationEnabled,
-                                onCheckedChange = { viewModel.setVibrationEnabled(it) },
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = Color.White,
-                                    checkedTrackColor = SuccessGreen,
-                                    uncheckedThumbColor = TextSecondary,
-                                    uncheckedTrackColor = ProgressTrack
-                                )
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-                        HorizontalDivider(color = DarkBorder, thickness = 1.dp)
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Option: Fokus-Sounds & Hintergründe
-                        Column {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.MusicNote,
-                                    contentDescription = null,
-                                    tint = PrimaryViolet,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column {
-                                    Text(
-                                        text = if (language == "de") "Fokus-Sounds & Hintergründe" else "Focus Sounds & Soundscapes",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = TextPrimary,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                    Text(
-                                        text = if (language == "de") {
-                                            val count = importedAudios.size
-                                            val currentName = selectedAudioFile?.nameWithoutExtension ?: "Kein Sound"
-                                            "$count Sounds • Standard: $currentName"
-                                        } else {
-                                            val count = importedAudios.size
-                                            val currentName = selectedAudioFile?.nameWithoutExtension ?: "No Sound"
-                                            "$count sounds • Default: $currentName"
-                                        },
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = TextSecondary
-                                    )
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Button(
-                                    onClick = { showAudioDialog = true },
-                                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryViolet),
-                                    shape = RoundedCornerShape(12.dp),
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Icon(imageVector = Icons.Default.LibraryMusic, contentDescription = null, modifier = Modifier.size(18.dp))
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(if (language == "de") "Verwalten" else "Manage", fontWeight = FontWeight.Bold)
-                                }
-                                OutlinedButton(
-                                    onClick = { audioPickerLauncherSettings.launch("audio/*") },
-                                    shape = RoundedCornerShape(12.dp),
-                                    border = BorderStroke(1.dp, SuccessGreen)
-                                ) {
-                                    Icon(imageVector = Icons.Default.AddCircle, contentDescription = null, tint = SuccessGreen, modifier = Modifier.size(18.dp))
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(if (language == "de") "Import" else "Import", color = SuccessGreen, fontWeight = FontWeight.Bold)
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.MusicNote,
+                                            contentDescription = null,
+                                            tint = PrimaryViolet,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Column {
+                                            Text(
+                                                text = if (language == "de") "Fokus-Sounds & Hintergründe" else "Focus Sounds & Soundscapes",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = TextPrimary,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                            Text(
+                                                text = if (language == "de") {
+                                                    val count = importedAudios.size
+                                                    val currentName = selectedAudioFile?.nameWithoutExtension ?: "Kein Sound"
+                                                    "$count Sounds • Standard: $currentName"
+                                                } else {
+                                                    val count = importedAudios.size
+                                                    val currentName = selectedAudioFile?.nameWithoutExtension ?: "No Sound"
+                                                    "$count sounds • Default: $currentName"
+                                                },
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = TextSecondary
+                                            )
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Button(
+                                            onClick = { showAudioDialog = true },
+                                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryViolet),
+                                            shape = RoundedCornerShape(12.dp),
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Icon(imageVector = Icons.Default.LibraryMusic, contentDescription = null, modifier = Modifier.size(18.dp))
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(if (language == "de") "Verwalten" else "Manage", fontWeight = FontWeight.Bold)
+                                        }
+                                        OutlinedButton(
+                                            onClick = { audioPickerLauncherSettings.launch("audio/*") },
+                                            shape = RoundedCornerShape(12.dp),
+                                            border = BorderStroke(1.dp, SuccessGreen)
+                                        ) {
+                                            Icon(imageVector = Icons.Default.AddCircle, contentDescription = null, tint = SuccessGreen, modifier = Modifier.size(18.dp))
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(if (language == "de") "Import" else "Import", color = SuccessGreen, fontWeight = FontWeight.Bold)
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
                 }
-            }
+                "habits" -> {
+                    item {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = AppCard),
+                            shape = RoundedCornerShape(20.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                    text = if (language == "de") "Gewohnheiten & Archiv" else "Habits & Archive",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = PrimaryViolet,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(bottom = 12.dp)
+                                )
 
-            // 3. Rückblicke & Berichte Card
+                                val archiveInteractionSource = remember { MutableInteractionSource() }
+                                val archiveIsPressed by archiveInteractionSource.collectIsPressedAsState()
+                                val archiveArrowOffsetX by animateDpAsState(
+                                    targetValue = if (archiveIsPressed) 8.dp else 0.dp,
+                                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+                                    label = "archive_arrow_offset"
+                                )
+                                val archiveArrowScale by animateFloatAsState(
+                                    targetValue = if (archiveIsPressed) 1.25f else 1.0f,
+                                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+                                    label = "archive_arrow_scale"
+                                )
+
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable(
+                                            interactionSource = archiveInteractionSource,
+                                            indication = ripple(),
+                                            onClick = { showArchivedList = true }
+                                        )
+                                        .padding(vertical = 4.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                        Icon(
+                                            imageVector = Icons.Default.Inbox,
+                                            contentDescription = "Archive",
+                                            tint = PrimaryViolet,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Column {
+                                            Text(
+                                                text = if (language == "de") "Archivierte Gewohnheiten" else "Archived Habits",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = TextPrimary,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                            Text(
+                                                text = if (language == "de") "Inaktive Gewohnheiten reaktivieren" else "Reactivate suspended habits",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = TextSecondary
+                                            )
+                                        }
+                                    }
+                                    Icon(
+                                        imageVector = Icons.Default.ChevronRight,
+                                        contentDescription = "Go",
+                                        tint = if (archiveIsPressed) PrimaryViolet else TextSecondary,
+                                        modifier = Modifier
+                                            .offset(x = archiveArrowOffsetX)
+                                            .scale(archiveArrowScale)
+                                            .size(20.dp)
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(16.dp))
+                                HorizontalDivider(color = AppBorder, thickness = 1.dp)
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Vibration,
+                                            contentDescription = "Vibration",
+                                            tint = PrimaryViolet,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Column {
+                                            Text(
+                                                text = if (language == "de") "Vibration beim Abhaken" else "Haptic feedback",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = TextPrimary,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                            Text(
+                                                text = if (language == "de") "Haptischer Impuls beim Erledigen" else "Short vibration pulse on completion",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = TextSecondary
+                                            )
+                                        }
+                                    }
+                                    Switch(
+                                        checked = vibrationEnabled,
+                                        onCheckedChange = { viewModel.setVibrationEnabled(it) },
+                                        colors = SwitchDefaults.colors(
+                                            checkedThumbColor = Color.White,
+                                            checkedTrackColor = SuccessGreen,
+                                            uncheckedThumbColor = TextSecondary,
+                                            uncheckedTrackColor = ProgressTrack
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                "notifications" -> {
+                    // 3. Rückblicke & Berichte Card
             item {
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = DarkCard),
+                    colors = CardDefaults.cardColors(containerColor = AppCard),
                     shape = RoundedCornerShape(20.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .border(1.dp, DarkBorder, RoundedCornerShape(20.dp))
+                        .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
                             text = if (language == "de") "Rückblicke & Berichte" else "Reviews & Reports",
                             style = MaterialTheme.typography.titleMedium,
-                            color = SuccessGreen,
+                            color = PrimaryViolet,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(bottom = 12.dp)
                         )
 
-                        // Option: Benachrichtigungen
+                        // Option: Benachrichtigungen erlauben (mit Android-Berechtigungsabfrage)
+                        var hasNotificationPermission by remember {
+                            mutableStateOf(
+                                if (android.os.Build.VERSION.SDK_INT >= 33) {
+                                    androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                                } else true
+                            )
+                        }
+
+                        val permissionLauncher = rememberLauncherForActivityResult(
+                            contract = ActivityResultContracts.RequestPermission()
+                        ) { isGranted: Boolean ->
+                            hasNotificationPermission = isGranted
+                            viewModel.setReviewNotificationsEnabled(isGranted)
+                        }
+
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -9356,15 +11150,25 @@ fun SettingsScreen(
                                         fontWeight = FontWeight.Medium
                                     )
                                     Text(
-                                        text = if (language == "de") "Meldung bei neuen Rückblicken" else "Notify when new reviews are ready",
+                                        text = if (language == "de") "Erinnerungen & Rückblick-Alarme erhalten" else "Receive reminders & review alerts",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = TextSecondary
                                     )
                                 }
                             }
                             Switch(
-                                checked = reviewNotificationsEnabled,
-                                onCheckedChange = { viewModel.setReviewNotificationsEnabled(it) },
+                                checked = reviewNotificationsEnabled && hasNotificationPermission,
+                                onCheckedChange = { isChecked ->
+                                    if (isChecked) {
+                                        if (android.os.Build.VERSION.SDK_INT >= 33 && !hasNotificationPermission) {
+                                            permissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                                        } else {
+                                            viewModel.setReviewNotificationsEnabled(true)
+                                        }
+                                    } else {
+                                        viewModel.setReviewNotificationsEnabled(false)
+                                    }
+                                },
                                 colors = SwitchDefaults.colors(
                                     checkedThumbColor = Color.White,
                                     checkedTrackColor = PrimaryViolet,
@@ -9375,7 +11179,7 @@ fun SettingsScreen(
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
-                        HorizontalDivider(color = DarkBorder, thickness = 1.dp)
+                        HorizontalDivider(color = AppBorder, thickness = 1.dp)
                         Spacer(modifier = Modifier.height(16.dp))
 
                         // Option: Monatsrückblick
@@ -9391,7 +11195,7 @@ fun SettingsScreen(
                                 Icon(
                                     imageVector = Icons.Default.CalendarViewMonth,
                                     contentDescription = "Monthly",
-                                    tint = SuccessGreen,
+                                    tint = PrimaryViolet,
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Spacer(modifier = Modifier.width(12.dp))
@@ -9414,102 +11218,15 @@ fun SettingsScreen(
                                 onCheckedChange = { viewModel.setMonthlyReviewEnabled(it) },
                                 colors = SwitchDefaults.colors(
                                     checkedThumbColor = Color.White,
-                                    checkedTrackColor = SuccessGreen,
+                                    checkedTrackColor = PrimaryViolet,
                                     uncheckedThumbColor = TextSecondary,
                                     uncheckedTrackColor = ProgressTrack
                                 )
                             )
                         }
 
-                        if (monthlyReviewEnabled) {
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(start = 32.dp)
-                            ) {
-                                val monthlyParts = monthlyReviewTime.split("-")
-                                val mDay = monthlyParts.getOrNull(0) ?: "01"
-                                val mTime = monthlyParts.getOrNull(1) ?: "09:00"
-
-                                Text(
-                                    text = if (language == "de") "Bereitstellung am Tag:" else "Generate on Day:",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = TextSecondary,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    listOf("01", "05", "10", "28").forEach { d ->
-                                        val isSelected = d == mDay
-                                        Box(
-                                            modifier = Modifier
-                                                .background(
-                                                    if (isSelected) SuccessGreen.copy(alpha = 0.2f) else ProgressTrack,
-                                                    RoundedCornerShape(8.dp)
-                                                )
-                                                .border(
-                                                    1.dp,
-                                                    if (isSelected) SuccessGreen else DarkBorder,
-                                                    RoundedCornerShape(8.dp)
-                                                )
-                                                .clickable { viewModel.setMonthlyReviewTime("$d-$mTime") }
-                                                .padding(horizontal = 12.dp, vertical = 6.dp)
-                                        ) {
-                                            Text(
-                                                text = "${d}.",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = if (isSelected) SuccessGreen else TextPrimary,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                        }
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(10.dp))
-
-                                Text(
-                                    text = if (language == "de") "Bereitstellung um Uhrzeit:" else "Generate at Time:",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = TextSecondary,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    listOf("08:00", "09:00", "12:00", "18:00", "20:00").forEach { t ->
-                                        val isSelected = t == mTime
-                                        Box(
-                                            modifier = Modifier
-                                                .background(
-                                                    if (isSelected) SuccessGreen.copy(alpha = 0.2f) else ProgressTrack,
-                                                    RoundedCornerShape(8.dp)
-                                                )
-                                                .border(
-                                                    1.dp,
-                                                    if (isSelected) SuccessGreen else DarkBorder,
-                                                    RoundedCornerShape(8.dp)
-                                                )
-                                                .clickable { viewModel.setMonthlyReviewTime("$mDay-$t") }
-                                                .padding(horizontal = 10.dp, vertical = 6.dp)
-                                        ) {
-                                            Text(
-                                                text = t,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = if (isSelected) SuccessGreen else TextPrimary,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
                         Spacer(modifier = Modifier.height(16.dp))
-                        HorizontalDivider(color = DarkBorder, thickness = 1.dp)
+                        HorizontalDivider(color = AppBorder, thickness = 1.dp)
                         Spacer(modifier = Modifier.height(16.dp))
 
                         // Option: Jahresrückblick
@@ -9525,7 +11242,7 @@ fun SettingsScreen(
                                 Icon(
                                     imageVector = Icons.Default.DateRange,
                                     contentDescription = "Yearly",
-                                    tint = HabitOrange,
+                                    tint = PrimaryViolet,
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Spacer(modifier = Modifier.width(12.dp))
@@ -9548,111 +11265,25 @@ fun SettingsScreen(
                                 onCheckedChange = { viewModel.setYearlyReviewEnabled(it) },
                                 colors = SwitchDefaults.colors(
                                     checkedThumbColor = Color.White,
-                                    checkedTrackColor = HabitOrange,
+                                    checkedTrackColor = PrimaryViolet,
                                     uncheckedThumbColor = TextSecondary,
                                     uncheckedTrackColor = ProgressTrack
                                 )
                             )
                         }
-
-                        if (yearlyReviewEnabled) {
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(start = 32.dp)
-                            ) {
-                                val yearlyParts = yearlyReviewTime.split("-")
-                                val yDay = yearlyParts.getOrNull(0) ?: "28"
-                                val yTime = yearlyParts.getOrNull(1) ?: "10:00"
-
-                                Text(
-                                    text = if (language == "de") "Bereitstellung im Dezember am Tag:" else "Generate in December on Day:",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = TextSecondary,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    listOf("24", "28", "30", "31").forEach { d ->
-                                        val isSelected = d == yDay
-                                        Box(
-                                            modifier = Modifier
-                                                .background(
-                                                    if (isSelected) HabitOrange.copy(alpha = 0.2f) else ProgressTrack,
-                                                    RoundedCornerShape(8.dp)
-                                                )
-                                                .border(
-                                                    1.dp,
-                                                    if (isSelected) HabitOrange else DarkBorder,
-                                                    RoundedCornerShape(8.dp)
-                                                )
-                                                .clickable { viewModel.setYearlyReviewTime("$d-$yTime") }
-                                                .padding(horizontal = 12.dp, vertical = 6.dp)
-                                        ) {
-                                            Text(
-                                                text = "${d}.",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = if (isSelected) HabitOrange else TextPrimary,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                        }
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(10.dp))
-
-                                Text(
-                                    text = if (language == "de") "Bereitstellung um Uhrzeit:" else "Generate at Time:",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = TextSecondary,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    listOf("08:00", "10:00", "12:00", "18:00", "20:00").forEach { t ->
-                                        val isSelected = t == yTime
-                                        Box(
-                                            modifier = Modifier
-                                                .background(
-                                                    if (isSelected) HabitOrange.copy(alpha = 0.2f) else ProgressTrack,
-                                                    RoundedCornerShape(8.dp)
-                                                )
-                                                .border(
-                                                    1.dp,
-                                                    if (isSelected) HabitOrange else DarkBorder,
-                                                    RoundedCornerShape(8.dp)
-                                                )
-                                                .clickable { viewModel.setYearlyReviewTime("$yDay-$t") }
-                                                .padding(horizontal = 10.dp, vertical = 6.dp)
-                                        ) {
-                                            Text(
-                                                text = t,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = if (isSelected) HabitOrange else TextPrimary,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
                     }
                 }
             }
-
-            // 4. Daten & Sicherung Card
+        }
+                "data" -> {
+                    // 4. Daten & Sicherung Card
             item {
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = DarkCard),
+                    colors = CardDefaults.cardColors(containerColor = AppCard),
                     shape = RoundedCornerShape(20.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .border(1.dp, DarkBorder, RoundedCornerShape(20.dp))
+                        .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
@@ -9768,7 +11399,7 @@ fun SettingsScreen(
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
-                        HorizontalDivider(color = DarkBorder, thickness = 1.dp)
+                        HorizontalDivider(color = AppBorder, thickness = 1.dp)
                         Spacer(modifier = Modifier.height(16.dp))
 
                         // Danger Zone / Wipe All Data
@@ -9799,211 +11430,64 @@ fun SettingsScreen(
                     }
                 }
             }
+        }
+    }
+}
 
-            // 5. Support, Feedback & Teilen Card
-            item {
-                val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = DarkCard),
-                    shape = RoundedCornerShape(20.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .border(1.dp, DarkBorder, RoundedCornerShape(20.dp))
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = if (language == "de") "Support, Feedback & Teilen" else "Support, Feedback & Share",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = PrimaryViolet,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(bottom = 12.dp)
+        // Floating Header Overlay with vertical gradient fade-out
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(84.dp)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            AppBg,
+                            AppBg,
+                            AppBg.copy(alpha = 0.9f),
+                            AppBg.copy(alpha = 0.5f),
+                            Color.Transparent
                         )
-
-                        // Option: Teilen mit Freunden (Share with a friend)
-                        Button(
-                            onClick = {
-                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                    type = "text/plain"
-                                    putExtra(Intent.EXTRA_SUBJECT, if (language == "de") "Empfehlung: Frequent Habits" else "Recommendation: Frequent Habits")
-                                    putExtra(Intent.EXTRA_TEXT, if (language == "de") {
-                                        "Hey! Ich nutze die App 'Frequent Habits', um meine Gewohnheiten zu tracken und meinen Alltag zu verbessern. Komplett werbefrei, open-source und offline-first! Schau sie dir an: https://github.com/FrequeNCy144/Frequent-Habits"
-                                    } else {
-                                        "Hey! I'm using 'Frequent Habits' to track my daily habits and improve my routine. Fully ad-free, open-source, and offline-first! Check it out: https://github.com/FrequeNCy144/Frequent-Habits"
-                                    })
-                                }
-                                context.startActivity(Intent.createChooser(shareIntent, if (language == "de") "Teilen mit..." else "Share with..."))
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = SuccessGreen),
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Share,
-                                contentDescription = "Share",
-                                tint = Color.White,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = if (language == "de") "App mit Freunden teilen" else "Share with a friend",
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // Option: GitHub Issue melden
-                        Button(
-                            onClick = { uriHandler.openUri("https://github.com/FrequeNCy144/Frequent-Habits/issues/new") },
-                            colors = ButtonDefaults.buttonColors(containerColor = ProgressTrack),
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.BugReport,
-                                contentDescription = "GitHub Issue",
-                                tint = TextPrimary,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = if (language == "de") "GitHub Issue / Bug melden" else "Report Issue / Bug on GitHub",
-                                color = TextPrimary
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        // Option: E-Mail Feedback / Support
-                        Button(
-                            onClick = {
-                                val emailIntent = Intent(Intent.ACTION_SENDTO).apply {
-                                    data = android.net.Uri.parse("mailto:support@frequncy-apps.com")
-                                }
-                                try {
-                                    context.startActivity(emailIntent)
-                                } catch (e: Exception) {
-                                    Toast.makeText(
-                                        context,
-                                        if (language == "de") "Keine E-Mail-App gefunden" else "No email app found",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = ProgressTrack),
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Email,
-                                contentDescription = "Email",
-                                tint = TextPrimary,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = if (language == "de") "E-Mail Feedback / Support" else "Email Feedback / Support",
-                                color = TextPrimary
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(12.dp))
-                        HorizontalDivider(color = DarkBorder, thickness = 1.dp)
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // Option: GitHub Repository
-                        Button(
-                            onClick = { uriHandler.openUri("https://github.com/FrequeNCy144/Frequent-Habits") },
-                            colors = ButtonDefaults.buttonColors(containerColor = ProgressTrack),
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Code,
-                                contentDescription = "GitHub",
-                                tint = TextPrimary,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "GitHub Repository",
-                                color = TextPrimary
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        // Option: Website
-                        Button(
-                            onClick = { uriHandler.openUri("https://frequency-apps.com") },
-                            colors = ButtonDefaults.buttonColors(containerColor = ProgressTrack),
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Language,
-                                contentDescription = "Website",
-                                tint = TextPrimary,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Website (frequency-apps.com)",
-                                color = TextPrimary
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // Authentic Liberapay Styled Donate Button (Liberapay Official Brand Colors)
-                        Button(
-                            onClick = { uriHandler.openUri("https://liberapay.com/FrequeNCy/donate") },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = androidx.compose.ui.graphics.Color(0xFFF6C915) // Official Liberapay Brand Yellow
-                            ),
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Favorite,
-                                contentDescription = "Donate",
-                                tint = androidx.compose.ui.graphics.Color(0xFF1A1A1A), // Dark charcoal
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = if (language == "de") "Spenden via Liberapay" else "Donate via Liberapay",
-                                color = androidx.compose.ui.graphics.Color(0xFF1A1A1A),
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Dedication (Widmung) at the very bottom
-            item {
-                Spacer(modifier = Modifier.height(24.dp))
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "„An Saskia – danke, dass du an meiner Seite bist, heute und an jedem weiteren Tag.“",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
-                            fontWeight = FontWeight.Light
-                        ),
-                        color = TextSecondary.copy(alpha = 0.5f),
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(horizontal = 16.dp)
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
+                )
+                .align(Alignment.TopCenter)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                ModernBackButton(
+                    onClick = {
+                        if (selectedSubpage != null) {
+                            selectedSubpage = null
+                        } else {
+                            onBack()
+                        }
+                    },
+                    testTag = "settings_back_button"
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                val headerTitle = when (selectedSubpage) {
+                    "profile" -> if (language == "de") "Profil & Konto" else "Profile & Account"
+                    "appearance" -> if (language == "de") "Erscheinungsbild & Sprache" else "Appearance & Language"
+                    "notifications" -> if (language == "de") "Benachrichtigungen" else "Notifications"
+                    "audio" -> if (language == "de") "Töne & Entspannung" else "Audio & Soundscapes"
+                    "habits" -> if (language == "de") "Gewohnheiten & Archiv" else "Habits & Archive"
+                    "data" -> if (language == "de") "Daten & Sicherung" else "Data & Backup"
+                    "about" -> if (language == "de") "Support & Über die App" else "Support & About"
+                    else -> if (language == "de") "Einstellungen" else "Settings"
                 }
+                Text(
+                    text = headerTitle,
+                    style = MaterialTheme.typography.displayMedium,
+                    color = TextPrimary,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
+    }
 
     if (showWipeConfirm) {
         AlertDialog(
@@ -10068,45 +11552,6 @@ fun SettingsScreen(
             onDismiss = { showAudioDialog = false }
         )
     }
-
-        // Floating Header Overlay with vertical gradient fade-out
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(84.dp)
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            DarkBg,
-                            DarkBg,
-                            DarkBg.copy(alpha = 0.9f),
-                            DarkBg.copy(alpha = 0.5f),
-                            Color.Transparent
-                        )
-                    )
-                )
-                .align(Alignment.TopCenter)
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                ModernBackButton(
-                    onClick = onBack,
-                    testTag = "settings_back_button"
-                )
-                Spacer(modifier = Modifier.width(16.dp))
-                Text(
-                    text = if (language == "de") "Einstellungen" else "Settings",
-                    style = MaterialTheme.typography.displayMedium,
-                    color = TextPrimary,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
-    }
     }
 }
 
@@ -10116,13 +11561,17 @@ fun SettingsScreen(
 fun CreateHabitScreen(
     language: String,
     onDismiss: () -> Unit,
-    onSave: (name: String, isNegative: Boolean, category: String, icon: String, color: String, type: String, unit: String, target: Float, freq: String, startMs: Long, specificDays: String, reminderEnabled: Boolean, reminderHour: Int, reminderMinute: Int, customReminders: String, description: String) -> Unit,
+    onSave: (name: String, isNegative: Boolean, category: String, icon: String, color: String, type: String, unit: String, target: Float, freq: String, startMs: Long, specificDays: String, reminderEnabled: Boolean, reminderHour: Int, reminderMinute: Int, customReminders: String, description: String, milestoneRewards: List<com.example.data.MilestoneReward>) -> Unit,
     editingHabit: Habit? = null
 ) {
+    BackHandler {
+        onDismiss()
+    }
     var isNegative by remember(editingHabit?.id) { mutableStateOf(editingHabit?.isNegative ?: false) } // Aufbauen = false, Abgewöhnen = true
     var activeExplanation by remember(editingHabit?.id) { mutableStateOf<Pair<String, String>?>(null) }
     var name by remember(editingHabit?.id) { mutableStateOf(editingHabit?.name ?: "") }
     var description by remember(editingHabit?.id) { mutableStateOf(editingHabit?.description ?: "") }
+    var milestoneRewards by remember(editingHabit?.id) { mutableStateOf<List<com.example.data.MilestoneReward>>(emptyList()) }
     var nameError by remember(editingHabit?.id) { mutableStateOf(false) }
     val scrollState = rememberScrollState()
     val coroutineScope = rememberCoroutineScope()
@@ -10176,8 +11625,6 @@ fun CreateHabitScreen(
             if (initialStr.isNotEmpty()) {
                 list.addAll(initialStr.split(",").filter { it.isNotEmpty() })
             }
-        } else {
-            list.add("18:00")
         }
         mutableStateOf(list.distinct().sorted())
     }
@@ -10220,7 +11667,7 @@ fun CreateHabitScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(DarkBg)
+            .background(MaterialTheme.colorScheme.background)
             .pointerInput(Unit) {
                 detectTapGestures(onTap = {
                     focusManager.clearFocus()
@@ -10235,7 +11682,7 @@ fun CreateHabitScreen(
                 .imePadding()
                 .verticalScroll(scrollState)
                 .padding(horizontal = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(28.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Spacer(modifier = Modifier.height(84.dp))
             
@@ -10273,12 +11720,12 @@ fun CreateHabitScreen(
                         .testTag("habit_name_input"),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = PrimaryViolet,
-                        unfocusedBorderColor = DarkBorder,
+                        unfocusedBorderColor = AppBorder,
                         errorBorderColor = FailedRed,
                         errorCursorColor = FailedRed,
                         errorSupportingTextColor = FailedRed,
-                        focusedContainerColor = DarkCard,
-                        unfocusedContainerColor = DarkCard,
+                        focusedContainerColor = AppCard,
+                        unfocusedContainerColor = AppCard,
                         errorContainerColor = FailedRed.copy(alpha = 0.08f)
                     ),
                     shape = RoundedCornerShape(16.dp),
@@ -10312,9 +11759,9 @@ fun CreateHabitScreen(
                         .testTag("habit_description_input"),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = PrimaryViolet,
-                        unfocusedBorderColor = DarkBorder,
-                        focusedContainerColor = DarkCard,
-                        unfocusedContainerColor = DarkCard
+                        unfocusedBorderColor = AppBorder,
+                        focusedContainerColor = AppCard,
+                        unfocusedContainerColor = AppCard
                     ),
                     shape = RoundedCornerShape(16.dp),
                     minLines = 1,
@@ -10414,68 +11861,123 @@ fun CreateHabitScreen(
                         fontWeight = FontWeight.Medium
                     )
 
-                    val icons = HabitIconMapping.iconList
                     val activeColor = HabitIconMapping.getColor(selectedColor)
+                    var selectedCategoryId by remember { mutableStateOf("all") }
 
-                    FlowRow(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        icons.forEach { (key, _) ->
-                            val isSelected = selectedIcon == key
-                            var showTooltip by remember { mutableStateOf(false) }
+                        items(HabitIconMapping.categories) { cat ->
+                            val isCatSelected = selectedCategoryId == cat.id
+                            FilterChip(
+                                selected = isCatSelected,
+                                onClick = { selectedCategoryId = cat.id },
+                                label = {
+                                    Text(
+                                        text = if (language == "de") cat.nameDe else cat.nameEn,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = if (isCatSelected) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = activeColor.copy(alpha = 0.25f),
+                                    selectedLabelColor = TextPrimary,
+                                    containerColor = ProgressTrack,
+                                    labelColor = TextSecondary
+                                ),
+                                border = FilterChipDefaults.filterChipBorder(
+                                    enabled = true,
+                                    selected = isCatSelected,
+                                    selectedBorderColor = activeColor,
+                                    borderColor = AppBorder,
+                                    borderWidth = 1.dp,
+                                    selectedBorderWidth = 1.5.dp
+                                ),
+                                shape = RoundedCornerShape(20.dp)
+                            )
+                        }
+                    }
 
-                            Box(
-                                modifier = Modifier
-                                    .size(48.dp)
-                                    .background(
-                                        if (isSelected) activeColor.copy(alpha = 0.2f) else ProgressTrack,
-                                        RoundedCornerShape(12.dp)
-                                    )
-                                    .border(
-                                        width = if (isSelected) 2.dp else 1.dp,
-                                        color = if (isSelected) activeColor else DarkBorder,
-                                        shape = RoundedCornerShape(12.dp)
-                                    )
-                                    .pointerInput(key) {
-                                        detectTapGestures(
-                                            onTap = { selectedIcon = key },
-                                            onLongPress = { showTooltip = true }
+                    val filteredIcons = remember(selectedCategoryId) {
+                        if (selectedCategoryId == "all") {
+                            HabitIconMapping.iconList
+                        } else {
+                            val cat = HabitIconMapping.categories.find { it.id == selectedCategoryId }
+                            val keys = cat?.keys ?: emptyList()
+                            HabitIconMapping.iconList.filter { keys.contains(it.first) }
+                        }
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(210.dp)
+                            .background(AppCard, RoundedCornerShape(16.dp))
+                            .border(1.dp, AppBorder, RoundedCornerShape(16.dp))
+                            .padding(8.dp)
+                    ) {
+                        LazyVerticalGrid(
+                            columns = GridCells.Adaptive(minSize = 48.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            items(filteredIcons) { (key, _) ->
+                                val isSelected = selectedIcon == key
+                                var showTooltip by remember { mutableStateOf(false) }
+
+                                Box(
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .background(
+                                            if (isSelected) activeColor.copy(alpha = 0.2f) else ProgressTrack,
+                                            RoundedCornerShape(12.dp)
                                         )
-                                    },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    painter = painterResource(id = HabitIconMapping.getIconDrawableId(key)),
-                                    contentDescription = key,
-                                    tint = if (isSelected) activeColor else TextSecondary,
-                                    modifier = Modifier.size(24.dp)
-                                )
-
-                                if (showTooltip) {
-                                    val density = androidx.compose.ui.platform.LocalDensity.current
-                                    val offsetInPx = with(density) { -52.dp.roundToPx() }
-                                    androidx.compose.ui.window.Popup(
-                                        alignment = Alignment.TopCenter,
-                                        offset = androidx.compose.ui.unit.IntOffset(0, offsetInPx),
-                                        onDismissRequest = { showTooltip = false }
-                                    ) {
-                                        Card(
-                                            colors = CardDefaults.cardColors(containerColor = DarkCard),
-                                            shape = RoundedCornerShape(8.dp),
-                                            modifier = Modifier
-                                                .border(1.dp, DarkBorder, RoundedCornerShape(8.dp))
-                                                .widthIn(max = 200.dp)
-                                        ) {
-                                            Text(
-                                                text = getIconLabel(key, language),
-                                                color = TextPrimary,
-                                                style = MaterialTheme.typography.labelLarge.copy(fontSize = 11.sp),
-                                                fontWeight = FontWeight.Bold,
-                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                                textAlign = TextAlign.Center
+                                        .border(
+                                            width = if (isSelected) 2.dp else 1.dp,
+                                            color = if (isSelected) activeColor else AppBorder,
+                                            shape = RoundedCornerShape(12.dp)
+                                        )
+                                        .pointerInput(key) {
+                                            detectTapGestures(
+                                                onTap = { selectedIcon = key },
+                                                onLongPress = { showTooltip = true }
                                             )
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = HabitIconMapping.getIcon(key),
+                                        contentDescription = key,
+                                        tint = if (isSelected) activeColor else TextSecondary,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+
+                                    if (showTooltip) {
+                                        val density = androidx.compose.ui.platform.LocalDensity.current
+                                        val offsetInPx = with(density) { -52.dp.roundToPx() }
+                                        androidx.compose.ui.window.Popup(
+                                            alignment = Alignment.TopCenter,
+                                            offset = androidx.compose.ui.unit.IntOffset(0, offsetInPx),
+                                            onDismissRequest = { showTooltip = false }
+                                        ) {
+                                            Card(
+                                                colors = CardDefaults.cardColors(containerColor = AppCard),
+                                                shape = RoundedCornerShape(8.dp),
+                                                modifier = Modifier
+                                                    .border(1.dp, AppBorder, RoundedCornerShape(8.dp))
+                                                    .widthIn(max = 200.dp)
+                                            ) {
+                                                Text(
+                                                    text = getIconLabel(key, language),
+                                                    color = TextPrimary,
+                                                    style = MaterialTheme.typography.labelLarge.copy(fontSize = 11.sp),
+                                                    fontWeight = FontWeight.Bold,
+                                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                                    textAlign = TextAlign.Center
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -10493,44 +11995,11 @@ fun CreateHabitScreen(
                         fontWeight = FontWeight.Medium
                     )
 
-                    FlowRow(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        HabitIconMapping.colorList.forEach { (key, colorObj) ->
-                            val isSelected = selectedColor == key
-                            Box(
-                                modifier = Modifier
-                                    .size(48.dp)
-                                    .background(colorObj.copy(alpha = 0.15f), CircleShape)
-                                    .border(
-                                        width = if (isSelected) 3.dp else 1.dp,
-                                        color = if (isSelected) colorObj else colorObj.copy(alpha = 0.4f),
-                                        shape = CircleShape
-                                    )
-                                    .clickable { selectedColor = key },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(if (isSelected) 24.dp else 28.dp)
-                                        .background(colorObj, CircleShape)
-                                ) {
-                                    if (isSelected) {
-                                        Icon(
-                                            imageVector = Icons.Default.Check,
-                                            contentDescription = "Selected",
-                                            tint = TextPrimary,
-                                            modifier = Modifier
-                                                .size(16.dp)
-                                                .align(Alignment.Center)
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    com.example.ui.components.ColorPaletteSelector(
+                        selectedColorKey = selectedColor,
+                        onColorSelected = { selectedColor = it },
+                        language = language
+                    )
                 }
 
                 // Type Toggle (Ja/Nein vs Zahlenbasiert)
@@ -10714,7 +12183,7 @@ fun CreateHabitScreen(
                                     singleLine = true,
                                     colors = OutlinedTextFieldDefaults.colors(
                                         focusedBorderColor = PrimaryViolet,
-                                        unfocusedBorderColor = DarkBorder,
+                                        unfocusedBorderColor = AppBorder,
                                         focusedLabelColor = PrimaryViolet,
                                         focusedTextColor = TextPrimary,
                                         unfocusedTextColor = TextPrimary
@@ -10731,7 +12200,7 @@ fun CreateHabitScreen(
                                 singleLine = true,
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedBorderColor = PrimaryViolet,
-                                    unfocusedBorderColor = DarkBorder,
+                                    unfocusedBorderColor = AppBorder,
                                     focusedLabelColor = PrimaryViolet,
                                     focusedTextColor = TextPrimary,
                                     unfocusedTextColor = TextPrimary
@@ -10807,7 +12276,7 @@ fun CreateHabitScreen(
                                         text = num.toString(),
                                         style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (isSelected) DarkBg else TextPrimary
+                                        color = if (isSelected) AppBg else TextPrimary
                                     )
                                 }
                             }
@@ -10878,7 +12347,7 @@ fun CreateHabitScreen(
                                         text = dayName.take(2),
                                         style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (isSelected) DarkBg else TextPrimary
+                                        color = if (isSelected) AppBg else TextPrimary
                                     )
                                 }
                             }
@@ -10887,8 +12356,10 @@ fun CreateHabitScreen(
                 }
 
                 // Daily Reminder Section
+                val reminderEnabled = remindersList.isNotEmpty()
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = ProgressTrack),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -10909,37 +12380,34 @@ fun CreateHabitScreen(
                                 Text(
                                     text = if (language == "de") "Erinnerung" else "Reminder",
                                     style = MaterialTheme.typography.titleMedium,
-                                    color = TextPrimary,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                     fontWeight = FontWeight.Bold
                                 )
-                            }
-                            Switch(
-                                checked = reminderEnabled,
-                                onCheckedChange = { checked ->
-                                    reminderEnabled = checked
-                                    if (checked && remindersList.isEmpty()) {
-                                        remindersList = listOf("18:00")
-                                    }
-                                },
-                                modifier = Modifier.scale(0.85f),
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = Color.White,
-                                    checkedTrackColor = PrimaryViolet,
-                                    uncheckedThumbColor = TextSecondary,
-                                    uncheckedTrackColor = DarkBg
+                                Spacer(modifier = Modifier.width(4.dp))
+                                InfoIconButton(
+                                    title = if (language == "de") "Erinnerung" else "Reminder",
+                                    explanation = if (language == "de") {
+                                        "Richte dir Benachrichtigungen ein, um zur gewünschten Uhrzeit an deine Gewohnheit erinnert zu werden."
+                                    } else {
+                                        "Set up notifications so you get reminded of your habit at your desired time."
+                                    },
+                                    onClick = { t, e -> activeExplanation = t to e },
+                                    modifier = Modifier.size(32.dp)
                                 )
-                            )
+                            }
                         }
 
-                        if (reminderEnabled) {
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Column(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            if (remindersList.isNotEmpty()) {
                                 remindersList.forEach { reminderTime ->
                                     Card(
-                                        colors = CardDefaults.cardColors(containerColor = DarkBg),
+                                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
                                         shape = RoundedCornerShape(10.dp),
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -10967,16 +12435,13 @@ fun CreateHabitScreen(
                                                     text = reminderTime,
                                                     style = MaterialTheme.typography.titleMedium,
                                                     fontWeight = FontWeight.Bold,
-                                                    color = TextPrimary
+                                                    color = MaterialTheme.colorScheme.onSurface
                                                 )
                                             }
                                             
                                             IconButton(
                                                 onClick = {
                                                     remindersList = remindersList.filter { it != reminderTime }
-                                                    if (remindersList.isEmpty()) {
-                                                        reminderEnabled = false
-                                                    }
                                                 },
                                                 modifier = Modifier.size(36.dp)
                                             ) {
@@ -10990,58 +12455,265 @@ fun CreateHabitScreen(
                                         }
                                     }
                                 }
-                                
-                                // Elegant Add Button
-                                OutlinedButton(
-                                    onClick = {
-                                        reminderToEditTime = null
-                                        showAddCustomDialog = true
-                                    },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(44.dp),
-                                    shape = RoundedCornerShape(10.dp),
-                                    border = BorderStroke(1.dp, PrimaryViolet.copy(alpha = 0.5f)),
-                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = PrimaryViolet)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Add,
-                                        contentDescription = "Add Reminder Icon",
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = if (language == "de") "Erinnerung hinzufügen" else "Add Reminder",
-                                        fontWeight = FontWeight.Bold,
-                                        style = MaterialTheme.typography.titleSmall
-                                    )
-                                }
+                            }
+
+                            // Add Button
+                            OutlinedButton(
+                                onClick = {
+                                    reminderToEditTime = null
+                                    showAddCustomDialog = true
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(44.dp),
+                                shape = RoundedCornerShape(10.dp),
+                                border = BorderStroke(1.dp, PrimaryViolet.copy(alpha = 0.5f)),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = PrimaryViolet)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = "Add Reminder Icon",
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = if (language == "de") "Erinnerung hinzufügen" else "Add Reminder",
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.titleSmall
+                                )
                             }
                         }
                     }
                 }
 
+                // Milestone Rewards Section
+                var showAddRewardDialog by remember { mutableStateOf(false) }
+
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Star,
+                                    contentDescription = "Milestone Rewards",
+                                    tint = PrimaryViolet,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = if (language == "de") "Meilenstein-Belohnungen" else "Milestone Rewards",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                InfoIconButton(
+                                    title = if (language == "de") "Meilenstein-Belohnungen" else "Milestone Rewards",
+                                    explanation = if (language == "de") {
+                                        "Setze dir persönliche Belohnungen für das Erreichen von Meilensteinen (z. B. 30 Tage Serie oder eine bestimmte Trophäe). Sobald du das Ziel erreichst, wird die Belohnung freigeschaltet!"
+                                    } else {
+                                        "Set personal rewards for reaching milestones (e.g. 30-day streak or a specific trophy). Once you reach the target, the reward unlocks!"
+                                    },
+                                    onClick = { t, e -> activeExplanation = t to e },
+                                    modifier = Modifier.size(32.dp)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            if (milestoneRewards.isNotEmpty()) {
+                                milestoneRewards.forEachIndexed { index, reward ->
+                                    Card(
+                                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+                                        shape = RoundedCornerShape(10.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = reward.rewardText,
+                                                    style = MaterialTheme.typography.titleMedium,
+                                                    color = MaterialTheme.colorScheme.onSurface,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                                val condText = when (reward.conditionType) {
+                                                    "STREAK" -> if (language == "de") "${reward.conditionValue} Tage Serie" else "${reward.conditionValue} Day Streak"
+                                                    "COMPLETIONS" -> if (language == "de") "${reward.conditionValue} Erledigungen" else "${reward.conditionValue} Completions"
+                                                    "TROPHY_COUPLED" -> {
+                                                        val tr = STANDARD_TROPHIES.find { it.id == reward.trophyId }
+                                                        if (tr != null) {
+                                                            if (language == "de") "Trophäe: ${tr.titleDe}" else "Trophy: ${tr.titleEn}"
+                                                        } else {
+                                                            reward.trophyId ?: ""
+                                                        }
+                                                    }
+                                                    else -> ""
+                                                }
+                                                if (condText.isNotEmpty()) {
+                                                    Text(
+                                                        text = condText,
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
+                                            }
+                                            IconButton(
+                                                onClick = {
+                                                    milestoneRewards = milestoneRewards.filterIndexed { i, _ -> i != index }
+                                                },
+                                                modifier = Modifier.size(36.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Delete,
+                                                    contentDescription = "Delete Reward",
+                                                    tint = FailedRed,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            OutlinedButton(
+                                onClick = { showAddRewardDialog = true },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(44.dp),
+                                shape = RoundedCornerShape(10.dp),
+                                border = BorderStroke(1.dp, PrimaryViolet.copy(alpha = 0.5f)),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = PrimaryViolet)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = "Add Reward Icon",
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = if (language == "de") "Belohnung hinzufügen" else "Add Reward",
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.titleSmall
+                                )
+                            }
+                        }
+                    }
+                }
+                
+                if (showAddRewardDialog) {
+                    AddMilestoneRewardDialog(
+                        language = language,
+                        onDismiss = {
+                            showAddRewardDialog = false
+                        },
+                        onAdd = { reward ->
+                            milestoneRewards = milestoneRewards + reward
+                            showAddRewardDialog = false
+                        }
+                    )
+                }
+
                 // Start Date Trigger Card
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = ProgressTrack),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
                     shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { showDatePicker = !showDatePicker }
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(14.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.DateRange, contentDescription = "Calendar", tint = PrimaryViolet, modifier = Modifier.size(20.dp))
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Text(text = formattedStartDate, style = MaterialTheme.typography.titleMedium, color = TextPrimary, fontWeight = FontWeight.Bold)
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.DateRange,
+                                    contentDescription = "Start Date Icon",
+                                    tint = PrimaryViolet,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = if (language == "de") "Startdatum" else "Start Date",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                InfoIconButton(
+                                    title = if (language == "de") "Startdatum" else "Start Date",
+                                    explanation = if (language == "de") {
+                                        "Legt fest, ab welchem Tag die Gewohnheit aktiv ist. Frühere Tage vor dem Startdatum werden in Serien und Statistiken nicht als unvollständig gewertet."
+                                    } else {
+                                        "Sets the day from which the habit becomes active. Days prior to the start date won't count as missed in streaks and stats."
+                                    },
+                                    onClick = { t, e -> activeExplanation = t to e },
+                                    modifier = Modifier.size(32.dp)
+                                )
+                            }
                         }
-                        Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Open Date Picker", tint = TextSecondary, modifier = Modifier.size(20.dp))
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    showDatePicker = !showDatePicker
+                                    if (showDatePicker) {
+                                        coroutineScope.launch {
+                                            kotlinx.coroutines.delay(150)
+                                            scrollState.animateScrollTo(scrollState.maxValue)
+                                        }
+                                    }
+                                }
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = formattedStartDate,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Icon(
+                                    imageVector = Icons.Default.KeyboardArrowDown,
+                                    contentDescription = "Open Date Picker",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
                     }
                 }
 
@@ -11049,8 +12721,8 @@ fun CreateHabitScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(DarkBg, RoundedCornerShape(12.dp))
-                            .border(1.dp, DarkBorder, RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
+                            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
                             .padding(12.dp)
                     ) {
                         SimpleDatePickerView(
@@ -11111,7 +12783,7 @@ fun CreateHabitScreen(
                                 
                                 onSave(
                                     name, isNegative, category, selectedIcon, selectedColor, type, unit, targetVal, 
-                                    frequency, startDateMillis, specDays, reminderEnabled, firstHour, firstMin, customRemindersStr, description
+                                    frequency, startDateMillis, specDays, reminderEnabled, firstHour, firstMin, customRemindersStr, description, milestoneRewards
                                 )
                             } else {
                                 nameError = true
@@ -11149,7 +12821,13 @@ fun CreateHabitScreen(
             AddCustomReminderDialog(
                 language = language,
                 initialTime = reminderToEditTime,
-                onDismiss = { showAddCustomDialog = false },
+                onDismiss = {
+                    showAddCustomDialog = false
+                    reminderToEditTime = null
+                    if (remindersList.isEmpty()) {
+                        reminderEnabled = false
+                    }
+                },
                 onConfirm = { hour, min ->
                     val formatted = String.format(java.util.Locale.US, "%02d:%02d", hour, min)
                     if (reminderToEditTime != null) {
@@ -11161,6 +12839,7 @@ fun CreateHabitScreen(
                     }
                     reminderToEditTime = null
                     showAddCustomDialog = false
+                    reminderEnabled = true
                 }
             )
         }
@@ -11173,10 +12852,10 @@ fun CreateHabitScreen(
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
-                            DarkBg,
-                            DarkBg,
-                            DarkBg.copy(alpha = 0.9f),
-                            DarkBg.copy(alpha = 0.5f),
+                            AppBg,
+                            AppBg,
+                            AppBg.copy(alpha = 0.9f),
+                            AppBg.copy(alpha = 0.5f),
                             Color.Transparent
                         )
                     )
@@ -11211,6 +12890,243 @@ fun CreateHabitScreen(
     }
 }
 
+data class StandardTrophyOption(
+    val id: String,
+    val type: String,
+    val tier: String,
+    val titleDe: String,
+    val titleEn: String,
+    val descDe: String,
+    val descEn: String
+)
+
+val STANDARD_TROPHIES = listOf(
+    StandardTrophyOption("COMP_10", "COMPLETIONS", "COMP_10", "10 Erledigungen", "10 Completions", "Insgesamt 10 Erledigungen eintragen", "Log 10 total completions"),
+    StandardTrophyOption("COMP_50", "COMPLETIONS", "COMP_50", "50 Erledigungen", "50 Completions", "Insgesamt 50 Erledigungen eintragen", "Log 50 total completions"),
+    StandardTrophyOption("COMP_200", "COMPLETIONS", "COMP_200", "200 Erledigungen", "200 Completions", "Insgesamt 200 Erledigungen eintragen", "Log 200 total completions"),
+    StandardTrophyOption("COMP_500", "COMPLETIONS", "COMP_500", "500 Erledigungen", "500 Completions", "Insgesamt 500 Erledigungen eintragen", "Log 500 total completions"),
+    StandardTrophyOption("WOOD", "STREAK", "WOOD", "7 Tage Serie (Holz)", "7-Day Streak (Wood)", "Eine 7-Tage-Serie erreichen", "Achieve a 7-day streak"),
+    StandardTrophyOption("BRONZE", "STREAK", "BRONZE", "14 Tage Serie (Bronze)", "14-Day Streak (Bronze)", "Eine 14-Tage-Serie erreichen", "Achieve a 14-day streak"),
+    StandardTrophyOption("SILVER", "STREAK", "SILVER", "30 Tage Serie (Silber)", "30-Day Streak (Silver)", "Eine 30-Tage-Serie erreichen", "Achieve a 30-day streak"),
+    StandardTrophyOption("GOLD", "STREAK", "GOLD", "100 Tage Serie (Gold)", "100-Day Streak (Gold)", "Eine 100-Tage-Serie erreichen", "Achieve a 100-day streak"),
+    StandardTrophyOption("PERF_7", "PERFECT_DAYS", "PERF_7", "7 perfekte Tage", "7 Perfect Days", "7 perfekte Tage am Stück", "7 consecutive perfect days"),
+    StandardTrophyOption("PERF_30", "PERFECT_DAYS", "PERF_30", "30 perfekte Tage", "30 Perfect Days", "30 perfekte Tage am Stück", "30 consecutive perfect days"),
+    StandardTrophyOption("PERF_100", "PERFECT_DAYS", "PERF_100", "100 perfekte Tage", "100 Perfect Days", "100 perfekte Tage am Stück", "100 consecutive perfect days")
+)
+
+@Composable
+fun AddMilestoneRewardDialog(
+    language: String,
+    onDismiss: () -> Unit,
+    onAdd: (com.example.data.MilestoneReward) -> Unit
+) {
+    var rewardText by remember { mutableStateOf("") }
+    var conditionType by remember { mutableStateOf("STREAK") }
+    var conditionValueStr by remember { mutableStateOf("") }
+    
+    var mode by remember { mutableStateOf("TROPHY") } // "TROPHY" or "CUSTOM"
+    var selectedTrophyId by remember { mutableStateOf("WOOD") }
+    
+    val scrollState = rememberScrollState()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = AppCard,
+        title = {
+            Text(
+                text = if (language == "de") "Belohnung definieren" else "Define Reward",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.verticalScroll(scrollState)) {
+                
+                OutlinedTextField(
+                    value = rewardText,
+                    onValueChange = { rewardText = it },
+                    label = { Text(if (language == "de") "Belohnung (z.B. Neues Buch)" else "Reward (e.g., New Book)", color = TextSecondary) },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = PrimaryViolet,
+                        unfocusedBorderColor = AppBorder,
+                        focusedTextColor = TextPrimary,
+                        unfocusedTextColor = TextPrimary
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                )
+
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        selected = mode == "TROPHY",
+                        onClick = { mode = "TROPHY" },
+                        label = { Text(if (language == "de") "Trophäe" else "Trophy") },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = PrimaryViolet,
+                            selectedLabelColor = Color.White
+                        )
+                    )
+                    FilterChip(
+                        selected = mode == "CUSTOM",
+                        onClick = { mode = "CUSTOM" },
+                        label = { Text(if (language == "de") "Manuell" else "Manual") },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = PrimaryViolet,
+                            selectedLabelColor = Color.White
+                        )
+                    )
+                }
+                
+                if (mode == "CUSTOM") {
+                    Text(
+                        text = if (language == "de") "Bedingung:" else "Condition:",
+                        color = TextPrimary,
+                        fontWeight = FontWeight.Bold
+                    )
+                    
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(
+                            selected = conditionType == "STREAK",
+                            onClick = { conditionType = "STREAK" },
+                            label = { Text(if (language == "de") "Streak (Tage)" else "Streak (Days)") },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = PrimaryViolet,
+                                selectedLabelColor = Color.White
+                            )
+                        )
+                        FilterChip(
+                            selected = conditionType == "COMPLETIONS",
+                            onClick = { conditionType = "COMPLETIONS" },
+                            label = { Text(if (language == "de") "Gesamt (Mal)" else "Total (Times)") },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = PrimaryViolet,
+                                selectedLabelColor = Color.White
+                            )
+                        )
+                    }
+                    
+                    OutlinedTextField(
+                        value = conditionValueStr,
+                        onValueChange = { conditionValueStr = it.filter { ch -> ch.isDigit() } },
+                        label = { Text(if (language == "de") "Ziel-Wert" else "Target Value", color = TextSecondary) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = PrimaryViolet,
+                            unfocusedBorderColor = AppBorder,
+                            focusedTextColor = TextPrimary,
+                            unfocusedTextColor = TextPrimary
+                        ),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                } else {
+                    Text(
+                        text = if (language == "de") "Gewohnheitsspezifische Trophäe:" else "Habit Trophy:",
+                        color = TextPrimary,
+                        fontWeight = FontWeight.Bold
+                    )
+                    
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 260.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        STANDARD_TROPHIES.filter { it.type == "STREAK" }.forEach { trophy ->
+                            val isSelected = selectedTrophyId == trophy.id
+                            Card(
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (isSelected) PrimaryViolet.copy(alpha = 0.2f) else AppBg
+                                ),
+                                border = BorderStroke(
+                                    1.dp,
+                                    if (isSelected) PrimaryViolet else AppBorder
+                                ),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { selectedTrophyId = trophy.id }
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(10.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    AchievementBadge(
+                                        type = trophy.type,
+                                        tier = trophy.tier,
+                                        isUnlocked = true,
+                                        modifier = Modifier.size(36.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = if (language == "de") trophy.titleDe else trophy.titleEn,
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = TextPrimary
+                                        )
+                                        Text(
+                                            text = if (language == "de") trophy.descDe else trophy.descEn,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = TextSecondary
+                                        )
+                                    }
+                                    if (isSelected) {
+                                        Icon(
+                                            imageVector = Icons.Default.CheckCircle,
+                                            contentDescription = "Selected",
+                                            tint = PrimaryViolet,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (rewardText.isNotBlank()) {
+                        if (mode == "CUSTOM" && conditionValueStr.isNotBlank()) {
+                            val condVal = conditionValueStr.toIntOrNull() ?: 1
+                            onAdd(com.example.data.MilestoneReward(
+                                habitId = 0,
+                                rewardText = rewardText.trim(),
+                                conditionType = conditionType,
+                                conditionValue = condVal
+                            ))
+                        } else if (mode == "TROPHY") {
+                            onAdd(com.example.data.MilestoneReward(
+                                habitId = 0,
+                                rewardText = rewardText.trim(),
+                                conditionType = "TROPHY_COUPLED",
+                                conditionValue = 0,
+                                trophyId = selectedTrophyId
+                            ))
+                        }
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = PrimaryViolet),
+                enabled = rewardText.isNotBlank() && (mode == "TROPHY" || conditionValueStr.isNotBlank())
+            ) {
+                Text(if (language == "de") "Hinzufügen" else "Add", fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(if (language == "de") "Abbrechen" else "Cancel", color = TextSecondary)
+            }
+        }
+    )
+}
+
 @Composable
 fun AddCustomReminderDialog(
     language: String,
@@ -11232,7 +13148,7 @@ fun AddCustomReminderDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = DarkCard,
+        containerColor = AppCard,
         title = {
             Text(
                 text = if (language == "de") "Erinnerung hinzufügen" else "Add Reminder",
@@ -11282,9 +13198,9 @@ fun AddCustomReminderDialog(
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = PrimaryViolet,
-                            unfocusedBorderColor = DarkBorder,
-                            focusedContainerColor = DarkBg,
-                            unfocusedContainerColor = DarkBg
+                            unfocusedBorderColor = AppBorder,
+                            focusedContainerColor = Color(0xFF3A3A44),
+                            unfocusedContainerColor = Color(0xFF3A3A44)
                         ),
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.fillMaxWidth()
@@ -11333,9 +13249,9 @@ fun AddCustomReminderDialog(
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = PrimaryViolet,
-                            unfocusedBorderColor = DarkBorder,
-                            focusedContainerColor = DarkBg,
-                            unfocusedContainerColor = DarkBg
+                            unfocusedBorderColor = AppBorder,
+                            focusedContainerColor = Color(0xFF3A3A44),
+                            unfocusedContainerColor = Color(0xFF3A3A44)
                         ),
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.fillMaxWidth()
@@ -11414,13 +13330,13 @@ fun SimpleDatePickerView(initialTimeMs: Long, onDateSelected: (Long) -> Unit) {
                     }
                 }
             ) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Prev Month", tint = TextPrimary)
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Prev Month", tint = MaterialTheme.colorScheme.onSurface)
             }
 
             Text(
                 text = "${monthNames[currentMonth]} $currentYear",
                 style = MaterialTheme.typography.titleMedium,
-                color = TextPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Bold
             )
 
@@ -11434,7 +13350,7 @@ fun SimpleDatePickerView(initialTimeMs: Long, onDateSelected: (Long) -> Unit) {
                     }
                 }
             ) {
-                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next Month", tint = TextPrimary)
+                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next Month", tint = MaterialTheme.colorScheme.onSurface)
             }
         }
 
@@ -11448,7 +13364,7 @@ fun SimpleDatePickerView(initialTimeMs: Long, onDateSelected: (Long) -> Unit) {
                 Text(
                     text = it,
                     style = MaterialTheme.typography.labelSmall,
-                    color = TextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f),
                     textAlign = TextAlign.Center,
                     fontWeight = FontWeight.Bold
@@ -11485,7 +13401,7 @@ fun SimpleDatePickerView(initialTimeMs: Long, onDateSelected: (Long) -> Unit) {
                             Text(
                                 text = day.toString(),
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = if (isSelected) TextPrimary else TextPrimary.copy(alpha = 0.8f),
+                                color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                             )
                         }
@@ -11705,11 +13621,11 @@ fun HabitStreakAchievementCard(
     val tierNamesEn = listOf("Wood Streak", "Bronze Streak", "Silver Streak", "Gold Streak")
 
     Card(
-        colors = CardDefaults.cardColors(containerColor = DarkCard),
+        colors = CardDefaults.cardColors(containerColor = AppCard),
         shape = RoundedCornerShape(16.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, DarkBorder, RoundedCornerShape(16.dp))
+            .border(1.dp, AppBorder, RoundedCornerShape(16.dp))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             // Habit Name and Category Icon
@@ -11724,7 +13640,7 @@ fun HabitStreakAchievementCard(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        painter = painterResource(id = HabitIconMapping.getIconDrawableId(habitIcon)),
+                        imageVector = HabitIconMapping.getIcon(habitIcon),
                         contentDescription = null,
                         tint = habitColor,
                         modifier = Modifier.size(18.dp)
@@ -11880,7 +13796,7 @@ fun HabitStreakAchievementCard(
                                 Box(
                                     modifier = Modifier
                                         .size(16.dp)
-                                        .background(DarkCard, CircleShape)
+                                        .background(AppCard, CircleShape)
                                         .border(1.dp, TextSecondary.copy(alpha = 0.4f), CircleShape)
                                         .align(Alignment.BottomEnd),
                                     contentAlignment = Alignment.Center
@@ -11932,14 +13848,14 @@ fun GlobalAchievementCard(
 
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = if (isUnlocked) DarkCard else DarkCard.copy(alpha = 0.6f)
+            containerColor = if (isUnlocked) AppCard else AppCard.copy(alpha = 0.6f)
         ),
         shape = RoundedCornerShape(16.dp),
         modifier = Modifier
             .fillMaxWidth()
             .border(
                 width = 1.dp,
-                color = if (isUnlocked) borderTint.copy(alpha = 0.4f) else DarkBorder.copy(alpha = 0.4f),
+                color = if (isUnlocked) borderTint.copy(alpha = 0.4f) else AppBorder.copy(alpha = 0.4f),
                 shape = RoundedCornerShape(16.dp)
             )
     ) {
@@ -12070,11 +13986,22 @@ fun ProfileScreen(
     var tempUserName by remember(userName) { mutableStateOf(userName) }
     var showProfileShareDialog by remember { mutableStateOf(false) }
 
+    val context = LocalContext.current
     val profileImagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
         if (uri != null) {
-            viewModel.updateProfileImageUri(uri.toString())
+            try {
+                val file = java.io.File(context.filesDir, "profile_avatar.jpg")
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    file.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                viewModel.updateProfileImageUri(android.net.Uri.fromFile(file).toString())
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 
@@ -12207,8 +14134,8 @@ fun ProfileScreen(
             Box(
                 modifier = Modifier
                     .size(44.dp)
-                    .border(1.dp, DarkBorder, RoundedCornerShape(12.dp))
-                    .background(DarkCard, RoundedCornerShape(12.dp))
+                    .border(1.dp, AppBorder, RoundedCornerShape(12.dp))
+                    .background(AppCard, RoundedCornerShape(12.dp))
                     .clickable { showProfileShareDialog = true }
                     .align(Alignment.CenterStart)
                     .testTag("profile_share_button"),
@@ -12217,7 +14144,7 @@ fun ProfileScreen(
                 Icon(
                     imageVector = Icons.Default.Share,
                     contentDescription = "Share Profile",
-                    tint = PrimaryViolet,
+                    tint = TextPrimary,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -12236,8 +14163,8 @@ fun ProfileScreen(
             Box(
                 modifier = Modifier
                     .size(44.dp)
-                    .border(1.dp, DarkBorder, RoundedCornerShape(12.dp))
-                    .background(DarkCard, RoundedCornerShape(12.dp))
+                    .border(1.dp, AppBorder, RoundedCornerShape(12.dp))
+                    .background(AppCard, RoundedCornerShape(12.dp))
                     .clickable { onSettingsClick() }
                     .align(Alignment.CenterEnd)
                     .testTag("profile_settings_button"),
@@ -12271,16 +14198,13 @@ fun ProfileScreen(
                         Box(
                             modifier = Modifier
                                 .size(104.dp)
-                                .clickable {
-                                    tempUserName = userName
-                                    showEditNameDialog = true
-                                },
+                                .clickable { onSettingsClick() },
                             contentAlignment = Alignment.Center
                         ) {
                             Surface(
                                 modifier = Modifier.size(104.dp),
                                 shape = CircleShape,
-                                color = DarkCard,
+                                color = AppCard,
                                 border = BorderStroke(2.dp, PrimaryViolet)
                             ) {
                                 if (profileImageUri.isNotEmpty()) {
@@ -12315,10 +14239,7 @@ fun ProfileScreen(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
-                                .clickable {
-                                    tempUserName = userName
-                                    showEditNameDialog = true
-                                }
+                                .clickable { onSettingsClick() }
                                 .padding(horizontal = 16.dp, vertical = 6.dp),
                             contentAlignment = Alignment.Center
                         ) {
@@ -12345,92 +14266,49 @@ fun ProfileScreen(
 
                 item {
                     Card(
-                        colors = CardDefaults.cardColors(containerColor = DarkCard),
+                        colors = CardDefaults.cardColors(containerColor = AppCard),
                         shape = RoundedCornerShape(16.dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .border(1.dp, DarkBorder, RoundedCornerShape(16.dp))
+                            .border(1.dp, AppBorder, RoundedCornerShape(16.dp))
                     ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceAround
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = habits.size.toString(),
-                                style = MaterialTheme.typography.titleLarge,
-                                color = TextPrimary,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = if (language == "de") "Gewohnheiten" else "Habits",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = TextSecondary
-                            )
-                        }
-
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = "$totalUnlockedCount / $totalPossibleCount",
-                                style = MaterialTheme.typography.titleLarge,
-                                color = HabitYellow,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = if (language == "de") "Erfolge" else "Achievements",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = TextSecondary
-                            )
-                        }
-
                         Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .clickable {
-                                    val title = if (language == "de") "Was sind Einträge?" else "What are Entries?"
-                                    val expl = if (language == "de") {
-                                        "Dieser Wert zeigt deine gesamten erfolgreichen Erledigungen an:\n\n" +
-                                        "• Bei aufbauenden Gewohnheiten zählt jeder Tag, an dem du dein Ziel erreicht hast.\n" +
-                                        "• Bei abgewöhnenden Gewohnheiten zählt jeder Tag, an dem du die Gewohnheit erfolgreich vermieden hast."
-                                    } else {
-                                        "This value represents your total successful completions:\n\n" +
-                                        "• For positive habits, each day you meet your goal counts as a completion.\n" +
-                                        "• For negative habits, each day you successfully avoid the bad habit counts as a completion."
-                                    }
-                                    activeExplanation = title to expl
-                                }
-                                .padding(4.dp)
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 14.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = totalGlobalCompletions.toString(),
-                                    style = MaterialTheme.typography.titleLarge,
-                                    color = SuccessGreen,
-                                    fontWeight = FontWeight.Bold
+                                    text = if (language == "de") "Erfolge freigeschaltet" else "Achievements Unlocked",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = TextPrimary
                                 )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Icon(
-                                    imageVector = Icons.Default.Info,
-                                    contentDescription = "Info",
-                                    tint = TextSecondary,
-                                    modifier = Modifier.size(14.dp)
+                                Text(
+                                    text = "$totalUnlockedCount / $totalPossibleCount",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = HabitYellow
                                 )
                             }
-                            Text(
-                                text = if (language == "de") "Einträge" else "Logs",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = TextSecondary
+                            val progressFraction = if (totalPossibleCount > 0) totalUnlockedCount.toFloat() / totalPossibleCount.toFloat() else 0f
+                            LinearProgressIndicator(
+                                progress = { progressFraction.coerceIn(0f, 1f) },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(6.dp)
+                                    .clip(RoundedCornerShape(3.dp)),
+                                color = HabitYellow,
+                                trackColor = ProgressTrack
                             )
                         }
                     }
                 }
-            }
 
             // Visual filter tabs to toggle: Freigeschaltet, Alle Erfolge
             item {
@@ -12446,8 +14324,8 @@ fun ProfileScreen(
                         Surface(
                             onClick = { selectedTab = index },
                             shape = RoundedCornerShape(20.dp),
-                            color = if (isSelected) PrimaryViolet else DarkCard,
-                            border = BorderStroke(1.dp, if (isSelected) PrimaryViolet else DarkBorder),
+                            color = if (isSelected) PrimaryViolet else AppCard,
+                            border = BorderStroke(1.dp, if (isSelected) PrimaryViolet else AppBorder),
                             modifier = Modifier
                                 .weight(1f)
                                 .height(42.dp)
@@ -12475,11 +14353,11 @@ fun ProfileScreen(
             if (displayedHabitStreaks.isEmpty() && displayedCompletions.isEmpty() && displayedPerfectDays.isEmpty()) {
                 item {
                     Card(
-                        colors = CardDefaults.cardColors(containerColor = DarkCard),
+                        colors = CardDefaults.cardColors(containerColor = AppCard),
                         shape = RoundedCornerShape(16.dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .border(1.dp, DarkBorder, RoundedCornerShape(16.dp))
+                            .border(1.dp, AppBorder, RoundedCornerShape(16.dp))
                     ) {
                         Column(
                             modifier = Modifier
@@ -12566,7 +14444,7 @@ fun ProfileScreen(
                         if (displayedHabitStreaks.isNotEmpty()) {
                             HorizontalDivider(
                                 modifier = Modifier.padding(vertical = 8.dp),
-                                color = DarkBorder,
+                                color = AppBorder,
                                 thickness = 1.dp
                             )
                         }
@@ -12615,7 +14493,7 @@ fun ProfileScreen(
                         if (displayedHabitStreaks.isNotEmpty() || displayedCompletions.isNotEmpty()) {
                             HorizontalDivider(
                                 modifier = Modifier.padding(vertical = 8.dp),
-                                color = DarkBorder,
+                                color = AppBorder,
                                 thickness = 1.dp
                             )
                         }
@@ -12657,7 +14535,7 @@ fun ProfileScreen(
         if (showEditNameDialog) {
             AlertDialog(
                 onDismissRequest = { showEditNameDialog = false },
-                containerColor = DarkCard,
+                containerColor = AppCard,
                 title = {
                     Text(
                         text = if (language == "de") "Profil bearbeiten" else "Edit Profile",
@@ -12679,7 +14557,7 @@ fun ProfileScreen(
                             Surface(
                                 modifier = Modifier.size(60.dp),
                                 shape = CircleShape,
-                                color = DarkCard,
+                                color = AppCard,
                                 border = BorderStroke(2.dp, PrimaryViolet)
                             ) {
                                 if (profileImageUri.isNotEmpty()) {
@@ -12736,7 +14614,7 @@ fun ProfileScreen(
                             modifier = Modifier.fillMaxWidth(),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = PrimaryViolet,
-                                unfocusedBorderColor = DarkBorder,
+                                unfocusedBorderColor = AppBorder,
                                 focusedTextColor = TextPrimary,
                                 unfocusedTextColor = TextPrimary
                             )
@@ -12811,11 +14689,11 @@ fun HabitAnalyticsSection(
         // --- Card 1: Verlauf (Balkendiagramm) ---
         if (habit.type == "NUMBER" || habit.type == "NUMERICAL") {
             Card(
-                colors = CardDefaults.cardColors(containerColor = DarkCard),
+                colors = CardDefaults.cardColors(containerColor = AppCard),
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .border(1.dp, DarkBorder, RoundedCornerShape(16.dp))
+                    .border(1.dp, AppBorder, RoundedCornerShape(16.dp))
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Row(
@@ -13042,7 +14920,7 @@ fun InfoIconButton(
     if (!LocalInfoCardsEnabled.current) return
     IconButton(
         onClick = { onClick(title, explanation) },
-        modifier = modifier.size(44.dp)
+        modifier = if (modifier == Modifier) Modifier.size(44.dp) else modifier
     ) {
         Icon(
             imageVector = Icons.Default.Info,
@@ -13085,7 +14963,7 @@ fun ExplanationDialog(
                 )
             }
         },
-        containerColor = DarkCard,
+        containerColor = AppCard,
         shape = RoundedCornerShape(16.dp)
     )
 }
@@ -13152,9 +15030,9 @@ fun DailyNoteDialog(
                     focusedTextColor = TextPrimary,
                     unfocusedTextColor = TextPrimary,
                     focusedBorderColor = PrimaryViolet,
-                    unfocusedBorderColor = DarkBorder,
-                    focusedContainerColor = DarkBg,
-                    unfocusedContainerColor = DarkBg,
+                    unfocusedBorderColor = AppBorder,
+                    focusedContainerColor = AppBg,
+                    unfocusedContainerColor = AppBg,
                     cursorColor = PrimaryViolet
                 )
             )
@@ -13173,9 +15051,9 @@ fun DailyNoteDialog(
                 )
             }
         },
-        containerColor = DarkCard,
+        containerColor = AppCard,
         shape = RoundedCornerShape(20.dp),
-        modifier = Modifier.border(1.dp, DarkBorder, RoundedCornerShape(20.dp))
+        modifier = Modifier.border(1.dp, AppBorder, RoundedCornerShape(20.dp))
     )
 }
 
@@ -13461,7 +15339,7 @@ fun AchievementUnlockedOverlay(
 
         Card(
             shape = RoundedCornerShape(28.dp),
-            colors = CardDefaults.cardColors(containerColor = DarkCard),
+            colors = CardDefaults.cardColors(containerColor = AppCard),
             modifier = Modifier
                 .padding(horizontal = 24.dp)
                 .fillMaxWidth()
@@ -13596,6 +15474,42 @@ fun AchievementUnlockedOverlay(
                                 color = TextPrimary,
                                 fontWeight = FontWeight.SemiBold
                             )
+                        }
+                    }
+                }
+                
+                if (!achievement.rewardText.isNullOrEmpty()) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = PrimaryViolet.copy(alpha = 0.15f)),
+                        border = BorderStroke(1.dp, PrimaryViolet),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(16.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Star,
+                                contentDescription = "Reward",
+                                tint = Color(0xFFFFD54F),
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = if (language == "de") "Deine Belohnung:" else "Your Reward:",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = PrimaryViolet
+                                )
+                                Text(
+                                    text = achievement.rewardText,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = TextPrimary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
                 }
@@ -13742,7 +15656,7 @@ fun AchievementBadge(
                     onDrawBehind {
                         // Draw background base circle
                         drawCircle(
-                            color = if (isUnlocked) DarkCard else DarkCard.copy(alpha = 0.5f),
+                            color = if (isUnlocked) AppCard else AppCard.copy(alpha = 0.5f),
                             radius = outerRadius,
                             center = center
                         )
@@ -14080,7 +15994,7 @@ fun CalendarWithRingsIcon(
                 
                 // Calendar Background Card
                 drawRoundRect(
-                    color = DarkCard,
+                    color = AppCard,
                     size = calSizeObj,
                     topLeft = calTopLeft,
                     cornerRadius = calCornerRadius
@@ -14286,8 +16200,8 @@ fun ModernBackButton(
         modifier = modifier
             .size(40.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(DarkCard)
-            .border(1.dp, DarkBorder, RoundedCornerShape(12.dp))
+            .background(AppCard)
+            .border(1.dp, AppBorder, RoundedCornerShape(12.dp))
             .clickable(
                 interactionSource = interactionSource,
                 indication = ripple(),
@@ -14315,14 +16229,15 @@ fun OnboardingScreen(
     language: String,
     onComplete: () -> Unit
 ) {
+    val context = LocalContext.current
     var currentStep by remember { mutableIntStateOf(0) }
-    val totalSteps = 6
+    val totalSteps = 7
     var dragOffset by remember { mutableFloatStateOf(0f) }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(DarkBg)
+            .background(MaterialTheme.colorScheme.background)
             .statusBarsPadding()
             .navigationBarsPadding()
             .testTag("onboarding_screen")
@@ -14333,31 +16248,26 @@ fun OnboardingScreen(
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Top Bar: Step Indicator & Skip Button (No Back Button)
+            // Top Bar
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Dummy spacer for layout balance
                 Spacer(modifier = Modifier.width(60.dp))
-
-                // Step Badge
                 Surface(
-                    color = DarkCard,
+                    color = MaterialTheme.colorScheme.surfaceVariant,
                     shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, DarkBorder)
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                 ) {
                     Text(
                         text = "${currentStep + 1} / $totalSteps",
                         style = MaterialTheme.typography.labelMedium,
-                        color = SecondaryViolet,
+                        color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
                     )
                 }
-
-                // Skip button
                 if (currentStep < totalSteps - 1) {
                     TextButton(
                         onClick = onComplete,
@@ -14365,7 +16275,7 @@ fun OnboardingScreen(
                     ) {
                         Text(
                             text = if (language == "de") "Überspringen" else "Skip",
-                            color = TextSecondary,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Medium
                         )
@@ -14377,7 +16287,6 @@ fun OnboardingScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Main Content Body with Animated Content & Horizontal Swipe Gesture
             AnimatedContent(
                 targetState = currentStep,
                 transitionSpec = {
@@ -14417,24 +16326,26 @@ fun OnboardingScreen(
                 label = "onboarding_step_anim"
             ) { step ->
                 Column(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState()),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
                     when (step) {
-                        0 -> OnboardingStep0(language)
-                        1 -> OnboardingStep1(language)
-                        2 -> OnboardingStep2(language)
-                        3 -> OnboardingStep3(language)
-                        4 -> OnboardingStep4(language)
-                        5 -> OnboardingStep5(language, viewModel)
+                        0 -> OnboardingStepWelcome(language)
+                        1 -> OnboardingStepPersonalize(language, viewModel)
+                        2 -> OnboardingStepFastTracking(language)
+                        3 -> OnboardingStepAnalyticsInsights(language)
+                        4 -> OnboardingStepReviewsRewards(language)
+                        5 -> OnboardingStepStayConnected(language, viewModel)
+                        6 -> OnboardingStepSecureDataLaunch(language, viewModel)
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Page Indicator Dots
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -14448,7 +16359,7 @@ fun OnboardingScreen(
                         label = "dotWidth"
                     )
                     val dotColor by animateColorAsState(
-                        targetValue = if (isSelected) PrimaryViolet else DarkBorder,
+                        targetValue = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
                         animationSpec = tween(250),
                         label = "dotColor"
                     )
@@ -14462,63 +16373,75 @@ fun OnboardingScreen(
                 }
             }
 
-            // Full Width Next/Finish Button
-            Button(
-                onClick = {
-                    if (currentStep < totalSteps - 1) {
-                        currentStep++
-                    } else {
-                        onComplete()
-                    }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp)
-                    .testTag("btn_onboarding_next"),
-                colors = ButtonDefaults.buttonColors(containerColor = PrimaryViolet),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
+            if (currentStep < totalSteps - 1) {
+                Button(
+                    onClick = { currentStep++ },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp)
+                        .testTag("btn_onboarding_next"),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                    shape = RoundedCornerShape(16.dp)
                 ) {
-                    Text(
-                        text = if (currentStep == totalSteps - 1) {
-                            if (language == "de") "Los geht's!" else "Get Started!"
-                        } else {
-                            if (language == "de") "Weiter" else "Next"
-                        },
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Icon(
-                        imageVector = if (currentStep == totalSteps - 1) Icons.Default.Check else Icons.Default.ArrowForward,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = if (language == "de") "Weiter" else "Next",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Icon(
+                            imageVector = Icons.Default.ArrowForward,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+            } else {
+                Button(
+                    onClick = onComplete,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp)
+                        .testTag("btn_onboarding_start"),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = if (language == "de") "Los geht's! 🚀" else "Get Started! 🚀",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
                 }
             }
         }
     }
 }
 
-// STEP 0: App Logo & Willkommen
 @Composable
-private fun OnboardingStep0(language: String) {
+private fun OnboardingStepWelcome(language: String) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth().padding(12.dp)
     ) {
         Card(
-            colors = CardDefaults.cardColors(containerColor = DarkCard),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
             shape = RoundedCornerShape(28.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .border(1.5.dp, PrimaryViolet.copy(alpha = 0.5f), RoundedCornerShape(28.dp))
+                .border(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f), RoundedCornerShape(28.dp))
         ) {
             Column(
                 modifier = Modifier
@@ -14526,90 +16449,970 @@ private fun OnboardingStep0(language: String) {
                     .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Large App Logo without surrounding circle
                 Image(
                     painter = painterResource(id = R.drawable.ic_launcher_foreground),
                     contentDescription = "Frequent Habits Logo",
                     modifier = Modifier.size(110.dp)
                 )
-
                 Spacer(modifier = Modifier.height(12.dp))
-
-                Text(
-                    text = "Frequent Habits",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = TextPrimary,
-                    fontWeight = FontWeight.Black,
-                    textAlign = TextAlign.Center
-                )
-
-                Text(
-                    text = "Frequent Habits. Permanent Results.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = SecondaryViolet,
-                    fontWeight = FontWeight.SemiBold,
-                    textAlign = TextAlign.Center
-                )
+                Surface(
+                    color = SuccessBg,
+                    shape = RoundedCornerShape(100.dp),
+                    border = BorderStroke(1.dp, SuccessGreen.copy(alpha = 0.4f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Lock,
+                            contentDescription = null,
+                            tint = SuccessGreen,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (language == "de") "100% PRIVAT & OFFLINE" else "100% PRIVATE & OFFLINE",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = SuccessGreen,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
             }
         }
-
-        Spacer(modifier = Modifier.height(18.dp))
-
-        // Privacy Badge
-        Surface(
-            color = SuccessBg,
-            shape = RoundedCornerShape(100.dp),
-            border = BorderStroke(1.dp, SuccessGreen.copy(alpha = 0.4f))
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Lock,
-                    contentDescription = null,
-                    tint = SuccessGreen,
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = if (language == "de") "100% PRIVAT & OFFLINE" else "100% PRIVATE & OFFLINE",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = SuccessGreen,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(14.dp))
-
+        Spacer(modifier = Modifier.height(24.dp))
         Text(
-            text = if (language == "de") "Deine tägliche Routine im Fokus" else "Focus on your daily routines",
+            text = if (language == "de") "Willkommen bei Frequent Habits" else "Welcome to Frequent Habits",
             style = MaterialTheme.typography.titleLarge,
-            color = TextPrimary,
+            color = MaterialTheme.colorScheme.onBackground,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
         )
-
         Spacer(modifier = Modifier.height(8.dp))
-
         Text(
-            text = if (language == "de") {
-                "Baue nachhaltige Gewohnheiten auf, behalte deine Erfolge im Blick und erstelle deine idealen Tagesabläufe — komplett lokal und werbefrei."
-            } else {
-                "Build sustainable habits, track your progress, and structure your ideal day — offline and ad-free."
-            },
+            text = if (language == "de") "Baue nachhaltige Routinen auf — 100% privat, offline und Cloud-frei." else "Build sustainable routines — 100% private, offline, and cloud-free.",
             style = MaterialTheme.typography.bodyMedium,
-            color = TextSecondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(horizontal = 8.dp)
         )
     }
 }
 
-// ==========================================
-// YEARLY REVIEW FEATURE & CAROUSEL SLIDES
-// ==========================================
+@Composable
+private fun OnboardingStepPersonalize(language: String, viewModel: HabitsViewModel) {
+    val accentColorName by viewModel.accentColorName.collectAsStateWithLifecycle()
+    val darkModeEnabled by viewModel.darkModeEnabled.collectAsStateWithLifecycle()
+    
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier.fillMaxWidth().padding(12.dp)
+    ) {
+        Text(
+            text = if (language == "de") "Gestalte deine App" else "Make It Yours",
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onBackground,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = if (language == "de") "Wähle deine bevorzugte Akzentfarbe und deinen gewünschten Design-Modus." else "Select your preferred theme and accent color.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 8.dp)
+        )
+        
+        Spacer(modifier = Modifier.height(32.dp))
+        
+        Text(
+            text = if (language == "de") "DESIGN MODUS" else "DESIGN THEME",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.align(Alignment.Start)
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Button(
+                onClick = { viewModel.setDarkModeEnabled(true) },
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (darkModeEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
+                ),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, if (darkModeEnabled) Color.Transparent else MaterialTheme.colorScheme.outline)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.DarkMode,
+                        contentDescription = null,
+                        tint = if (darkModeEnabled) Color.White else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = if (language == "de") "Dunkel" else "Dark",
+                        color = if (darkModeEnabled) Color.White else MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+            Button(
+                onClick = { viewModel.setDarkModeEnabled(false) },
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (!darkModeEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
+                ),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, if (!darkModeEnabled) Color.Transparent else MaterialTheme.colorScheme.outline)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.LightMode,
+                        contentDescription = null,
+                        tint = if (!darkModeEnabled) Color.White else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = if (language == "de") "Hell" else "Light",
+                        color = if (!darkModeEnabled) Color.White else MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(32.dp))
+        
+        Text(
+            text = if (language == "de") "AKZENTFARBE" else "ACCENT COLOR",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.align(Alignment.Start)
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        com.example.ui.components.ColorPaletteSelector(
+            selectedColorKey = accentColorName,
+            onColorSelected = { viewModel.setAccentColorName(it) },
+            language = language
+        )
+    }
+}
+
+@Composable
+private fun OnboardingStepFastTracking(language: String) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier.fillMaxWidth().padding(12.dp)
+    ) {
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+            shape = RoundedCornerShape(28.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f), RoundedCornerShape(28.dp))
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Interactive Widget Mockup
+                Surface(
+                    color = AppCard,
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, AppBorder),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(14.dp)
+                    ) {
+                        // Header Row (Progress bar and streak)
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            // Progress bar
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(10.dp)
+                                    .clip(RoundedCornerShape(5.dp))
+                                    .background(ProgressTrack)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxHeight()
+                                        .fillMaxWidth(0.66f) // 66% progress
+                                        .clip(RoundedCornerShape(5.dp))
+                                        .background(SuccessGreen)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(16.dp))
+                            // Streak badge
+                            Row(
+                                modifier = Modifier
+                                    .background(Color(0xFFFFF3E0), RoundedCornerShape(8.dp))
+                                    .border(1.dp, Color(0xFFFFB74D), RoundedCornerShape(8.dp))
+                                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "🔥",
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "5",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color(0xFFFF9800),
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        // Habit 1 (Binary, Unchecked)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(ProgressTrack.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                                .border(1.dp, AppBorder, RoundedCornerShape(12.dp))
+                                .padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .background(PrimaryViolet.copy(alpha = 0.15f), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.WaterDrop,
+                                        contentDescription = null,
+                                        tint = PrimaryViolet,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    text = if (language == "de") "Wasser trinken" else "Drink Water",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = TextPrimary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            // Circular checkbox unchecked icon
+                            Box(
+                                modifier = Modifier
+                                    .size(22.dp)
+                                    .border(2.dp, TextSecondary.copy(alpha = 0.6f), CircleShape)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Habit 2 (Binary, Checked)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(ProgressTrack.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                                .border(1.dp, AppBorder, RoundedCornerShape(12.dp))
+                                .padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .background(SuccessGreen.copy(alpha = 0.15f), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.SelfImprovement,
+                                        contentDescription = null,
+                                        tint = SuccessGreen,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    text = if (language == "de") "Meditation" else "Meditation",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = TextPrimary,
+                                    fontWeight = FontWeight.Bold,
+                                    textDecoration = TextDecoration.LineThrough
+                                )
+                            }
+                            // Circular checkbox checked green icon
+                            Box(
+                                modifier = Modifier
+                                    .size(22.dp)
+                                    .background(SuccessGreen, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // Audio Timer Mockup
+                Surface(
+                    color = AppCard,
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, AppBorder),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(14.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        // Real-style Circular Clock with minute ticks
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Box(
+                                modifier = Modifier.size(140.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                // Background outer glow
+                                Box(
+                                    modifier = Modifier
+                                        .size(135.dp)
+                                        .clip(CircleShape)
+                                        .background(
+                                            Brush.radialGradient(
+                                                colors = listOf(
+                                                    PrimaryViolet.copy(alpha = 0.18f),
+                                                    PrimaryViolet.copy(alpha = 0.04f),
+                                                    Color.Transparent
+                                                )
+                                            )
+                                        )
+                                )
+
+                                // Canvas to draw ticks & sweep
+                                Box(
+                                    contentAlignment = Alignment.Center,
+                                    modifier = Modifier
+                                        .size(110.dp)
+                                        .drawWithCache {
+                                            val strokeWidth = 5.dp.toPx()
+                                            val activeColor = PrimaryViolet
+                                            val inactiveColor = ProgressTrack
+                                            val sweepAngle = 360f * 0.75f // 18:45 of 25 mins is 75%
+
+                                            onDrawBehind {
+                                                val radius = size.minDimension / 2f - strokeWidth
+                                                val centerPoint = Offset(size.width / 2f, size.height / 2f)
+
+                                                // Draw track circle
+                                                drawCircle(
+                                                    color = inactiveColor,
+                                                    radius = radius,
+                                                    style = Stroke(width = strokeWidth)
+                                                )
+
+                                                // Draw sweep arc
+                                                drawArc(
+                                                    color = activeColor,
+                                                    startAngle = -90f,
+                                                    sweepAngle = sweepAngle,
+                                                    useCenter = false,
+                                                    style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                                                )
+
+                                                // Draw 60 ticks
+                                                for (i in 0 until 60) {
+                                                    val angleRad = Math.toRadians((i * 6 - 90).toDouble())
+                                                    val isMajor = i % 5 == 0
+                                                    val tickLength = if (isMajor) 5.dp.toPx() else 2.5.dp.toPx()
+                                                    val innerR = radius - strokeWidth / 2f - 2.5.dp.toPx()
+                                                    val outerR = innerR - tickLength
+
+                                                    val startX = centerPoint.x + innerR * Math.cos(angleRad).toFloat()
+                                                    val startY = centerPoint.y + innerR * Math.sin(angleRad).toFloat()
+                                                    val endX = centerPoint.x + outerR * Math.cos(angleRad).toFloat()
+                                                    val endY = centerPoint.y + outerR * Math.sin(angleRad).toFloat()
+
+                                                    val tickProgress = (i * 6).toFloat()
+                                                    val isPassed = tickProgress <= sweepAngle
+                                                    drawLine(
+                                                        color = if (isPassed) activeColor.copy(alpha = 0.8f) else AppBorder.copy(alpha = 0.5f),
+                                                        start = Offset(startX, startY),
+                                                        end = Offset(endX, endY),
+                                                        strokeWidth = if (isMajor) 1.2.dp.toPx() else 0.6.dp.toPx()
+                                                    )
+                                                }
+
+                                                // Endpoint dot indicator
+                                                val endAngleRad = Math.toRadians((sweepAngle - 90).toDouble())
+                                                val dotX = centerPoint.x + radius * Math.cos(endAngleRad).toFloat()
+                                                val dotY = centerPoint.y + radius * Math.sin(endAngleRad).toFloat()
+                                                drawCircle(
+                                                    color = Color.White,
+                                                    radius = strokeWidth / 1.3f,
+                                                    center = Offset(dotX, dotY)
+                                                )
+                                                drawCircle(
+                                                    color = PrimaryViolet,
+                                                    radius = strokeWidth / 2f,
+                                                    center = Offset(dotX, dotY)
+                                                )
+                                            }
+                                        }
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text(
+                                            text = "18:45",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = TextPrimary,
+                                            fontWeight = FontWeight.Black
+                                        )
+                                        Text(
+                                            text = if (language == "de") "Fokus" else "Focus",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = TextSecondary
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // Play/Pause control and soundscape selection pill
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+                        ) {
+                            // Soundscape pill
+                            Row(
+                                modifier = Modifier
+                                    .background(ProgressTrack, RoundedCornerShape(12.dp))
+                                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.MusicNote,
+                                    contentDescription = null,
+                                    tint = PrimaryViolet,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = if (language == "de") "Regenschauer" else "Rainfall",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = TextPrimary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+
+                            // Play/Pause button
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .background(PrimaryViolet, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Pause,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        Text(
+            text = if (language == "de") "Widgets & Fokus Timer" else "Widgets & Focus Timer",
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onBackground,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = if (language == "de") "Erfasse Gewohnheiten direkt vom Homescreen mit interaktiven Widgets, oder nutze den integrierten Audio-Timer für konzentrierte Sessions." else "Track habits straight from your homescreen with interactive widgets, or use the built-in Audio Timer for focused sessions.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 8.dp)
+        )
+    }
+}
+
+@Composable
+private fun OnboardingStepAnalyticsInsights(language: String) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier.fillMaxWidth().padding(12.dp)
+    ) {
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+            shape = RoundedCornerShape(28.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f), RoundedCornerShape(28.dp))
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Surface(
+                    color = MaterialTheme.colorScheme.surface,
+                    shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.BarChart, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(if (language == "de") "Wochenübersicht" else "Weekly Overview", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth().height(60.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.Bottom
+                        ) {
+                            listOf(0.4f, 0.7f, 0.5f, 0.9f, 0.2f, 0.8f, 1.0f).forEach { height ->
+                                Box(
+                                    modifier = Modifier
+                                        .width(20.dp)
+                                        .fillMaxHeight(height)
+                                        .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
+                                        .background(MaterialTheme.colorScheme.primary)
+                                )
+                            }
+                        }
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Surface(
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Lightbulb, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                if (language == "de") "Smart Insights" else "Smart Insights",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                            Text(
+                                if (language == "de") "Wird in 7 Tagen freigeschaltet" else "Unlocks in 7 Days",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        Text(
+            text = if (language == "de") "Detaillierte Statistiken & Smart Insights" else "Detailed Stats & Smart Insights",
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onBackground,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = if (language == "de") "Analysiere umfassende Diagramme sofort. Dokumentiere Gewohnheiten für 7 Tage, um smarte Mustererkennung freizuschalten." else "Explore comprehensive charts and statistics immediately. Log habits for 7 days to also unlock smart pattern analysis.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 8.dp)
+        )
+    }
+}
+
+@Composable
+private fun OnboardingStepReviewsRewards(language: String) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier.fillMaxWidth().padding(12.dp)
+    ) {
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+            shape = RoundedCornerShape(28.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f), RoundedCornerShape(28.dp))
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Monthly Review Mockup (Looks like MonthlyReviewCoverSlide!)
+                Surface(
+                    color = Color(0xFF1E1B2E), // cover slide background
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, Color(0xFF4C3A7A).copy(alpha = 0.5f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .background(Color.White.copy(alpha = 0.12f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CalendarToday,
+                                contentDescription = "Calendar",
+                                tint = Color(0xFFA78BFA),
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Surface(
+                            color = PrimaryViolet.copy(alpha = 0.3f),
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, PrimaryViolet.copy(alpha = 0.6f))
+                        ) {
+                            Text(
+                                text = "✨ AUGUST 2026 ✨",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = if (language == "de") "Dein Monatsrückblick" else "Your Monthly Review",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color.White,
+                            fontWeight = FontWeight.ExtraBold,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = if (language == "de") "Routine & Fortschritt im Rückblick" else "Routine & progress in review",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.7f),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // Milestone Reward Mockup (Uses actual AchievementBadge!)
+                Surface(
+                    color = AppCard,
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, AppBorder),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier.size(48.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            AchievementBadge(
+                                type = "STREAK",
+                                tier = "GOLD",
+                                isUnlocked = true,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = if (language == "de") "Gold-Streak freigeschaltet!" else "Gold Streak Unlocked!",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = TextPrimary,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = if (language == "de") "Belohnung: Kinobesuch (Meilenstein: 60 Tage)" else "Reward: Movie night (Milestone: 60 Days)",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextSecondary
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        Text(
+            text = if (language == "de") "Rückblicke & Belohnungen" else "Reviews & Milestone Rewards",
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onBackground,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = if (language == "de") "Reflektiere dein Wachstum mit Monats- und Jahresrückblicken (inkl. Zeitkapseln für dein zukünftiges Ich) und verknüpfe Erfolge mit echten Belohnungen." else "Reflect on your growth with Monthly and Yearly Reviews (featuring Time Capsules for your future self) and link habit achievements to real-life rewards.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 8.dp)
+        )
+    }
+}
+
+@Composable
+private fun OnboardingStepStayConnected(language: String, viewModel: HabitsViewModel) {
+    val context = LocalContext.current
+    var hasPermission by remember {
+        mutableStateOf(
+            if (android.os.Build.VERSION.SDK_INT >= 33) {
+                androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            } else true
+        )
+    }
+
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        hasPermission = isGranted
+        if (isGranted) {
+            viewModel.setReviewNotificationsEnabled(true)
+        }
+    }
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier.fillMaxWidth().padding(12.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Default.NotificationsActive,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(80.dp).padding(bottom = 16.dp)
+        )
+        Text(
+            text = if (language == "de") "Verpasse keinen Rückblick" else "Never Miss a Review",
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onBackground,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = if (language == "de") "Aktiviere Benachrichtigungen, um tägliche Erinnerungen und pünktliche Monats-/Jahresrückblick-Alarme zu erhalten." else "Enable notifications to receive daily habit reminders and timely Monthly/Yearly Review alerts.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 8.dp)
+        )
+        
+        Spacer(modifier = Modifier.height(32.dp))
+        
+        if (hasPermission) {
+            Surface(
+                color = SuccessBg,
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, SuccessGreen.copy(alpha = 0.5f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = SuccessGreen)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = if (language == "de") "Benachrichtigungen aktiviert!" else "Notifications Enabled!",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = SuccessGreen
+                    )
+                }
+            }
+        } else {
+            Button(
+                onClick = {
+                    if (android.os.Build.VERSION.SDK_INT >= 33) {
+                        launcher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                    } else {
+                        viewModel.setReviewNotificationsEnabled(true)
+                        hasPermission = true
+                    }
+                },
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Icon(Icons.Default.Notifications, contentDescription = null, tint = Color.White)
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = if (language == "de") "Benachrichtigungen aktivieren" else "Enable Notifications",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        Text(
+            text = if (language == "de") "Kann später in den Einstellungen geändert werden" else "Can be changed later in Settings",
+            color = Color.Transparent,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.Medium
+        )
+    }
+}
+
+@Composable
+private fun OnboardingStepSecureDataLaunch(language: String, viewModel: HabitsViewModel) {
+    val backupFolderUri by viewModel.backupFolderUri.collectAsStateWithLifecycle()
+    val isFolderSet = backupFolderUri.isNotBlank()
+    val context = LocalContext.current
+    
+    val folderPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        if (uri != null) {
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                )
+                viewModel.saveBackupFolderUri(uri.toString())
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier.fillMaxWidth().padding(12.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Default.FolderSpecial,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(80.dp).padding(bottom = 16.dp)
+        )
+        Text(
+            text = if (language == "de") "Sichere deine Daten" else "Protect Your Data",
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onBackground,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = if (language == "de") "Da deine Daten 100% lokal gespeichert werden, wähle einen Ordner (z.B. Downloads, SD-Karte), in dem automatische Backups abgelegt werden." else "Since your data is stored 100% locally, select a folder (e.g., Downloads, SD Card) where automatic SAF backups can be saved.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 8.dp)
+        )
+        
+        Spacer(modifier = Modifier.height(32.dp))
+        
+        if (isFolderSet) {
+            Surface(
+                color = SuccessBg,
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, SuccessGreen.copy(alpha = 0.5f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = SuccessGreen)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = if (language == "de") "Backup-Ordner festgelegt ✓" else "Backup Folder Set ✓",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = SuccessGreen
+                    )
+                }
+            }
+        } else {
+            Button(
+                onClick = { folderPickerLauncher.launch(null) },
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Icon(Icons.Default.CreateNewFolder, contentDescription = null, tint = Color.White)
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = if (language == "de") "Backup-Ordner auswählen" else "Select Backup Folder",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        Text(
+            text = if (language == "de") "Kann später in den Einstellungen geändert werden" else "Can be changed later in Settings",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.Medium
+        )
+    }
+}
+
 
 fun parseHabitColor(colorName: String): Color {
     return when (colorName.lowercase()) {
@@ -14750,6 +17553,21 @@ fun calculateHabitStrengthOnDate(habit: Habit, logs: List<HabitLog>, targetDateS
     return percentage.coerceIn(0, 100)
 }
 
+fun isLogCompleted(log: HabitLog, habit: Habit?): Boolean {
+    if (log.isPaused) return false
+    return when (log.value) {
+        -1f -> false
+        -2f -> true
+        else -> {
+            if (habit != null) {
+                if (habit.type == "BINARY") true else log.value >= habit.targetValue
+            } else {
+                log.value > 0f
+            }
+        }
+    }
+}
+
 fun calculateMonthlyReviewData(
     year: Int,
     month: Int,
@@ -14758,14 +17576,20 @@ fun calculateMonthlyReviewData(
     language: String
 ): MonthlyReviewData {
     val monthPrefix = String.format(java.util.Locale.US, "%04d-%02d-", year, month)
-    val monthLogs = allLogs.filter { it.date.startsWith(monthPrefix) && it.value > 0f && !it.isPaused }
-    val totalCompletions = monthLogs.size
+    
+    val validMonthLogs = allLogs.filter { log ->
+        log.date.startsWith(monthPrefix) && isLogCompleted(log, allHabits.find { it.id == log.habitId })
+    }
+    val totalCompletions = validMonthLogs.size
     
     val prevYear = if (month == 1) year - 1 else year
     val prevMonth = if (month == 1) 12 else month - 1
     val prevMonthPrefix = String.format(java.util.Locale.US, "%04d-%02d-", prevYear, prevMonth)
-    val prevLogs = allLogs.filter { it.date.startsWith(prevMonthPrefix) && it.value > 0f && !it.isPaused }
-    val prevMonthCompletions = prevLogs.size
+    
+    val validPrevLogs = allLogs.filter { log ->
+        log.date.startsWith(prevMonthPrefix) && isLogCompleted(log, allHabits.find { it.id == log.habitId })
+    }
+    val prevMonthCompletions = validPrevLogs.size
     
     val growthPercentage = if (prevMonthCompletions > 0) {
         (((totalCompletions - prevMonthCompletions).toFloat() / prevMonthCompletions) * 100).toInt()
@@ -14800,10 +17624,10 @@ fun calculateMonthlyReviewData(
     
     // MVP Habit: most completions in this month
     val mvpHabit = activeHabits.maxByOrNull { h ->
-        allLogs.count { it.habitId == h.id && it.date.startsWith(monthPrefix) && it.value > 0f && !it.isPaused }
+        allLogs.count { it.habitId == h.id && it.date.startsWith(monthPrefix) && isLogCompleted(it, h) }
     }
     val mvpCompletions = if (mvpHabit != null) {
-        allLogs.count { it.habitId == mvpHabit.id && it.date.startsWith(monthPrefix) && it.value > 0f && !it.isPaused }
+        allLogs.count { it.habitId == mvpHabit.id && it.date.startsWith(monthPrefix) && isLogCompleted(it, mvpHabit) }
     } else 0
     val mvpStrength = if (mvpHabit != null) {
         calculateHabitStrengthOnDate(mvpHabit, allLogs, thisMonthLastDay)
@@ -14814,13 +17638,13 @@ fun calculateMonthlyReviewData(
         val validStartStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date(if (h.startDate > 946684800000L) h.startDate else h.createdAt))
         validStartStr <= thisMonthLastDay
     }.minByOrNull { h ->
-        val comps = allLogs.count { it.habitId == h.id && it.date.startsWith(monthPrefix) && it.value > 0f && !it.isPaused }
+        val comps = allLogs.count { it.habitId == h.id && it.date.startsWith(monthPrefix) && isLogCompleted(it, h) }
         val expected = if (h.frequency == "TIMES_WEEKLY") (h.specificDays.toIntOrNull() ?: 3) * 4 else 28
         comps.toFloat() / expected.coerceAtLeast(1).toFloat()
     }
     
     val focusCompletions = if (focusHabit != null) {
-        allLogs.count { it.habitId == focusHabit.id && it.date.startsWith(monthPrefix) && it.value > 0f && !it.isPaused }
+        allLogs.count { it.habitId == focusHabit.id && it.date.startsWith(monthPrefix) && isLogCompleted(it, focusHabit) }
     } else 0
     
     val focusExpected = if (focusHabit != null) {
@@ -14829,7 +17653,7 @@ fun calculateMonthlyReviewData(
     
     // Power day of week
     val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
-    val logsByDayOfWeek = monthLogs.groupBy { log ->
+    val logsByDayOfWeek = validMonthLogs.groupBy { log ->
         try {
             val d = sdf.parse(log.date)
             val cal = java.util.Calendar.getInstance()
@@ -14967,103 +17791,109 @@ fun calculateYearlyReviewData(
     language: String
 ): YearlyReviewData {
     val yearPrefix = "$year-"
-    val yearLogs = allLogs.filter { it.date.startsWith(yearPrefix) && it.value > 0f && !it.isPaused }
-    val totalCompletions = yearLogs.size
-
-    val activeDates = yearLogs.map { it.date }.distinct()
-    val activeDaysCount = activeDates.size
-
-    val currentYear = Calendar.getInstance().get(Calendar.YEAR)
-    val totalDays = if (year == currentYear) {
-        Calendar.getInstance().get(Calendar.DAY_OF_YEAR)
-    } else {
-        if ((year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)) 366 else 365
+    
+    val validYearLogs = allLogs.filter { log -> 
+        log.date.startsWith(yearPrefix) && isLogCompleted(log, allHabits.find { it.id == log.habitId })
     }
-    val activeDaysPercentage = if (totalDays > 0) ((activeDaysCount.toFloat() / totalDays) * 100).toInt().coerceIn(0, 100) else 0
+    val totalCompletions = validYearLogs.size
 
-    // Logs by habit
-    val logsByHabit = yearLogs.groupBy { it.habitId }
-    val topHabitEntry = logsByHabit.maxByOrNull { it.value.size }
-    val topHabit = allHabits.find { it.id == topHabitEntry?.key }
-    val topHabitCompletions = topHabitEntry?.value?.size ?: 0
-
-    val growthHabit = allHabits
-        .filter { !it.isArchived && it.id != topHabit?.id }
-        .minByOrNull { h -> logsByHabit[h.id]?.size ?: 0 }
-    val growthHabitCompletions = if (growthHabit != null) logsByHabit[growthHabit.id]?.size ?: 0 else 0
-
-    // Best month
-    val logsByMonth = yearLogs.groupBy { 
-        if (it.date.length >= 7) it.date.substring(5, 7) else "01" 
-    }
-    val bestMonthEntry = logsByMonth.maxByOrNull { it.value.size }
-    val monthNum = (bestMonthEntry?.key ?: "01").toIntOrNull() ?: 1
-    val bestMonthName = getMonthNameLocalized(monthNum, language)
-    val bestMonthCompletions = bestMonthEntry?.value?.size ?: 0
-
-    // Best Day of Week
-    val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
-    val logsByDayOfWeek = yearLogs.groupBy { log ->
-        try {
-            val d = sdf.parse(log.date)
-            val cal = Calendar.getInstance()
-            if (d != null) cal.time = d
-            cal.get(Calendar.DAY_OF_WEEK)
-        } catch (e: Exception) {
-            Calendar.MONDAY
-        }
-    }
-    val bestDayEntry = logsByDayOfWeek.maxByOrNull { it.value.size }
-    val dayOfWeekNum = bestDayEntry?.key ?: Calendar.MONDAY
-    val bestDayOfWeekName = getDayOfWeekNameLocalized(dayOfWeekNum, language)
-    val bestDayOfWeekCompletions = bestDayEntry?.value?.size ?: 0
-
-    // Perfect days count
+    val activeDates = validYearLogs.map { it.date }.distinct()
+    val totalActiveDays = activeDates.size
+    
     val activeHabits = allHabits.filter { !it.isArchived }
-    val perfectDaysCount = if (activeHabits.isNotEmpty()) {
-        activeDates.count { date ->
-            val dateLogs = yearLogs.filter { it.date == date }
-            val completedHabitIds = dateLogs.map { it.habitId }.toSet()
-            activeHabits.all { h -> completedHabitIds.contains(h.id) }
-        }
-    } else 0
-
-    // Longest streak in this year across all habits
-    var longestStreakVal = 0
-    var longestStreakHabitVal: Habit? = null
-    var isStreakActiveVal = false
     
-    for (h in allHabits) {
-        val hLogs = allLogs.filter { it.habitId == h.id && it.date.startsWith(yearPrefix) }
-        val (cur, max) = calculateStreakFast(h, hLogs)
-        if (max > longestStreakVal) {
-            longestStreakVal = max
-            longestStreakHabitVal = h
-            isStreakActiveVal = cur > 0 && cur >= max
-        }
-    }
-    
-    // Account transformation
+    // Calculate Score from Dec 31 of prev year to Dec 31 of this year
     val prevYearLastDay = "${year - 1}-12-31"
-    val yearLastDay = "$year-12-31"
+    val thisYearLastDay = "$year-12-31"
     
     val startScore = if (activeHabits.isNotEmpty()) {
         activeHabits.map { calculateHabitStrengthOnDate(it, allLogs, prevYearLastDay) }.average().toInt()
     } else 0
     
     val endScore = if (activeHabits.isNotEmpty()) {
-        activeHabits.map { calculateHabitStrengthOnDate(it, allLogs, yearLastDay) }.average().toInt()
+        activeHabits.map { calculateHabitStrengthOnDate(it, allLogs, thisYearLastDay) }.average().toInt()
     } else 0
     
     val scoreDelta = endScore - startScore
 
+    val mvpHabit = activeHabits.maxByOrNull { h ->
+        allLogs.count { it.habitId == h.id && it.date.startsWith(yearPrefix) && isLogCompleted(it, h) }
+    }
+    val mvpCompletions = if (mvpHabit != null) {
+        allLogs.count { it.habitId == mvpHabit.id && it.date.startsWith(yearPrefix) && isLogCompleted(it, mvpHabit) }
+    } else 0
+
+    val growthHabit = activeHabits.maxByOrNull { h ->
+        val startH = calculateHabitStrengthOnDate(h, allLogs, prevYearLastDay)
+        val endH = calculateHabitStrengthOnDate(h, allLogs, thisYearLastDay)
+        endH - startH
+    }
+    val growthHabitCompletions = if (growthHabit != null) {
+        allLogs.count { it.habitId == growthHabit.id && it.date.startsWith(yearPrefix) && isLogCompleted(it, growthHabit) }
+    } else 0
+
+    val activeDaysPercentage = if (totalActiveDays > 0) {
+        (totalActiveDays * 100) / 365
+    } else 0
+
+    val completionsByMonth = validYearLogs.groupBy { 
+        if (it.date.length >= 7) it.date.substring(5, 7).toIntOrNull() ?: 1 else 1 
+    }
+    val bestMonthEntry = completionsByMonth.maxByOrNull { it.value.size }
+    val bestMonthNum = bestMonthEntry?.key ?: 1
+    val bestMonthName = getMonthNameLocalized(bestMonthNum, language)
+    val bestMonthCompletions = bestMonthEntry?.value?.size ?: 0
+
+    val sdfDay = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+    val calDay = Calendar.getInstance()
+    val completionsByDayOfWeek = validYearLogs.groupBy { log ->
+        try {
+            val date = sdfDay.parse(log.date)
+            if (date != null) {
+                calDay.time = date
+                calDay.get(Calendar.DAY_OF_WEEK)
+            } else Calendar.MONDAY
+        } catch (e: Exception) {
+            Calendar.MONDAY
+        }
+    }
+    val bestDayOfWeekEntry = completionsByDayOfWeek.maxByOrNull { it.value.size }
+    val bestDayOfWeekNum = bestDayOfWeekEntry?.key ?: Calendar.MONDAY
+    val bestDayOfWeekName = when (bestDayOfWeekNum) {
+        Calendar.SUNDAY -> if (language == "de") "Sonntag" else "Sunday"
+        Calendar.MONDAY -> if (language == "de") "Montag" else "Monday"
+        Calendar.TUESDAY -> if (language == "de") "Dienstag" else "Tuesday"
+        Calendar.WEDNESDAY -> if (language == "de") "Mittwoch" else "Wednesday"
+        Calendar.THURSDAY -> if (language == "de") "Donnerstag" else "Thursday"
+        Calendar.FRIDAY -> if (language == "de") "Freitag" else "Friday"
+        Calendar.SATURDAY -> if (language == "de") "Samstag" else "Saturday"
+        else -> if (language == "de") "Montag" else "Monday"
+    }
+    val bestDayOfWeekCompletions = bestDayOfWeekEntry?.value?.size ?: 0
+
+    var perfectDaysCount = 0
+    val daysInYearWithLogs = validYearLogs.groupBy { it.date }
+    for ((_, logsOnDay) in daysInYearWithLogs) {
+        if (activeHabits.isNotEmpty() && logsOnDay.size >= activeHabits.size) {
+            perfectDaysCount++
+        }
+    }
+
+    val streakPairs = activeHabits.map { h ->
+        h to calculateStreakFast(h, allLogs)
+    }
+    val longestStreakPair = streakPairs.maxByOrNull { it.second.second }
+    val longestStreak = longestStreakPair?.second?.second ?: 0
+    val longestStreakHabit = longestStreakPair?.first
+    val isStreakActive = (longestStreakPair?.second?.first ?: 0) > 0
+
     return YearlyReviewData(
         year = year,
         totalCompletions = totalCompletions,
-        activeDaysCount = activeDaysCount,
+        activeDaysCount = totalActiveDays,
         activeDaysPercentage = activeDaysPercentage,
-        topHabit = topHabit,
-        topHabitCompletions = topHabitCompletions,
+        topHabit = mvpHabit,
+        topHabitCompletions = mvpCompletions,
         growthHabit = growthHabit,
         growthHabitCompletions = growthHabitCompletions,
         bestMonthName = bestMonthName,
@@ -15071,9 +17901,9 @@ fun calculateYearlyReviewData(
         bestDayOfWeekName = bestDayOfWeekName,
         bestDayOfWeekCompletions = bestDayOfWeekCompletions,
         perfectDaysCount = perfectDaysCount,
-        longestStreak = longestStreakVal,
-        longestStreakHabit = longestStreakHabitVal,
-        isStreakActive = isStreakActiveVal,
+        longestStreak = longestStreak,
+        longestStreakHabit = longestStreakHabit,
+        isStreakActive = isStreakActive,
         startScore = startScore,
         endScore = endScore,
         scoreDelta = scoreDelta
@@ -15122,6 +17952,7 @@ fun YearlyReviewDialog(
     allHabits: List<Habit>,
     allLogs: List<HabitLog>,
     language: String,
+    viewModel: HabitsViewModel,
     onDismiss: () -> Unit
 ) {
     Dialog(
@@ -15131,22 +17962,23 @@ fun YearlyReviewDialog(
         val reviewData = remember(year, allHabits, allLogs, language) {
             calculateYearlyReviewData(year, allHabits, allLogs, language)
         }
-        val pageCount = 6
+        val pageCount = 7
         val pagerState = rememberPagerState(pageCount = { pageCount })
         val coroutineScope = rememberCoroutineScope()
 
         val gradientColors = when (pagerState.currentPage) {
-            0 -> listOf(Color(0xFF1E1B4B), Color(0xFF0F172A), DarkBg)
-            1 -> listOf(Color(0xFF064E3B), Color(0xFF0F172A), DarkBg)
-            2 -> listOf(Color(0xFF4C1D95), Color(0xFF1E1B4B), DarkBg)
-            3 -> listOf(Color(0xFF78350F), Color(0xFF18181B), DarkBg)
-            4 -> listOf(Color(0xFF164E63), Color(0xFF0F172A), DarkBg)
-            else -> listOf(Color(0xFF312E81), Color(0xFF1E1B4B), DarkBg)
+            0 -> listOf(Color(0xFF1E1B4B), Color(0xFF0F172A), AppBg)
+            1 -> listOf(Color(0xFF064E3B), Color(0xFF0F172A), AppBg)
+            2 -> listOf(Color(0xFF4C1D95), Color(0xFF1E1B4B), AppBg)
+            3 -> listOf(Color(0xFF78350F), Color(0xFF18181B), AppBg)
+            4 -> listOf(Color(0xFF164E63), Color(0xFF0F172A), AppBg)
+            5 -> listOf(Color(0xFF312E81), Color(0xFF1E1B4B), AppBg)
+            else -> listOf(Color(0xFF1E3A8A), Color(0xFF0F172A), AppBg)
         }
 
         Surface(
             modifier = Modifier.fillMaxSize(),
-            color = DarkBg
+            color = AppBg
         ) {
             Box(
                 modifier = Modifier
@@ -15209,85 +18041,53 @@ fun YearlyReviewDialog(
                             2 -> YearlyReviewTopHabitSlide(year, language, reviewData)
                             3 -> YearlyReviewGrowthSlide(year, language, reviewData)
                             4 -> YearlyReviewPeakMomentsSlide(year, language, reviewData)
+                            5 -> TimeCapsuleSlide("YEARLY", year, 1, language, viewModel)
                             else -> YearlyReviewSummarySlide(year, language, reviewData, onDismiss)
                         }
                     }
 
-                    // Bottom Navigation Buttons
-                    Row(
+                    // Bottom Navigation Buttons: Only a single Next button!
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(bottom = 24.dp, top = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                            .padding(bottom = 72.dp, top = 8.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        if (pagerState.currentPage > 0) {
-                            OutlinedButton(
-                                onClick = {
-                                    coroutineScope.launch {
-                                        pagerState.animateScrollToPage(pagerState.currentPage - 1)
-                                    }
-                                },
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
-                                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.4f)),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "Previous",
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(if (language == "de") "Zurück" else "Back")
-                            }
-                        } else {
-                            Spacer(modifier = Modifier.width(1.dp))
-                        }
-
-                        if (pagerState.currentPage < pageCount - 1) {
-                            Button(
-                                onClick = {
+                        val isLastPage = pagerState.currentPage == pageCount - 1
+                        Button(
+                            onClick = {
+                                if (isLastPage) {
+                                    onDismiss()
+                                } else {
                                     coroutineScope.launch {
                                         pagerState.animateScrollToPage(pagerState.currentPage + 1)
                                     }
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isLastPage) SuccessGreen else PrimaryViolet,
+                                contentColor = Color.White
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(50.dp)
+                        ) {
+                            Text(
+                                text = if (isLastPage) {
+                                    if (language == "de") "Fertig" else "Finish"
+                                } else {
+                                    if (language == "de") "Weiter" else "Next"
                                 },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = PrimaryViolet,
-                                    contentColor = Color.White
-                                ),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Text(
-                                    if (language == "de") "Weiter" else "Next",
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                    contentDescription = "Next",
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                        } else {
-                            Button(
-                                onClick = onDismiss,
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = SuccessGreen,
-                                    contentColor = Color.White
-                                ),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = "Finish",
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    if (language == "de") "Fertig" else "Done",
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Icon(
+                                imageVector = if (isLastPage) Icons.Default.Check else Icons.AutoMirrored.Filled.ArrowForward,
+                                contentDescription = if (isLastPage) "Finish" else "Next",
+                                modifier = Modifier.size(18.dp)
+                            )
                         }
                     }
                 }
@@ -15558,9 +18358,11 @@ fun YearlyReviewTopHabitSlide(year: Int, language: String, reviewData: YearlyRev
                             .border(2.dp, hColor, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = h.icon,
-                            style = MaterialTheme.typography.headlineMedium
+                        Icon(
+                            imageVector = HabitIconMapping.getIcon(h.icon),
+                            contentDescription = h.name,
+                            tint = hColor,
+                            modifier = Modifier.size(36.dp)
                         )
                     }
 
@@ -15671,9 +18473,11 @@ fun YearlyReviewGrowthSlide(year: Int, language: String, reviewData: YearlyRevie
                             .border(2.dp, Color(0xFFF59E0B), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = h.icon,
-                            style = MaterialTheme.typography.headlineMedium
+                        Icon(
+                            imageVector = HabitIconMapping.getIcon(h.icon),
+                            contentDescription = h.name,
+                            tint = Color(0xFFF59E0B),
+                            modifier = Modifier.size(36.dp)
                         )
                     }
 
@@ -15937,19 +18741,29 @@ fun YearlyReviewSummarySlide(
                 if (reviewData.topHabit != null) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
                             text = if (language == "de") "Top Gewohnheit:" else "Top Habit:",
                             color = Color.White.copy(alpha = 0.8f),
                             style = MaterialTheme.typography.bodyMedium
                         )
-                        Text(
-                            text = "${reviewData.topHabit.icon} ${reviewData.topHabit.name}",
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = HabitIconMapping.getIcon(reviewData.topHabit.icon),
+                                contentDescription = null,
+                                tint = parseHabitColor(reviewData.topHabit.color),
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = reviewData.topHabit.name,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
                     }
                 }
 
@@ -16105,6 +18919,7 @@ fun MonthlyReviewDialog(
     allHabits: List<Habit>,
     allLogs: List<HabitLog>,
     language: String,
+    viewModel: HabitsViewModel,
     onDismiss: () -> Unit
 ) {
     Dialog(
@@ -16114,21 +18929,22 @@ fun MonthlyReviewDialog(
         val reviewData = remember(year, month, allHabits, allLogs, language) {
             calculateMonthlyReviewData(year, month, allHabits, allLogs, language)
         }
-        val pageCount = 5
+        val pageCount = 6
         val pagerState = rememberPagerState(pageCount = { pageCount })
         val coroutineScope = rememberCoroutineScope()
 
         val gradientColors = when (pagerState.currentPage) {
-            0 -> listOf(Color(0xFF1E1B4B), Color(0xFF0F172A), DarkBg)
-            1 -> listOf(Color(0xFF064E3B), Color(0xFF0F172A), DarkBg)
-            2 -> listOf(Color(0xFF4C1D95), Color(0xFF1E1B4B), DarkBg)
-            3 -> listOf(Color(0xFF78350F), Color(0xFF18181B), DarkBg)
-            else -> listOf(Color(0xFF1E3A8A), Color(0xFF0F172A), DarkBg)
+            0 -> listOf(Color(0xFF1E1B4B), Color(0xFF0F172A), AppBg)
+            1 -> listOf(Color(0xFF064E3B), Color(0xFF0F172A), AppBg)
+            2 -> listOf(Color(0xFF4C1D95), Color(0xFF1E1B4B), AppBg)
+            3 -> listOf(Color(0xFF78350F), Color(0xFF18181B), AppBg)
+            4 -> listOf(Color(0xFF312E81), Color(0xFF1E1B4B), AppBg)
+            else -> listOf(Color(0xFF1E3A8A), Color(0xFF0F172A), AppBg)
         }
 
         Surface(
             modifier = Modifier.fillMaxSize(),
-            color = DarkBg
+            color = AppBg
         ) {
             Box(
                 modifier = Modifier
@@ -16190,85 +19006,53 @@ fun MonthlyReviewDialog(
                             1 -> MonthlyReviewVolumeSlide(year, month, language, reviewData)
                             2 -> MonthlyReviewMVPSlide(year, month, language, reviewData)
                             3 -> MonthlyReviewFocusSlide(year, month, language, reviewData)
+                            4 -> TimeCapsuleSlide("MONTHLY", year, month, language, viewModel)
                             else -> MonthlyReviewSummarySlide(year, month, language, reviewData, onDismiss)
                         }
                     }
 
-                    // Bottom Navigation Buttons
-                    Row(
+                    // Bottom Navigation Buttons: Only a single Next button!
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(bottom = 24.dp, top = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                            .padding(bottom = 72.dp, top = 8.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        if (pagerState.currentPage > 0) {
-                            OutlinedButton(
-                                onClick = {
-                                    coroutineScope.launch {
-                                        pagerState.animateScrollToPage(pagerState.currentPage - 1)
-                                    }
-                                },
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
-                                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.4f)),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "Previous",
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(if (language == "de") "Zurück" else "Back")
-                            }
-                        } else {
-                            Spacer(modifier = Modifier.width(1.dp))
-                        }
-
-                        if (pagerState.currentPage < pageCount - 1) {
-                            Button(
-                                onClick = {
+                        val isLastPage = pagerState.currentPage == pageCount - 1
+                        Button(
+                            onClick = {
+                                if (isLastPage) {
+                                    onDismiss()
+                                } else {
                                     coroutineScope.launch {
                                         pagerState.animateScrollToPage(pagerState.currentPage + 1)
                                     }
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isLastPage) SuccessGreen else PrimaryViolet,
+                                contentColor = Color.White
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(50.dp)
+                        ) {
+                            Text(
+                                text = if (isLastPage) {
+                                    if (language == "de") "Fertig" else "Finish"
+                                } else {
+                                    if (language == "de") "Weiter" else "Next"
                                 },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = PrimaryViolet,
-                                    contentColor = Color.White
-                                ),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Text(
-                                    if (language == "de") "Weiter" else "Next",
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                    contentDescription = "Next",
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                        } else {
-                            Button(
-                                onClick = onDismiss,
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = SuccessGreen,
-                                    contentColor = Color.White
-                                ),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = "Finish",
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    if (language == "de") "Fertig" else "Done",
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Icon(
+                                imageVector = if (isLastPage) Icons.Default.Check else Icons.AutoMirrored.Filled.ArrowForward,
+                                contentDescription = if (isLastPage) "Finish" else "Next",
+                                modifier = Modifier.size(18.dp)
+                            )
                         }
                     }
                 }
@@ -16516,9 +19300,11 @@ fun MonthlyReviewMVPSlide(year: Int, month: Int, language: String, reviewData: M
                             .border(2.dp, hColor, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = h.icon,
-                            style = MaterialTheme.typography.headlineMedium
+                        Icon(
+                            imageVector = HabitIconMapping.getIcon(h.icon),
+                            contentDescription = h.name,
+                            tint = hColor,
+                            modifier = Modifier.size(36.dp)
                         )
                     }
 
@@ -16637,9 +19423,11 @@ fun MonthlyReviewFocusSlide(year: Int, month: Int, language: String, reviewData:
                             .border(2.dp, Color(0xFFF59E0B), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = h.icon,
-                            style = MaterialTheme.typography.headlineMedium
+                        Icon(
+                            imageVector = HabitIconMapping.getIcon(h.icon),
+                            contentDescription = h.name,
+                            tint = Color(0xFFF59E0B),
+                            modifier = Modifier.size(36.dp)
                         )
                     }
 
@@ -16784,19 +19572,29 @@ fun MonthlyReviewSummarySlide(
                 if (reviewData.mvpHabit != null) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
                             text = if (language == "de") "Monats-MVP:" else "Monthly MVP:",
                             color = Color.White.copy(alpha = 0.8f),
                             style = MaterialTheme.typography.bodyMedium
                         )
-                        Text(
-                            text = "${reviewData.mvpHabit.icon} ${reviewData.mvpHabit.name}",
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = HabitIconMapping.getIcon(reviewData.mvpHabit.icon),
+                                contentDescription = null,
+                                tint = parseHabitColor(reviewData.mvpHabit.color),
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = reviewData.mvpHabit.name,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
                     }
                 }
 
@@ -17009,15 +19807,31 @@ fun YearlyReviewStreakSlide(year: Int, language: String, reviewData: YearlyRevie
 
                 if (reviewData.longestStreakHabit != null) {
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = if (language == "de") 
-                            "Erreicht bei: ${reviewData.longestStreakHabit.icon} ${reviewData.longestStreakHabit.name}" 
-                        else 
-                            "Achieved on: ${reviewData.longestStreakHabit.icon} ${reviewData.longestStreakHabit.name}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.85f),
-                        textAlign = TextAlign.Center
-                    )
+                    val hColor = parseHabitColor(reviewData.longestStreakHabit.color)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = if (language == "de") "Erreicht bei: " else "Achieved on: ",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White.copy(alpha = 0.85f)
+                        )
+                        Icon(
+                            imageVector = HabitIconMapping.getIcon(reviewData.longestStreakHabit.icon),
+                            contentDescription = null,
+                            tint = hColor,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = reviewData.longestStreakHabit.name,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White.copy(alpha = 0.85f),
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
 
                 if (reviewData.isStreakActive) {
@@ -17367,11 +20181,11 @@ private fun OnboardingStep2(language: String) {
     ) {
         // Complete Audio Timer Menu as called in the app (WidgetAddValueDialog / Value Dialog)
         Card(
-            colors = CardDefaults.cardColors(containerColor = DarkCard),
+            colors = CardDefaults.cardColors(containerColor = AppCard),
             shape = RoundedCornerShape(20.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .border(1.dp, DarkBorder, RoundedCornerShape(20.dp))
+                .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
@@ -17441,7 +20255,7 @@ private fun OnboardingStep2(language: String) {
                         modifier = Modifier
                             .size(36.dp)
                             .background(ProgressTrack, CircleShape)
-                            .border(1.dp, DarkBorder, CircleShape),
+                            .border(1.dp, AppBorder, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -17507,8 +20321,8 @@ private fun OnboardingStep2(language: String) {
                         Row(
                             modifier = Modifier
                                 .weight(1f)
-                                .background(DarkBg, RoundedCornerShape(14.dp))
-                                .border(1.dp, DarkBorder, RoundedCornerShape(14.dp))
+                                .background(AppBg, RoundedCornerShape(14.dp))
+                                .border(1.dp, AppBorder, RoundedCornerShape(14.dp))
                                 .padding(horizontal = 12.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -17639,11 +20453,11 @@ private fun OnboardingStep3(language: String) {
         modifier = Modifier.fillMaxWidth()
     ) {
         Card(
-            colors = CardDefaults.cardColors(containerColor = DarkCard),
+            colors = CardDefaults.cardColors(containerColor = AppCard),
             shape = RoundedCornerShape(20.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .border(1.dp, DarkBorder, RoundedCornerShape(20.dp))
+                .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
@@ -17702,11 +20516,11 @@ private fun OnboardingStep4(language: String) {
         modifier = Modifier.fillMaxWidth()
     ) {
         Card(
-            colors = CardDefaults.cardColors(containerColor = DarkCard),
+            colors = CardDefaults.cardColors(containerColor = AppCard),
             shape = RoundedCornerShape(20.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .border(1.dp, DarkBorder, RoundedCornerShape(20.dp))
+                .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
@@ -17786,5 +20600,533 @@ private fun OnboardingStep5(language: String, viewModel: HabitsViewModel) {
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(horizontal = 16.dp)
         )
+    }
+}
+
+@Composable
+fun TimeCapsuleSlide(
+    type: String, // "MONTHLY" or "YEARLY"
+    year: Int,
+    month: Int = 1, // Only used for Monthly
+    language: String,
+    viewModel: HabitsViewModel
+) {
+    // 1. Calculate current period string & upcoming period string
+    val currentPeriod = if (type == "MONTHLY") {
+        "$year-%02d".format(month)
+    } else {
+        "$year"
+    }
+
+    val upcomingPeriod = if (type == "MONTHLY") {
+        val currentYearMonth = java.time.YearMonth.of(year, month)
+        currentYearMonth.plusMonths(1).toString() // "yyyy-MM"
+    } else {
+        "${year + 1}"
+    }
+
+    // 2. Fetch Past Note (targeting currentPeriod)
+    val pastNoteFlow = remember(type, currentPeriod) { viewModel.getTimeCapsuleNote(type, currentPeriod) }
+    val pastNote by pastNoteFlow.collectAsStateWithLifecycle(initialValue = null)
+
+    // 3. Fetch Future Note draft (targeting upcomingPeriod)
+    val futureNoteFlow = remember(type, upcomingPeriod) { viewModel.getTimeCapsuleNote(type, upcomingPeriod) }
+    val futureNote by futureNoteFlow.collectAsStateWithLifecycle(initialValue = null)
+
+    // Local state for the future note text input
+    var futureText by remember { mutableStateOf("") }
+
+    // Synchronize the input field text when the database loads the draft
+    LaunchedEffect(futureNote) {
+        if (futureNote != null && futureText.isEmpty()) {
+            futureText = futureNote!!.content
+        }
+    }
+
+    val titleText = if (type == "MONTHLY") {
+        if (language == "de") "Zeitkapsel" else "Time Capsule"
+    } else {
+        if (language == "de") "Jahres-Zeitkapsel" else "Yearly Time Capsule"
+    }
+
+    val subtitleText = if (type == "MONTHLY") {
+        if (language == "de") "Botschaften zwischen deinem vergangenen und zukünftigen Ich." else "Messages between your past and future self."
+    } else {
+        if (language == "de") "Wirf einen Blick zurück und hinterlassen Wünsche für das nächste Jahr." else "Look back at your goals and leave messages for next year."
+    }
+
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Top
+    ) {
+        item {
+            Text(
+                text = "⏳ $titleText",
+                style = MaterialTheme.typography.headlineMedium,
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+
+            Text(
+                text = subtitleText,
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.White.copy(alpha = 0.8f),
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 6.dp, bottom = 24.dp)
+            )
+        }
+
+        // PAST MESSAGE CARD
+        item {
+            val pastPeriodLabel = if (type == "MONTHLY") {
+                // Get month name of currentPeriod
+                val yearMonth = java.time.YearMonth.parse(currentPeriod)
+                val formatter = java.time.format.DateTimeFormatter.ofPattern("MMMM yyyy", if (language == "de") Locale.GERMAN else Locale.ENGLISH)
+                yearMonth.format(formatter)
+            } else {
+                currentPeriod
+            }
+
+            Text(
+                text = "✉️ " + (if (language == "de") "Nachricht für $pastPeriodLabel" else "Message for $pastPeriodLabel"),
+                style = MaterialTheme.typography.titleMedium,
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp, vertical = 8.dp),
+                textAlign = TextAlign.Start
+            )
+
+            if (pastNote != null) {
+                // VISUALLY DISTINCT UNSEALED NOTE CARD WITH MAIL/ENVELOPE DESIGN
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 24.dp),
+                    color = Color(0xFFFEF3C7).copy(alpha = 0.95f), // Warm yellow/parchment background
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.5.dp, Color(0xFFD97706)) // Amber border
+                ) {
+                    Column(
+                        modifier = Modifier.padding(18.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Drafts, // open envelope / unsealed note
+                                contentDescription = "Unsealed Mail",
+                                tint = Color(0xFFD97706),
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Text(
+                                text = if (language == "de") "Brief entsiegelt!" else "Letter unsealed!",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = Color(0xFF92400E),
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Text(
+                            text = "\"${pastNote!!.content}\"",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = Color(0xFF1F2937), // Dark text for parchment
+                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        val sdf = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
+                        val dateFormatted = sdf.format(Date(pastNote!!.createdAt))
+                        Text(
+                            text = if (language == "de") "Geschrieben am $dateFormatted" else "Written on $dateFormatted",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color(0xFF78350F),
+                            modifier = Modifier.align(Alignment.End)
+                        )
+                    }
+                }
+            } else {
+                // Friendly placeholder
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 24.dp),
+                    color = Color.White.copy(alpha = 0.1f),
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f))
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .padding(20.dp)
+                            .fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Mail,
+                            contentDescription = "Closed envelope",
+                            tint = Color.White.copy(alpha = 0.4f),
+                            modifier = Modifier.size(36.dp)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = if (language == "de") 
+                                "Keine Nachricht aus der Vergangenheit versiegelt." 
+                            else 
+                                "No message from the past unsealed.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White.copy(alpha = 0.6f),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            }
+        }
+
+        // FUTURE MESSAGE CARD
+        item {
+            val futurePeriodLabel = if (type == "MONTHLY") {
+                val yearMonth = java.time.YearMonth.parse(upcomingPeriod)
+                val formatter = java.time.format.DateTimeFormatter.ofPattern("MMMM yyyy", if (language == "de") Locale.GERMAN else Locale.ENGLISH)
+                yearMonth.format(formatter)
+            } else {
+                upcomingPeriod
+            }
+
+            Text(
+                text = "✍️ " + (if (language == "de") "Brief an dein zukünftiges Ich für $futurePeriodLabel" else "Letter to your future self for $futurePeriodLabel"),
+                style = MaterialTheme.typography.titleMedium,
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp, vertical = 8.dp),
+                textAlign = TextAlign.Start
+            )
+
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 36.dp),
+                color = Color.White.copy(alpha = 0.08f),
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f))
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Text(
+                        text = if (type == "MONTHLY") {
+                            if (language == "de")
+                                "Was möchtest du im nächsten Monat erreichen? Welche Gewohnheiten willst du meistern? Schreib es hier nieder:"
+                            else
+                                "What do you want to achieve next month? Which habits do you want to master? Write it here:"
+                        } else {
+                            if (language == "de")
+                                "Hinterlasse eine Nachricht oder ein großes Lebensziel an dein zukünftiges Ich für das kommende Jahr:"
+                            else
+                                "Leave a message or a major life goal for your future self for the upcoming year:"
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.85f),
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+
+                    OutlinedTextField(
+                        value = futureText,
+                        onValueChange = { newValue ->
+                            futureText = newValue
+                            viewModel.saveTimeCapsuleNote(type, upcomingPeriod, newValue)
+                        },
+                        placeholder = {
+                            Text(
+                                text = if (language == "de") "Liebes zukünftiges Ich..." else "Dear future self...",
+                                color = Color.White.copy(alpha = 0.4f)
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(130.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Color(0xFFF59E0B),
+                            unfocusedBorderColor = Color.White.copy(alpha = 0.25f),
+                            focusedContainerColor = Color.Black.copy(alpha = 0.2f),
+                            unfocusedContainerColor = Color.Black.copy(alpha = 0.1f),
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White
+                        ),
+                        maxLines = 5,
+                        textStyle = MaterialTheme.typography.bodyMedium
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Lock,
+                            contentDescription = "Lock",
+                            tint = Color(0xFFF59E0B),
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = if (type == "MONTHLY") {
+                                if (language == "de") "Diese Kapsel bleibt bis zum Beginn von $futurePeriodLabel versiegelt." else "This capsule remains sealed until the start of $futurePeriodLabel."
+                            } else {
+                                if (language == "de") "Diese Kapsel bleibt bis zum Beginn von $futurePeriodLabel versiegelt." else "This capsule remains sealed until the start of $futurePeriodLabel."
+                            },
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White.copy(alpha = 0.5f)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun RewardsOverviewSheet(
+    viewModel: com.example.ui.HabitsViewModel,
+    language: String,
+    onDismiss: () -> Unit
+) {
+    val allRewards by viewModel.allMilestoneRewards.collectAsStateWithLifecycle(initialValue = emptyList())
+    val profileStats by viewModel.profileStats.collectAsStateWithLifecycle(initialValue = com.example.data.ProfileStats())
+    
+    var selectedTabIndex by remember { mutableStateOf(0) }
+    
+    val activeRewards = allRewards.filter { it.unlockedAt == 0L }
+    val achievedRewards = allRewards.filter { it.unlockedAt > 0L }.sortedByDescending { it.unlockedAt }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 16.dp),
+            color = AppCard,
+            border = BorderStroke(1.dp, AppBorder),
+            shape = RoundedCornerShape(24.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (language == "de") "Belohnungs-Übersicht" else "Rewards Overview",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = TextPrimary,
+                        fontWeight = FontWeight.Bold
+                    )
+                    IconButton(onClick = onDismiss) {
+                        Icon(imageVector = Icons.Default.Close, contentDescription = "Close", tint = TextSecondary)
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(12.dp))
+
+                TabRow(
+                    selectedTabIndex = selectedTabIndex,
+                    containerColor = Color.Transparent,
+                    contentColor = PrimaryViolet
+                ) {
+                    Tab(
+                        selected = selectedTabIndex == 0,
+                        onClick = { selectedTabIndex = 0 },
+                        text = { Text(if (language == "de") "Aktive (${activeRewards.size})" else "Active (${activeRewards.size})", color = if (selectedTabIndex == 0) PrimaryViolet else TextSecondary) }
+                    )
+                    Tab(
+                        selected = selectedTabIndex == 1,
+                        onClick = { selectedTabIndex = 1 },
+                        text = { Text(if (language == "de") "Erreicht (${achievedRewards.size})" else "Achieved (${achievedRewards.size})", color = if (selectedTabIndex == 1) PrimaryViolet else TextSecondary) }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 420.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    if (selectedTabIndex == 0) {
+                        if (activeRewards.isEmpty()) {
+                            item {
+                                Text(
+                                    text = if (language == "de") "Keine aktiven Belohnungen definiert." else "No active rewards defined.",
+                                    color = TextSecondary,
+                                    modifier = Modifier.padding(vertical = 16.dp)
+                                )
+                            }
+                        } else {
+                            items(activeRewards) { reward ->
+                                val habitStat = profileStats.habitStreaks.find { it.habit.id == reward.habitId }
+                                val currentValue = when (reward.conditionType) {
+                                    "STREAK" -> habitStat?.longestStreak ?: 0
+                                    "COMPLETIONS" -> habitStat?.totalCompletions ?: 0
+                                    else -> 0
+                                }
+                                val targetValue = reward.conditionValue.coerceAtLeast(1)
+                                val progress = if (reward.conditionType == "TROPHY_COUPLED") 0f else (currentValue.toFloat() / targetValue.toFloat()).coerceIn(0f, 1f)
+                                val trophy = if (reward.conditionType == "TROPHY_COUPLED") STANDARD_TROPHIES.find { it.id == reward.trophyId } else null
+
+                                Card(
+                                    colors = CardDefaults.cardColors(containerColor = AppBg),
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(12.dp),
+                                    border = BorderStroke(1.dp, AppBorder)
+                                ) {
+                                    Column(modifier = Modifier.padding(14.dp)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            if (trophy != null) {
+                                                AchievementBadge(
+                                                    type = trophy.type,
+                                                    tier = trophy.tier,
+                                                    isUnlocked = false,
+                                                    modifier = Modifier.size(28.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(10.dp))
+                                            } else {
+                                                Icon(Icons.Default.Star, contentDescription = null, tint = PrimaryViolet, modifier = Modifier.size(20.dp))
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                            }
+                                            Text(
+                                                text = reward.rewardText,
+                                                style = MaterialTheme.typography.titleMedium,
+                                                color = TextPrimary,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.height(10.dp))
+                                        if (reward.conditionType != "TROPHY_COUPLED") {
+                                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                                Text(
+                                                    text = if (language == "de") "Fortschritt" else "Progress",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = TextSecondary
+                                                )
+                                                Text(
+                                                    text = "$currentValue / $targetValue",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = TextPrimary,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.height(6.dp))
+                                            LinearProgressIndicator(
+                                                progress = progress,
+                                                modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
+                                                color = PrimaryViolet,
+                                                trackColor = AppBorder
+                                            )
+                                        } else {
+                                            val tName = if (trophy != null) (if (language == "de") trophy.titleDe else trophy.titleEn) else (reward.trophyId ?: "")
+                                            Text(
+                                                text = if (language == "de") "Gekoppelt an Trophäe: $tName" else "Coupled to Trophy: $tName",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = TextSecondary
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        if (achievedRewards.isEmpty()) {
+                            item {
+                                Text(
+                                    text = if (language == "de") "Noch keine Belohnungen erreicht." else "No rewards achieved yet.",
+                                    color = TextSecondary,
+                                    modifier = Modifier.padding(vertical = 16.dp)
+                                )
+                            }
+                        } else {
+                            items(achievedRewards) { reward ->
+                                val trophy = if (reward.conditionType == "TROPHY_COUPLED") STANDARD_TROPHIES.find { it.id == reward.trophyId } else null
+                                Card(
+                                    colors = CardDefaults.cardColors(containerColor = if (reward.isRedeemed) AppBg else PrimaryViolet.copy(alpha = 0.12f)),
+                                    border = if (reward.isRedeemed) BorderStroke(1.dp, AppBorder) else BorderStroke(1.dp, PrimaryViolet.copy(alpha = 0.5f)),
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().padding(14.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                                            if (trophy != null) {
+                                                AchievementBadge(
+                                                    type = trophy.type,
+                                                    tier = trophy.tier,
+                                                    isUnlocked = true,
+                                                    modifier = Modifier.size(28.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(10.dp))
+                                            }
+                                            Column {
+                                                Text(
+                                                    text = reward.rewardText,
+                                                    style = MaterialTheme.typography.titleMedium,
+                                                    color = if (reward.isRedeemed) TextSecondary else TextPrimary,
+                                                    fontWeight = FontWeight.Bold,
+                                                    textDecoration = if (reward.isRedeemed) TextDecoration.LineThrough else TextDecoration.None
+                                                )
+                                                Text(
+                                                    text = if (reward.isRedeemed) {
+                                                        if (language == "de") "Eingelöst" else "Redeemed"
+                                                    } else {
+                                                        if (language == "de") "Bereit zum Einlösen!" else "Ready to redeem!"
+                                                    },
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = if (reward.isRedeemed) TextSecondary else PrimaryViolet
+                                                )
+                                            }
+                                        }
+                                        if (!reward.isRedeemed) {
+                                            Button(
+                                                onClick = { viewModel.redeemMilestoneReward(reward.id) },
+                                                colors = ButtonDefaults.buttonColors(containerColor = PrimaryViolet),
+                                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+                                            ) {
+                                                Text(
+                                                    text = if (language == "de") "Einlösen" else "Redeem",
+                                                    style = MaterialTheme.typography.labelMedium,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }

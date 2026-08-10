@@ -3,6 +3,7 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import androidx.room.ColumnInfo
 import androidx.compose.runtime.Immutable
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -63,6 +64,38 @@ data class HabitLog(
 data class DailyNote(
     @PrimaryKey val date: String, // format: "yyyy-MM-dd"
     val content: String
+)
+
+@Entity(tableName = "time_capsule_notes")
+@Immutable
+data class TimeCapsuleNote(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val type: String, // "MONTHLY" or "YEARLY"
+    val targetPeriod: String, // format: "yyyy-MM" or "yyyy"
+    val content: String,
+    val createdAt: Long = System.currentTimeMillis()
+)
+
+@Entity(
+    tableName = "milestone_rewards",
+    foreignKeys = [
+        ForeignKey(
+            entity = Habit::class,
+            parentColumns = ["id"],
+            childColumns = ["habitId"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ]
+)
+data class MilestoneReward(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    @ColumnInfo(index = true) val habitId: Int,
+    val rewardText: String,
+    val isRedeemed: Boolean = false,
+    val unlockedAt: Long = 0L,
+    val conditionType: String = "", // "STREAK", "COMPLETIONS", "TROPHY_COUPLED"
+    val conditionValue: Int = 0, // e.g., 30 for 30 completions
+    val trophyId: String = "" // if conditionType == "TROPHY_COUPLED", e.g., "STREAK_BRONZE"
 )
 
 @Immutable
@@ -333,7 +366,8 @@ fun getLogStatus(habit: Habit, log: HabitLog?, dateStr: String, startSdfStr: Str
 @Immutable
 data class ProfileHabitStreak(
     val habit: Habit,
-    val longestStreak: Int
+    val longestStreak: Int,
+    val totalCompletions: Int = 0
 )
 
 @Immutable
@@ -350,10 +384,11 @@ data class ProfileStats(
 
 data class UnlockedAchievementInfo(
     val id: String,
-    val type: String, // "STREAK", "COMPLETIONS", "PERFECT_DAYS"
+    val type: String, // "STREAK", "COMPLETIONS", "PERFECT_DAYS", "CUSTOM_MILESTONE"
     val tier: String, // "WOOD", "BRONZE", "SILVER", "GOLD", "COMP_10", "PERF_7", etc.
     val title: String,
     val description: String,
+    val rewardText: String? = null,
     val habitName: String? = null,
     val habitColor: String? = null,
     val habitIcon: String? = null
@@ -390,6 +425,124 @@ data class CalendarGridCellData(
     val completed: Int,
     val isOutOfRange: Boolean = false
 )
+
+object StreakCalculator {
+    fun calculate(habits: List<Habit>, logs: List<HabitLog>, targetDateStr: String? = null): PerfectDaysStats {
+        if (habits.isEmpty()) return PerfectDaysStats(0, 0, 0, 0)
+
+        val actualTodayEpoch = (System.currentTimeMillis() / (1000L * 60 * 60 * 24)).toInt()
+        val targetEpoch = if (targetDateStr != null) {
+            try { java.time.LocalDate.parse(targetDateStr).toEpochDay().toInt() } catch (e: Exception) { actualTodayEpoch }
+        } else actualTodayEpoch
+        val todayEpoch = targetEpoch.coerceAtMost(actualTodayEpoch)
+        
+        var oldestStartEpoch = todayEpoch
+        habits.forEach { habit ->
+            val validStartMillis = if (habit.startDate > 946684800000L) {
+                habit.startDate
+            } else if (habit.createdAt > 946684800000L) {
+                habit.createdAt
+            } else {
+                System.currentTimeMillis()
+            }
+            val startEpoch = (validStartMillis / (1000L * 60 * 60 * 24)).toInt()
+            if (startEpoch < oldestStartEpoch) {
+                oldestStartEpoch = startEpoch
+            }
+        }
+
+        if (todayEpoch - oldestStartEpoch > 365) {
+            oldestStartEpoch = todayEpoch - 365
+        }
+
+        if (oldestStartEpoch > todayEpoch) return PerfectDaysStats(0, 0, 0, 0)
+
+        val logsByDateAndHabit = logs.groupBy { it.date }.mapValues { entry ->
+            entry.value.associateBy { it.habitId }
+        }
+
+        var totalPerfectDays = 0
+        var perfectDaysStreak = 0
+        var currentPerfectStreak = 0
+
+        var totalCompletedCompletions = 0
+        var totalPossibleCompletions = 0
+
+        for (epochDay in oldestStartEpoch..todayEpoch) {
+            val date = java.time.LocalDate.ofEpochDay(epochDay.toLong())
+            val dateStr = String.format(Locale.US, "%04d-%02d-%02d", date.year, date.monthValue, date.dayOfMonth)
+
+            val activeHabits = habits.filter { habit ->
+                isHabitActiveOnDate(habit, dateStr)
+            }
+
+            if (activeHabits.isEmpty()) {
+                continue
+            }
+
+            val dayLogs = logsByDateAndHabit[dateStr] ?: emptyMap()
+            var allCompletedThisDay = true
+            var checkedAnyOnDay = false
+
+            activeHabits.forEach { habit ->
+                if (habit.frequency == "TIMES_WEEKLY") {
+                    return@forEach
+                }
+                val log = dayLogs[habit.id]
+                val isPaused = log != null && log.isPaused
+                if (!isPaused) {
+                    checkedAnyOnDay = true
+                    totalPossibleCompletions++
+                    val successful = if (log != null) {
+                        when (log.value) {
+                            -1f -> false
+                            -2f -> true
+                            else -> {
+                                if (habit.type == "BINARY") {
+                                    if (habit.isNegative) false else true
+                                } else {
+                                    if (habit.isNegative) log.value < habit.targetValue else log.value >= habit.targetValue
+                                }
+                            }
+                        }
+                    } else {
+                        habit.isNegative
+                    }
+
+                    if (successful) {
+                        totalCompletedCompletions++
+                    } else {
+                        allCompletedThisDay = false
+                    }
+                }
+            }
+
+            if (checkedAnyOnDay && allCompletedThisDay) {
+                totalPerfectDays++
+                currentPerfectStreak++
+                if (currentPerfectStreak > perfectDaysStreak) {
+                    perfectDaysStreak = currentPerfectStreak
+                }
+            } else if (checkedAnyOnDay) {
+                currentPerfectStreak = 0
+            }
+        }
+
+        val completionRate = if (totalPossibleCompletions > 0) {
+            (totalCompletedCompletions.toFloat() / totalPossibleCompletions.toFloat() * 100).toInt().coerceIn(0, 100)
+        } else {
+            0
+        }
+
+        return PerfectDaysStats(
+            totalPerfectDays = totalPerfectDays,
+            perfectDaysStreak = perfectDaysStreak,
+            currentStreak = currentPerfectStreak,
+            totalCompletedHabits = totalCompletedCompletions,
+            totalCompletionRate = completionRate
+        )
+    }
+}
 
 
 

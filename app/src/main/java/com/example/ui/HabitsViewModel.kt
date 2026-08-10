@@ -41,7 +41,17 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
     private val _userName = MutableStateFlow(if (initialUserName == "Inlitx") "" else initialUserName)
     val userName: StateFlow<String> = _userName.asStateFlow()
 
-    private val _profileImageUri = MutableStateFlow(sharedPrefs.getString("profile_image_uri", "") ?: "")
+    private val avatarFile = File(application.filesDir, "profile_avatar.jpg")
+    private val initialProfileImageUri = sharedPrefs.getString("profile_image_uri", "") ?: ""
+    private val resolvedProfileUri = when {
+        avatarFile.exists() && avatarFile.length() > 0 -> android.net.Uri.fromFile(avatarFile).toString()
+        initialProfileImageUri.startsWith("file://") -> {
+            val f = File(initialProfileImageUri.removePrefix("file://"))
+            if (f.exists() && f.length() > 0) initialProfileImageUri else ""
+        }
+        else -> ""
+    }
+    private val _profileImageUri = MutableStateFlow(resolvedProfileUri)
     val profileImageUri: StateFlow<String> = _profileImageUri.asStateFlow()
 
     private val _smartInsightDismissedDate = MutableStateFlow(sharedPrefs.getString("smart_insight_dismissed_date", "") ?: "")
@@ -59,8 +69,16 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun updateProfileImageUri(uri: String) {
-        _profileImageUri.value = uri
-        sharedPrefs.edit().putString("profile_image_uri", uri).apply()
+        if (uri.isEmpty()) {
+            if (avatarFile.exists()) {
+                try { avatarFile.delete() } catch (e: Exception) { e.printStackTrace() }
+            }
+            _profileImageUri.value = ""
+            sharedPrefs.edit().putString("profile_image_uri", "").apply()
+        } else {
+            _profileImageUri.value = uri
+            sharedPrefs.edit().putString("profile_image_uri", uri).apply()
+        }
     }
 
     fun setPendingWidgetHabitId(id: Int) {
@@ -72,6 +90,7 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     // Reactively loaded habits and logs
+    val allMilestoneRewards = repository.allMilestoneRewards
     val allHabits: StateFlow<List<Habit>> = repository.allHabits.map { habits ->
         habits.filter { !it.isArchived }
     }.stateIn(
@@ -144,6 +163,12 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
     private val _language = MutableStateFlow(sharedPrefs.getString("language", "en") ?: "en")
     val language: StateFlow<String> = _language.asStateFlow()
 
+    private val _accentColorName = MutableStateFlow(sharedPrefs.getString("accent_color_name", "PURPLE") ?: "PURPLE")
+    val accentColorName: StateFlow<String> = _accentColorName.asStateFlow()
+
+    private val _darkModeEnabled = MutableStateFlow(sharedPrefs.getBoolean("dark_mode_enabled", true))
+    val darkModeEnabled: StateFlow<Boolean> = _darkModeEnabled.asStateFlow()
+
     private val _vibrationEnabled = MutableStateFlow(sharedPrefs.getBoolean("vibration_enabled", true))
     val vibrationEnabled: StateFlow<Boolean> = _vibrationEnabled.asStateFlow()
 
@@ -159,14 +184,24 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
     private val _monthlyReviewEnabled = MutableStateFlow(sharedPrefs.getBoolean("monthly_review_enabled", true))
     val monthlyReviewEnabled: StateFlow<Boolean> = _monthlyReviewEnabled.asStateFlow()
 
-    private val _monthlyReviewTime = MutableStateFlow(sharedPrefs.getString("monthly_review_time", "01-09:00") ?: "01-09:00")
-    val monthlyReviewTime: StateFlow<String> = _monthlyReviewTime.asStateFlow()
 
     private val _yearlyReviewEnabled = MutableStateFlow(sharedPrefs.getBoolean("yearly_review_enabled", true))
     val yearlyReviewEnabled: StateFlow<Boolean> = _yearlyReviewEnabled.asStateFlow()
 
-    private val _yearlyReviewTime = MutableStateFlow(sharedPrefs.getString("yearly_review_time", "28-10:00") ?: "28-10:00")
-    val yearlyReviewTime: StateFlow<String> = _yearlyReviewTime.asStateFlow()
+
+    private val _deepLinkReviewMonth = MutableStateFlow<Pair<Int, Int>?>(null)
+    val deepLinkReviewMonth: StateFlow<Pair<Int, Int>?> = _deepLinkReviewMonth.asStateFlow()
+
+    private val _deepLinkReviewYear = MutableStateFlow<Int?>(null)
+    val deepLinkReviewYear: StateFlow<Int?> = _deepLinkReviewYear.asStateFlow()
+
+    fun setDeepLinkReviewMonth(value: Pair<Int, Int>?) {
+        _deepLinkReviewMonth.value = value
+    }
+
+    fun setDeepLinkReviewYear(value: Int?) {
+        _deepLinkReviewYear.value = value
+    }
 
     private val _hasOnboarded = MutableStateFlow(sharedPrefs.getBoolean("has_onboarded", false))
     val hasOnboarded: StateFlow<Boolean> = _hasOnboarded.asStateFlow()
@@ -196,6 +231,14 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
         } else {
             com.example.NotificationHelper.cancelReminder(getApplication())
         }
+    }
+
+    private val _isSaskiaUnlocked = MutableStateFlow(sharedPrefs.getBoolean("is_saskia_unlocked", false))
+    val isSaskiaUnlocked: StateFlow<Boolean> = _isSaskiaUnlocked.asStateFlow()
+
+    fun unlockSaskia() {
+        _isSaskiaUnlocked.value = true
+        sharedPrefs.edit().putBoolean("is_saskia_unlocked", true).apply()
     }
 
     fun updateNotificationTime(hour: Int, minute: Int) {
@@ -583,7 +626,7 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
                 isWeeklyTargetReached = weeklyLoggedCount >= weeklyTargetCount
             }
 
-            val (streakVal, _) = calculateStreak(habit, logs)
+            val (streakVal, _) = calculateStreak(habit, logs, targetDateStr = date)
 
             HabitUiItem(
                 habit = habit,
@@ -628,8 +671,8 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
         initialValue = 0
     )
 
-    val perfectDaysStats: StateFlow<PerfectDaysStats> = combine(allHabits, allLogs) { habits, logs ->
-        calculatePerfectDaysStats(habits, logs)
+    val perfectDaysStats: StateFlow<PerfectDaysStats> = combine(allHabits, allLogs, selectedDate) { habits, logs, date ->
+        calculatePerfectDaysStats(habits, logs, targetDateStr = date)
     }.flowOn(kotlinx.coroutines.Dispatchers.Default).stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -648,7 +691,8 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
 
         val habitStreaks = habits.map { habit ->
             val (_, longestStreak) = calculateStreak(habit, logs)
-            ProfileHabitStreak(habit, longestStreak)
+            val completions = logs.count { it.habitId == habit.id && isLogCompleted(habit, it) }
+            ProfileHabitStreak(habit, longestStreak, completions)
         }
 
         val unlockedHabitStreaks = habitStreaks.sumOf { streakInfo ->
@@ -1618,9 +1662,31 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun getTimeCapsuleNote(type: String, targetPeriod: String): Flow<TimeCapsuleNote?> {
+        return repository.getTimeCapsuleNote(type, targetPeriod)
+    }
+
+    fun saveTimeCapsuleNote(type: String, targetPeriod: String, content: String) {
+        viewModelScope.launch {
+            repository.saveTimeCapsuleNote(type, targetPeriod, content)
+        }
+    }
+
     fun setLanguage(lang: String) {
         _language.value = lang
         sharedPrefs.edit().putString("language", lang).apply()
+    }
+
+    fun setAccentColorName(name: String) {
+        _accentColorName.value = name
+        sharedPrefs.edit().putString("accent_color_name", name).apply()
+        com.example.ui.theme.updateAccentColors(name)
+        HabitWidgetProvider.triggerUpdate(getApplication())
+    }
+
+    fun setDarkModeEnabled(enabled: Boolean) {
+        _darkModeEnabled.value = enabled
+        sharedPrefs.edit().putBoolean("dark_mode_enabled", enabled).apply()
     }
 
     fun setVibrationEnabled(enabled: Boolean) {
@@ -1636,6 +1702,7 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
     fun setReviewNotificationsEnabled(enabled: Boolean) {
         _reviewNotificationsEnabled.value = enabled
         sharedPrefs.edit().putBoolean("notifications_enabled", enabled).apply()
+        com.example.NotificationHelper.scheduleReviewNotifications(getApplication())
     }
 
     fun dismissReview(reviewKey: String) {
@@ -1648,22 +1715,16 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
     fun setMonthlyReviewEnabled(enabled: Boolean) {
         _monthlyReviewEnabled.value = enabled
         sharedPrefs.edit().putBoolean("monthly_review_enabled", enabled).apply()
+        com.example.NotificationHelper.scheduleReviewNotifications(getApplication())
     }
 
-    fun setMonthlyReviewTime(time: String) {
-        _monthlyReviewTime.value = time
-        sharedPrefs.edit().putString("monthly_review_time", time).apply()
-    }
 
     fun setYearlyReviewEnabled(enabled: Boolean) {
         _yearlyReviewEnabled.value = enabled
         sharedPrefs.edit().putBoolean("yearly_review_enabled", enabled).apply()
+        com.example.NotificationHelper.scheduleReviewNotifications(getApplication())
     }
 
-    fun setYearlyReviewTime(time: String) {
-        _yearlyReviewTime.value = time
-        sharedPrefs.edit().putString("yearly_review_time", time).apply()
-    }
 
     fun setOnboarded(completed: Boolean) {
         _hasOnboarded.value = completed
@@ -1691,7 +1752,8 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
         reminderHour: Int = 18,
         reminderMinute: Int = 0,
         customReminders: String = "",
-        description: String = ""
+        description: String = "",
+        milestoneRewards: List<com.example.data.MilestoneReward> = emptyList()
     ) {
         viewModelScope.launch {
             try {
@@ -1715,6 +1777,11 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
                 )
                 val insertedId = repository.insertHabit(habit).toInt()
                 val finalHabit = habit.copy(id = insertedId)
+                
+                milestoneRewards.forEach { reward ->
+                    repository.insertMilestoneReward(reward.copy(habitId = insertedId))
+                }
+                
                 try {
                     com.example.NotificationHelper.scheduleAllHabitReminders(
                         getApplication(),
@@ -2029,13 +2096,14 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     // STATS CALCULATION FUNCTIONS
-    fun calculateStreak(habit: Habit, logs: List<HabitLog>): Pair<Int, Int> {
+    fun calculateStreak(habit: Habit, logs: List<HabitLog>, targetDateStr: String? = null): Pair<Int, Int> {
         // Return (currentStreak, longestStreak)
         val validStartMillis = if (habit.startDate > 946684800000L) habit.startDate else habit.createdAt
         val startSdf = SimpleDateFormat("yyyy-MM-dd", Locale.US)
         val startSdfStr = startSdf.format(Date(validStartMillis))
 
-        val habitLogs = logs.filter { it.habitId == habit.id && it.date >= startSdfStr }
+        val targetMaxDateStr = targetDateStr ?: "9999-12-31"
+        val habitLogs = logs.filter { it.habitId == habit.id && it.date >= startSdfStr && it.date <= targetMaxDateStr }
         if (habitLogs.isEmpty() && !habit.isNegative) return 0 to 0
 
         val completedDates = mutableSetOf<String>()
@@ -2164,7 +2232,9 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
 
         if (habit.isNegative && loggedDates.isEmpty() && validStartMillis >= System.currentTimeMillis()) return 0 to 0
 
-        val todayEpoch = millisToEpochDays(System.currentTimeMillis())
+        val actualTodayEpoch = millisToEpochDays(System.currentTimeMillis())
+        val targetEpoch = if (targetDateStr != null) dateToEpochDaysFast(targetDateStr) else actualTodayEpoch
+        val todayEpoch = targetEpoch.coerceAtMost(actualTodayEpoch)
         val startEpoch = millisToEpochDays(validStartMillis)
 
         if (startEpoch > todayEpoch) return 0 to 0
@@ -2497,10 +2567,12 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
         return sdf.format(Date())
     }
 
-    fun calculatePerfectDaysStats(habits: List<Habit>, logs: List<HabitLog>): PerfectDaysStats {
+    fun calculatePerfectDaysStats(habits: List<Habit>, logs: List<HabitLog>, targetDateStr: String? = null): PerfectDaysStats {
         if (habits.isEmpty()) return PerfectDaysStats(0, 0, 0, 0)
 
-        val todayEpoch = millisToEpochDays(System.currentTimeMillis())
+        val actualTodayEpoch = millisToEpochDays(System.currentTimeMillis())
+        val targetEpoch = if (targetDateStr != null) dateToEpochDaysFast(targetDateStr) else actualTodayEpoch
+        val todayEpoch = targetEpoch.coerceAtMost(actualTodayEpoch)
         
         // Oldest start epoch
         var oldestStartEpoch = todayEpoch
@@ -2647,8 +2719,10 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
 
     private fun initAchievementObserver() {
         viewModelScope.launch {
-            combine(profileStats, language) { stats, lang -> stats to lang }.collect { (stats, lang) ->
-                val currentUnlocked = calculateUnlockedAchievementsList(stats, lang)
+            combine(profileStats, language, allMilestoneRewards) { stats, lang, rewards -> 
+                Triple(stats, lang, rewards)
+            }.collect { (stats, lang, rewards) ->
+                val currentUnlocked = calculateUnlockedAchievementsList(stats, lang, rewards)
                 val currentIds = currentUnlocked.map { it.id }.toSet()
 
                 if (knownUnlockedAchievementIds == null) {
@@ -2673,6 +2747,21 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
                     if (_newlyUnlockedAchievement.value == null) {
                         _newlyUnlockedAchievement.value = updatedQueue.firstOrNull()
                     }
+                    
+                    // Mark associated rewards as unlocked
+                    newlyUnlocked.forEach { ach ->
+                        if (ach.rewardText != null) {
+                            val rewardToUpdate = rewards.find { 
+                                it.conditionType == "CUSTOM_MILESTONE" && it.id.toString() == ach.id.replace("CUSTOM_", "") ||
+                                it.conditionType == "TROPHY_COUPLED" && it.trophyId == ach.tier
+                            }
+                            if (rewardToUpdate != null && rewardToUpdate.unlockedAt == 0L) {
+                                viewModelScope.launch {
+                                    repository.updateMilestoneReward(rewardToUpdate.copy(unlockedAt = System.currentTimeMillis()))
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -2691,9 +2780,15 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
 
     private fun calculateUnlockedAchievementsList(
         stats: com.example.data.ProfileStats,
-        lang: String
+        lang: String,
+        rewards: List<MilestoneReward> = emptyList()
     ): List<com.example.data.UnlockedAchievementInfo> {
         val list = mutableListOf<com.example.data.UnlockedAchievementInfo>()
+
+        // Helper to find reward text
+        fun getRewardText(trophyId: String, habitId: Int? = null): String? {
+            return rewards.find { it.conditionType == "TROPHY_COUPLED" && it.trophyId == trophyId && (habitId == null || it.habitId == habitId) }?.rewardText
+        }
 
         // Global Completions
         val totalGlobalCompletions = stats.totalGlobalCompletions
@@ -2818,11 +2913,51 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
             }
         }
 
-        return list
+        // Apply reward text to standard achievements
+        val finalList = list.map { ach ->
+            val habitId = if (ach.id.startsWith("STREAK_")) ach.id.split("_")[1].toIntOrNull() else null
+            ach.copy(rewardText = getRewardText(ach.tier, habitId))
+        }.toMutableList()
+
+        // Add custom milestone rewards as virtual achievements
+        val customMilestones = rewards.filter { it.conditionType == "STREAK" || it.conditionType == "COMPLETIONS" }
+        customMilestones.forEach { reward ->
+            val habitStat = stats.habitStreaks.find { it.habit.id == reward.habitId }
+            if (habitStat != null) {
+                val isReached = when (reward.conditionType) {
+                    "STREAK" -> habitStat.longestStreak >= reward.conditionValue
+                    "COMPLETIONS" -> habitStat.totalCompletions >= reward.conditionValue
+                    else -> false
+                }
+                
+                if (isReached) {
+                    finalList.add(com.example.data.UnlockedAchievementInfo(
+                        id = "CUSTOM_${reward.id}",
+                        type = "CUSTOM_MILESTONE",
+                        tier = "CUSTOM",
+                        title = if (lang == "de") "${habitStat.habit.name}: Meilenstein erreicht" else "${habitStat.habit.name}: Milestone Reached",
+                        description = if (lang == "de") "Belohnung freigeschaltet!" else "Reward unlocked!",
+                        habitName = habitStat.habit.name,
+                        habitColor = habitStat.habit.color,
+                        habitIcon = habitStat.habit.icon,
+                        rewardText = reward.rewardText
+                    ))
+                }
+            }
+        }
+
+        return finalList
     }
 
     init {
+        com.example.ui.theme.updateAccentColors(_accentColorName.value)
         initAchievementObserver()
+        viewModelScope.launch {
+            perfectDaysStats.collect { stats ->
+                sharedPrefs.edit().putInt("current_perfect_streak", stats.currentStreak).apply()
+                com.example.HabitWidgetProvider.triggerUpdate(getApplication())
+            }
+        }
         viewModelScope.launch {
             selectedDate.collect {
                 _heatmapMonthOffset.value = 0
@@ -2836,6 +2971,20 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
                         getApplication(),
                         habit
                     )
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun redeemMilestoneReward(rewardId: Int) {
+        viewModelScope.launch {
+            try {
+                val rewards = repository.getAllMilestoneRewardsRaw()
+                val reward = rewards.find { it.id == rewardId }
+                if (reward != null) {
+                    repository.updateMilestoneReward(reward.copy(isRedeemed = true))
                 }
             } catch (e: Exception) {
                 e.printStackTrace()

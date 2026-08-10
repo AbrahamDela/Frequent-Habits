@@ -75,8 +75,40 @@ class HabitRepository(private val habitDao: HabitDao) {
         habitDao.deleteLogsForHabitOnDate(habitId, date)
     }
 
+    fun getTimeCapsuleNote(type: String, targetPeriod: String): Flow<TimeCapsuleNote?> =
+        habitDao.getTimeCapsuleNote(type, targetPeriod)
+
+    suspend fun getTimeCapsuleNoteRaw(type: String, targetPeriod: String): TimeCapsuleNote? =
+        habitDao.getTimeCapsuleNoteRaw(type, targetPeriod)
+
+    suspend fun saveTimeCapsuleNote(type: String, targetPeriod: String, content: String) {
+        if (content.trim().isEmpty()) {
+            val existing = habitDao.getTimeCapsuleNoteRaw(type, targetPeriod)
+            if (existing != null) {
+                habitDao.deleteTimeCapsuleNote(existing)
+            }
+        } else {
+            val existing = habitDao.getTimeCapsuleNoteRaw(type, targetPeriod)
+            if (existing != null) {
+                habitDao.insertTimeCapsuleNote(existing.copy(content = content, createdAt = System.currentTimeMillis()))
+            } else {
+                habitDao.insertTimeCapsuleNote(TimeCapsuleNote(type = type, targetPeriod = targetPeriod, content = content))
+            }
+        }
+    }
+
     suspend fun clearAllData() {
         habitDao.clearAllLogs()
         habitDao.clearAllHabits()
+        habitDao.clearAllTimeCapsuleNotes()
     }
+
+    // Milestone Rewards
+    val allMilestoneRewards: Flow<List<MilestoneReward>> = habitDao.getAllMilestoneRewards()
+    suspend fun getAllMilestoneRewardsRaw(): List<MilestoneReward> = habitDao.getAllMilestoneRewardsRaw()
+    fun getMilestoneRewardsForHabit(habitId: Int): Flow<List<MilestoneReward>> = habitDao.getMilestoneRewardsForHabit(habitId)
+    suspend fun insertMilestoneReward(reward: MilestoneReward) = habitDao.insertMilestoneReward(reward)
+    suspend fun updateMilestoneReward(reward: MilestoneReward) = habitDao.updateMilestoneReward(reward)
+    suspend fun deleteMilestoneReward(reward: MilestoneReward) = habitDao.deleteMilestoneReward(reward)
+    suspend fun deleteMilestoneRewardsForHabit(habitId: Int) = habitDao.deleteMilestoneRewardsForHabit(habitId)
 }
