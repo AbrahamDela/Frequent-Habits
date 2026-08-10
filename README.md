@@ -1,6 +1,6 @@
 <div align="center">
 
-# <img src="fastlane/metadata/android/en-US/images/icon.png" width="38" alt="Frequent Habits Logo"> Frequent Habits
+# Frequent Habits
 
 <img width="2048" height="1000" alt="featureGraphic" src="https://github.com/user-attachments/assets/1cfba531-14b8-4345-b0b2-f68bcee0c9af" />
 
