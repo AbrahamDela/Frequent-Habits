@@ -948,7 +948,7 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
                     val combinedStatus = overallCal.statusMap[dateStr] ?: "INACTIVE"
                     val isToday = dateStr == today
                     val isFuture = dateStr > today
-                    val isOutOfRange = dateStr < minDate
+                    val isOutOfRange = false
                     val dayOfMonth = cursor.get(Calendar.DAY_OF_MONTH)
                     
                     weekDays.add(
@@ -1010,7 +1010,7 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
                 val combinedStatus = overallCal.statusMap[dateStr] ?: "INACTIVE"
                 val isToday = dateStr == today
                 val isFuture = dateStr > today
-                val isOutOfRange = dateStr < minDate
+                val isOutOfRange = false
                 val dayOfMonth = cursor.get(Calendar.DAY_OF_MONTH)
                 
                 weekDays.add(
@@ -1192,7 +1192,7 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
                         
                         val isToday = dateStr == todayStr
                         val isFuture = dateStr > todayStr
-                        val isOutOfRange = dateStr < minDate
+                        val isOutOfRange = false
                         val dayOfMonth = cursor.get(Calendar.DAY_OF_MONTH)
                         
                         weekDays.add(
@@ -1260,7 +1260,7 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
                     
                     val isToday = dateStr == todayStr
                     val isFuture = dateStr > todayStr
-                    val isOutOfRange = dateStr < minDate
+                    val isOutOfRange = false
                     val dayOfMonth = yearCursor.get(Calendar.DAY_OF_MONTH)
                     
                     weekDays.add(
@@ -1996,7 +1996,13 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
             if (value == 0f) {
                 repository.unlogHabit(habitId, date)
             } else {
-                repository.logHabit(habitId, date, value)
+                val habit = repository.getHabitByIdSuspend(habitId)
+                val cappedValue = if (habit != null && habit.targetValue > 0f && value > 0f) {
+                    value.coerceAtMost(habit.targetValue)
+                } else {
+                    value
+                }
+                repository.logHabit(habitId, date, cappedValue)
             }
             // Refresh widget state
             HabitWidgetProvider.triggerUpdate(getApplication())

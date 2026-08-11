@@ -1,4 +1,5 @@
 package com.example
+import androidx.compose.ui.graphics.nativeCanvas
 
 import kotlin.math.roundToInt
 import com.frequent.habits.R
@@ -27,10 +28,16 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -241,6 +248,13 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
     val language by viewModel.language.collectAsStateWithLifecycle()
     val infoCardsEnabled by viewModel.infoCardsEnabled.collectAsStateWithLifecycle()
 
+    val todayListState = rememberLazyListState()
+    val statsListState = rememberLazyListState()
+    val profileListState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
+    val mainTabRoutes = remember { setOf("TODAY", "STATS", "PROFILE") }
+    var previousRoute by remember { mutableStateOf<String?>(null) }
+
     CompositionLocalProvider(LocalInfoCardsEnabled provides infoCardsEnabled) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -311,8 +325,20 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
         )
     }
 
-    // Keep tab selected state in synchronization if user navigates
+    // Keep tab selected state in synchronization if user navigates & scroll to top when switching main tabs
     LaunchedEffect(currentRoute) {
+        if (currentRoute != null) {
+            if (mainTabRoutes.contains(currentRoute)) {
+                if (previousRoute != null && mainTabRoutes.contains(previousRoute) && previousRoute != currentRoute) {
+                    when (currentRoute) {
+                        "TODAY" -> todayListState.scrollToItem(0, 0)
+                        "STATS" -> statsListState.scrollToItem(0, 0)
+                        "PROFILE" -> profileListState.scrollToItem(0, 0)
+                    }
+                }
+            }
+            previousRoute = currentRoute
+        }
         if (currentRoute != null && !currentRoute.startsWith("DETAIL") && selectedTab != currentRoute) {
             selectedTab = currentRoute
         }
@@ -336,14 +362,25 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
                                 if (language == "de") "Erstelle zuerst eine Gewohnheit, um Statistiken zu sehen." else "Create a habit first to view statistics.",
                                 Toast.LENGTH_SHORT
                             ).show()
-                        } else if (selectedTab != tab) {
-                            selectedTab = tab
-                            navController.navigate(tab) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+                        } else {
+                            val targetState = when (tab) {
+                                "TODAY" -> todayListState
+                                "STATS" -> statsListState
+                                "PROFILE" -> profileListState
+                                else -> null
+                            }
+                            if (selectedTab != tab) {
+                                selectedTab = tab
+                                navController.navigate(tab) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
-                                launchSingleTop = true
-                                restoreState = true
+                            }
+                            coroutineScope.launch {
+                                targetState?.scrollToItem(0, 0)
                             }
                         }
                     },
@@ -424,11 +461,13 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
                     ProfileScreen(
                         viewModel = viewModel,
                         language = language,
-                        onSettingsClick = {
-                            navController.navigate("MORE") {
+                        onSettingsClick = { subpage ->
+                            val dest = if (subpage != null) "MORE?subpage=$subpage" else "MORE"
+                            navController.navigate(dest) {
                                 launchSingleTop = true
                             }
-                        }
+                        },
+                        listState = profileListState
                     )
                 }
                 composable("TODAY") {
@@ -451,7 +490,8 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
                             }
                         },
                         showCreateFirstHabitHint = showCreateFirstHabitHint,
-                        onDismissFirstHabitHint = { showCreateFirstHabitHint = false }
+                        onDismissFirstHabitHint = { showCreateFirstHabitHint = false },
+                        listState = todayListState
                     )
                 }
                 composable("CREATE") {
@@ -549,7 +589,8 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
                                     launchSingleTop = true
                                 }
                             }
-                        }
+                        },
+                        listState = statsListState
                     )
                 }
                 composable("OVERALL_STATS") {
@@ -567,13 +608,27 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
                                 launchSingleTop = true
                                 restoreState = true
                             }
+                            coroutineScope.launch {
+                                todayListState.scrollToItem(0, 0)
+                            }
                         }
                     )
                 }
-                composable("MORE") {
+                composable(
+                    route = "MORE?subpage={subpage}",
+                    arguments = listOf(
+                        navArgument("subpage") {
+                            type = NavType.StringType
+                            nullable = true
+                            defaultValue = null
+                        }
+                    )
+                ) { backStackEntry ->
+                    val subpage = backStackEntry.arguments?.getString("subpage")
                     SettingsScreen(
                         viewModel = viewModel,
                         language = language,
+                        initialSubpage = subpage,
                         onBack = {
                             navController.popBackStack()
                         }
@@ -3058,7 +3113,8 @@ fun TodayScreen(
     onAddClick: () -> Unit,
     onEditHabit: (Habit) -> Unit,
     showCreateFirstHabitHint: Boolean = false,
-    onDismissFirstHabitHint: () -> Unit = {}
+    onDismissFirstHabitHint: () -> Unit = {},
+    listState: LazyListState = rememberLazyListState()
 ) {
     val selectedDate by viewModel.selectedDate.collectAsStateWithLifecycle()
     val weekStartCalendar by viewModel.currentWeekStart.collectAsStateWithLifecycle()
@@ -3135,6 +3191,7 @@ fun TodayScreen(
             }
     ) {
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
                 .background(AppBg)
@@ -4331,17 +4388,19 @@ fun HabitItemRow(
     }
 
     val handleUserToggle = {
-        if (!isCompleted) {
+        if (!isNumerical && !isCompleted && !isFailed) {
             triggerUserFeedback()
         }
         onToggle(habit.id, hasLog)
     }
 
     val handleUserAddQuantity = {
-        if (!isCompleted && (currentValue + 1f >= targetVal)) {
-            triggerUserFeedback()
+        if (!isCompleted) {
+            if (currentValue + 1f >= targetVal) {
+                triggerUserFeedback()
+            }
+            onAddQuantity(habit.id, currentValue, 1f)
         }
-        onAddQuantity(habit.id, currentValue, 1f)
     }
 
     LaunchedEffect(isCompleted, selectedDate) {
@@ -4777,7 +4836,8 @@ fun StatsScreen(
     language: String,
     onAddClick: () -> Unit,
     onHabitClick: (Int) -> Unit,
-    onOverallClick: () -> Unit
+    onOverallClick: () -> Unit,
+    listState: LazyListState = rememberLazyListState()
 ) {
     val strength by viewModel.totalStrength.collectAsStateWithLifecycle()
     val longestStreak by viewModel.longestStreakOfAll.collectAsStateWithLifecycle()
@@ -4897,6 +4957,7 @@ fun StatsScreen(
 
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
                 .background(AppBg)
@@ -5248,223 +5309,23 @@ fun StatsScreen(
             )
         }
         
-        if (showReviewArchive) {
-            Dialog(onDismissRequest = { showReviewArchive = false }) {
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 4.dp, vertical = 16.dp),
-                    color = AppCard,
-                    border = BorderStroke(1.dp, AppBorder),
-                    shape = RoundedCornerShape(24.dp)
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(20.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = if (language == "de") "Deine Rückblicke" else "Your Reviews",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    color = TextPrimary,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                IconButton(
-                                    onClick = { showReviewExplanation = true },
-                                    modifier = Modifier.size(24.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Info,
-                                        contentDescription = "Info",
-                                        tint = PrimaryViolet,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                            }
-                            IconButton(onClick = { showReviewArchive = false }) {
-                                Icon(imageVector = Icons.Default.Close, contentDescription = "Close", tint = TextSecondary)
-                            }
-                        }
-                        
-                        Spacer(modifier = Modifier.height(16.dp))
-                        
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(max = 420.dp)
-                                .verticalScroll(rememberScrollState()),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            if (availableYears.isEmpty() && availableMonths.isEmpty()) {
-                                Text(
-                                    text = if (language == "de") "Noch keine Rückblicke verfügbar." else "No reviews available yet.",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = TextSecondary,
-                                    modifier = Modifier.padding(vertical = 16.dp)
-                                )
-                            }
-                            
-                            // Monthly reviews section
-                            if (availableMonths.isNotEmpty()) {
-                                Text(
-                                    text = if (language == "de") "MONATSRÜCKBLICKE" else "MONTHLY REVIEWS",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = SuccessGreen,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(bottom = 4.dp)
-                                )
-                                for ((y, m) in availableMonths) {
-                                    val monthLogsCount = remember(y, m, allLogs) {
-                                        val prefix = String.format(java.util.Locale.US, "%04d-%02d-", y, m)
-                                        allLogs.count { it.date.startsWith(prefix) && it.value > 0f }
-                                    }
-                                    val mName = when (m) {
-                                        1 -> if (language == "de") "Januar" else "January"
-                                        2 -> if (language == "de") "Februar" else "February"
-                                        3 -> if (language == "de") "März" else "March"
-                                        4 -> if (language == "de") "April" else "April"
-                                        5 -> if (language == "de") "Mai" else "May"
-                                        6 -> if (language == "de") "Juni" else "June"
-                                        7 -> if (language == "de") "Juli" else "July"
-                                        8 -> if (language == "de") "August" else "August"
-                                        9 -> if (language == "de") "September" else "September"
-                                        10 -> if (language == "de") "Oktober" else "October"
-                                        11 -> if (language == "de") "November" else "November"
-                                        else -> if (language == "de") "Dezember" else "December"
-                                    }
-                                    Surface(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clip(RoundedCornerShape(12.dp))
-                                            .clickable {
-                                                selectedReviewMonth = y to m
-                                                showReviewArchive = false
-                                            },
-                                        color = AppBg,
-                                        border = BorderStroke(1.dp, AppBorder),
-                                        shape = RoundedCornerShape(12.dp)
-                                    ) {
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(horizontal = 12.dp, vertical = 10.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Box(
-                                                    modifier = Modifier
-                                                        .size(32.dp)
-                                                        .background(SuccessGreen.copy(alpha = 0.15f), CircleShape),
-                                                    contentAlignment = Alignment.Center
-                                                ) {
-                                                    Text(text = "📊", style = MaterialTheme.typography.bodyMedium)
-                                                }
-                                                Spacer(modifier = Modifier.width(10.dp))
-                                                Column {
-                                                    Text(
-                                                        text = if (language == "de") "Rückblick $mName $y" else "Review $mName $y",
-                                                        style = MaterialTheme.typography.titleSmall,
-                                                        color = TextPrimary,
-                                                        fontWeight = FontWeight.Bold
-                                                    )
-                                                    Text(
-                                                        text = "$monthLogsCount " + (if (language == "de") "Abschlüsse" else "completions"),
-                                                        style = MaterialTheme.typography.labelSmall,
-                                                        color = TextSecondary
-                                                    )
-                                                }
-                                            }
-                                            Icon(
-                                                imageVector = Icons.Default.PlayArrow,
-                                                contentDescription = "Play",
-                                                tint = SuccessGreen,
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                            
-                            // Yearly reviews section
-                            if (availableYears.isNotEmpty()) {
-                                Spacer(modifier = Modifier.height(12.dp))
-                                Text(
-                                    text = if (language == "de") "JAHRESRÜCKBLICKE" else "YEARLY REVIEWS",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = PrimaryViolet,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(bottom = 4.dp)
-                                )
-                                for (y in availableYears) {
-                                    val yearLogsCount = remember(y, allLogs) {
-                                        allLogs.count { it.date.startsWith("$y-") && it.value > 0f }
-                                    }
-                                    Surface(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clip(RoundedCornerShape(12.dp))
-                                            .clickable {
-                                                selectedReviewYear = y
-                                                showReviewArchive = false
-                                            },
-                                        color = AppBg,
-                                        border = BorderStroke(1.dp, AppBorder),
-                                        shape = RoundedCornerShape(12.dp)
-                                    ) {
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(horizontal = 12.dp, vertical = 10.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Box(
-                                                    modifier = Modifier
-                                                        .size(32.dp)
-                                                        .background(PrimaryViolet.copy(alpha = 0.15f), CircleShape),
-                                                    contentAlignment = Alignment.Center
-                                                ) {
-                                                    Text(text = "🎆", style = MaterialTheme.typography.bodyMedium)
-                                                }
-                                                Spacer(modifier = Modifier.width(10.dp))
-                                                Column {
-                                                    Text(
-                                                        text = if (language == "de") "Jahresrückblick $y" else "$y Year in Review",
-                                                        style = MaterialTheme.typography.titleSmall,
-                                                        color = TextPrimary,
-                                                        fontWeight = FontWeight.Bold
-                                                    )
-                                                    Text(
-                                                        text = "$yearLogsCount " + (if (language == "de") "Abschlüsse" else "completions"),
-                                                        style = MaterialTheme.typography.labelSmall,
-                                                        color = TextSecondary
-                                                    )
-                                                }
-                                            }
-                                            Icon(
-                                                imageVector = Icons.Default.PlayArrow,
-                                                contentDescription = "Play",
-                                                tint = PrimaryViolet,
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        ReviewArchiveDialog(
+            showReviewArchive = showReviewArchive,
+            availableYears = availableYears,
+            availableMonths = availableMonths,
+            allLogs = allLogs,
+            language = language,
+            onShowReviewExplanation = { showReviewExplanation = true },
+            onSelectReviewMonth = { (y, m) ->
+                selectedReviewMonth = y to m
+                showReviewArchive = false
+            },
+            onSelectReviewYear = { y ->
+                selectedReviewYear = y
+                showReviewArchive = false
+            },
+            onDismiss = { showReviewArchive = false }
+        )
     }
 }
 
@@ -6006,6 +5867,16 @@ fun HabitDetailScreen(
                             color = TextSecondary,
                             fontWeight = FontWeight.Bold
                         )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        InfoIconButton(
+                            title = if (language == "de") "Kalender-Historie" else "Calendar History",
+                            explanation = if (language == "de") {
+                                "Bietet eine vollständige Monatsübersicht deiner Abschlüsse. Grün steht für erfolgreiche Tage, Rot für fehlgeschlagene Tage, Gelb für ausstehende Tage und Dunkelgrau für inaktive Tage oder Pausen."
+                            } else {
+                                "Provides a full monthly overview of your completions. Green represents a successful day, red represents a failed day, yellow/amber represents a pending log, and dark grey indicates inactive/rest days."
+                            },
+                            onClick = { t, e -> activeExplanation = t to e }
+                        )
                         Spacer(modifier = Modifier.weight(1f))
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -6025,15 +5896,6 @@ fun HabitDetailScreen(
                                 fontWeight = FontWeight.Medium
                             )
                         }
-                        InfoIconButton(
-                            title = if (language == "de") "Kalender-Historie" else "Calendar History",
-                            explanation = if (language == "de") {
-                                "Bietet eine vollständige Monatsübersicht deiner Abschlüsse. Grün steht für erfolgreiche Tage, Rot für fehlgeschlagene Tage, Gelb für ausstehende Tage und Dunkelgrau für inaktive Tage oder Pausen."
-                            } else {
-                                "Provides a full monthly overview of your completions. Green represents a successful day, red represents a failed day, yellow/amber represents a pending log, and dark grey indicates inactive/rest days."
-                            },
-                            onClick = { t, e -> activeExplanation = t to e }
-                        )
                     }
 
                     val habitColor = HabitIconMapping.getColor(habit.color)
@@ -6691,8 +6553,9 @@ fun calculateHabitTrendPoints(
                 var completions = 0
                 var activeDays = 0
 
+                val actualEnd = if (weekEnd.isAfter(today)) today else weekEnd
                 var current = weekStart
-                while (!current.isAfter(weekEnd)) {
+                while (!current.isAfter(actualEnd)) {
                     val dateStr = current.toString()
                     if (isHabitActiveOnDate(habit, dateStr)) {
                         activeDays++
@@ -6723,8 +6586,9 @@ fun calculateHabitTrendPoints(
                 var completions = 0
                 var activeDays = 0
 
+                val actualEnd = if (monthEnd.isAfter(today)) today else monthEnd
                 var current = monthStart
-                while (!current.isAfter(monthEnd)) {
+                while (!current.isAfter(actualEnd)) {
                     val dateStr = current.toString()
                     if (isHabitActiveOnDate(habit, dateStr)) {
                         activeDays++
@@ -6754,8 +6618,9 @@ fun calculateHabitTrendPoints(
                 var completions = 0
                 var activeDays = 0
 
+                val actualEnd = if (yearEnd.isAfter(today)) today else yearEnd
                 var current = yearStart
-                while (!current.isAfter(yearEnd)) {
+                while (!current.isAfter(actualEnd)) {
                     val dateStr = current.toString()
                     if (isHabitActiveOnDate(habit, dateStr)) {
                         activeDays++
@@ -6835,8 +6700,9 @@ fun calculateOverallTrendPoints(
 
                 activeHabits.forEach { habit ->
                     val startSdfStr = habitStartDates[habit] ?: "1970-01-01"
+                    val actualEnd = if (weekEnd.isAfter(today)) today else weekEnd
                     var current = weekStart
-                    while (!current.isAfter(weekEnd)) {
+                    while (!current.isAfter(actualEnd)) {
                         val dateStr = current.toString()
                         if (isHabitActiveOnDate(habit, dateStr)) {
                             activeDays++
@@ -6870,8 +6736,9 @@ fun calculateOverallTrendPoints(
 
                 activeHabits.forEach { habit ->
                     val startSdfStr = habitStartDates[habit] ?: "1970-01-01"
+                    val actualEnd = if (monthEnd.isAfter(today)) today else monthEnd
                     var current = monthStart
-                    while (!current.isAfter(monthEnd)) {
+                    while (!current.isAfter(actualEnd)) {
                         val dateStr = current.toString()
                         if (isHabitActiveOnDate(habit, dateStr)) {
                             activeDays++
@@ -6904,8 +6771,9 @@ fun calculateOverallTrendPoints(
 
                 activeHabits.forEach { habit ->
                     val startSdfStr = habitStartDates[habit] ?: "1970-01-01"
+                    val actualEnd = if (yearEnd.isAfter(today)) today else yearEnd
                     var current = yearStart
-                    while (!current.isAfter(yearEnd)) {
+                    while (!current.isAfter(actualEnd)) {
                         val dateStr = current.toString()
                         if (isHabitActiveOnDate(habit, dateStr)) {
                             activeDays++
@@ -6936,12 +6804,13 @@ fun TimeframeSelectorPills(
     selectedTimeframeIndex: Int,
     onTimeframeSelected: (Int) -> Unit,
     language: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    customLabels: List<String>? = null
 ) {
-    val labels = if (language == "de") {
-        listOf("Wöchentlich", "Monatlich", "Jährlich")
+    val labels = customLabels ?: if (language == "de") {
+        listOf("Diese Woche", "Diesen Monat", "Dieses Jahr", "Gesamt")
     } else {
-        listOf("Weekly", "Monthly", "Yearly")
+        listOf("This Week", "This Month", "This Year", "Total")
     }
 
     Row(
@@ -7023,6 +6892,16 @@ fun HabitScoreTrendCard(
                     color = TextSecondary,
                     fontWeight = FontWeight.Bold
                 )
+                Spacer(modifier = Modifier.width(4.dp))
+                InfoIconButton(
+                    title = if (language == "de") "Habit Score Trend" else "Habit Score Trend",
+                    explanation = if (language == "de") {
+                        "Zeigt die historische Entwicklung deines Gewohnheits-Scores (0–100) im gewählten Zeitraum."
+                    } else {
+                        "Shows the historical progression of your habit strength score (0–100) over time."
+                    },
+                    onClick = onInfoClick
+                )
                 Spacer(modifier = Modifier.weight(1f))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -7042,15 +6921,6 @@ fun HabitScoreTrendCard(
                         fontWeight = FontWeight.Medium
                     )
                 }
-                InfoIconButton(
-                    title = if (language == "de") "Habit Score Trend" else "Habit Score Trend",
-                    explanation = if (language == "de") {
-                        "Zeigt die historische Entwicklung deines Gewohnheits-Scores (0–100) im gewählten Zeitraum."
-                    } else {
-                        "Shows the historical progression of your habit strength score (0–100) over time."
-                    },
-                    onClick = onInfoClick
-                )
             }
 
             Spacer(modifier = Modifier.height(14.dp))
@@ -7115,6 +6985,16 @@ fun HabitVolumeProgressionCard(
                     color = TextSecondary,
                     fontWeight = FontWeight.Bold
                 )
+                Spacer(modifier = Modifier.width(4.dp))
+                InfoIconButton(
+                    title = if (language == "de") "Abschluss-Volumen" else "Completion Volume",
+                    explanation = if (language == "de") {
+                        "Zeigt die absoluten erfolgreichen Gewohnheitsabschlüsse pro Periode."
+                    } else {
+                        "Shows absolute completed check-ins per selected period."
+                    },
+                    onClick = onInfoClick
+                )
                 Spacer(modifier = Modifier.weight(1f))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -7134,15 +7014,6 @@ fun HabitVolumeProgressionCard(
                         fontWeight = FontWeight.Medium
                     )
                 }
-                InfoIconButton(
-                    title = if (language == "de") "Abschluss-Volumen" else "Completion Volume",
-                    explanation = if (language == "de") {
-                        "Zeigt die absoluten erfolgreichen Gewohnheitsabschlüsse pro Periode."
-                    } else {
-                        "Shows absolute completed check-ins per selected period."
-                    },
-                    onClick = onInfoClick
-                )
             }
 
             Spacer(modifier = Modifier.height(14.dp))
@@ -7167,6 +7038,8 @@ fun ScoreTrendLineChart(
 ) {
     if (points.isEmpty()) return
 
+    var selectedPointIndex by remember { mutableStateOf<Int?>(null) }
+
     Column(modifier = modifier.fillMaxWidth()) {
         Box(
             modifier = Modifier
@@ -7174,7 +7047,32 @@ fun ScoreTrendLineChart(
                 .height(180.dp)
                 .padding(vertical = 8.dp)
         ) {
-            Canvas(modifier = Modifier.fillMaxSize()) {
+            Canvas(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .pointerInput(points) {
+                        detectTapGestures { offset ->
+                            val paddingLeft = 32.dp.toPx()
+                            val paddingBottom = 24.dp.toPx()
+                            val graphWidth = size.width - paddingLeft
+                            val graphHeight = size.height - paddingBottom
+                            val stepX = if (points.size > 1) graphWidth / (points.size - 1) else graphWidth
+
+                            val clickedIndex = points.mapIndexed { idx, pt ->
+                                val x = paddingLeft + (idx * stepX)
+                                val y = graphHeight - (pt.score.coerceIn(0f, 100f) / 100f * graphHeight)
+                                val distance = Math.hypot((offset.x - x).toDouble(), (offset.y - y).toDouble())
+                                idx to distance
+                            }.minByOrNull { it.second }
+
+                            if (clickedIndex != null && clickedIndex.second < 40.dp.toPx()) {
+                                selectedPointIndex = clickedIndex.first
+                            } else {
+                                selectedPointIndex = null
+                            }
+                        }
+                    }
+            ) {
                 val width = size.width
                 val height = size.height
                 val paddingLeft = 32.dp.toPx()
@@ -7251,6 +7149,56 @@ fun ScoreTrendLineChart(
                         color = PrimaryViolet,
                         radius = 3.5.dp.toPx(),
                         center = pt
+                    )
+                }
+
+                selectedPointIndex?.let { idx ->
+                    val pt = pathPoints[idx]
+                    val trendPoint = points[idx]
+                    val text = "${trendPoint.score.toInt()}%"
+                    
+                    val paint = android.graphics.Paint().apply {
+                        color = android.graphics.Color.WHITE
+                        textSize = 34f
+                        textAlign = android.graphics.Paint.Align.CENTER
+                        isAntiAlias = true
+                        isFakeBoldText = true
+                    }
+                    val bgPaint = android.graphics.Paint().apply {
+                        color = PrimaryViolet.toArgb()
+                        isAntiAlias = true
+                    }
+
+                    val textBounds = android.graphics.Rect()
+                    paint.getTextBounds(text, 0, text.length, textBounds)
+                    
+                    val tooltipWidth = textBounds.width() + 40f
+                    val tooltipHeight = textBounds.height() + 24f
+                    
+                    val rect = android.graphics.RectF(
+                        pt.x - tooltipWidth / 2f,
+                        pt.y - tooltipHeight - 35f,
+                        pt.x + tooltipWidth / 2f,
+                        pt.y - 15f
+                    )
+                    
+                    drawContext.canvas.nativeCanvas.drawRoundRect(
+                        rect, 16f, 16f, bgPaint
+                    )
+
+                    val path = android.graphics.Path().apply {
+                        moveTo(pt.x - 12f, pt.y - 16f)
+                        lineTo(pt.x + 12f, pt.y - 16f)
+                        lineTo(pt.x, pt.y - 6f)
+                        close()
+                    }
+                    drawContext.canvas.nativeCanvas.drawPath(path, bgPaint)
+
+                    drawContext.canvas.nativeCanvas.drawText(
+                        text,
+                        pt.x,
+                        pt.y - (tooltipHeight / 2f) - 25f + (textBounds.height() / 2f),
+                        paint
                     )
                 }
             }
@@ -7407,6 +7355,16 @@ fun OverallScoreTrendCard(
                     color = TextSecondary,
                     fontWeight = FontWeight.Bold
                 )
+                Spacer(modifier = Modifier.width(4.dp))
+                InfoIconButton(
+                    title = if (language == "de") "Gesamt Score Trend" else "Overall Score Trend",
+                    explanation = if (language == "de") {
+                        "Zeigt die historische Entwicklung deines Gesamt-Konto-Scores (0–100) über alle Gewohnheiten."
+                    } else {
+                        "Shows the historical progression of your overall account strength score (0–100) across all habits."
+                    },
+                    onClick = onInfoClick
+                )
                 Spacer(modifier = Modifier.weight(1f))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -7426,15 +7384,6 @@ fun OverallScoreTrendCard(
                         fontWeight = FontWeight.Medium
                     )
                 }
-                InfoIconButton(
-                    title = if (language == "de") "Gesamt Score Trend" else "Overall Score Trend",
-                    explanation = if (language == "de") {
-                        "Zeigt die historische Entwicklung deines Gesamt-Konto-Scores (0–100) über alle Gewohnheiten."
-                    } else {
-                        "Shows the historical progression of your overall account strength score (0–100) across all habits."
-                    },
-                    onClick = onInfoClick
-                )
             }
 
             Spacer(modifier = Modifier.height(14.dp))
@@ -7497,6 +7446,16 @@ fun OverallVolumeProgressionCard(
                     color = TextSecondary,
                     fontWeight = FontWeight.Bold
                 )
+                Spacer(modifier = Modifier.width(4.dp))
+                InfoIconButton(
+                    title = if (language == "de") "Gesamt-Volumen" else "Total Volume Progression",
+                    explanation = if (language == "de") {
+                        "Zeigt die absolute Anzahl aller erfolgreich absolvierten Check-Ins im ausgewählten Zeitraum."
+                    } else {
+                        "Shows total completed check-ins recorded across all habits per selected period."
+                    },
+                    onClick = onInfoClick
+                )
                 Spacer(modifier = Modifier.weight(1f))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -7516,15 +7475,6 @@ fun OverallVolumeProgressionCard(
                         fontWeight = FontWeight.Medium
                     )
                 }
-                InfoIconButton(
-                    title = if (language == "de") "Gesamt-Volumen" else "Total Volume Progression",
-                    explanation = if (language == "de") {
-                        "Zeigt die absolute Anzahl aller erfolgreich absolvierten Check-Ins im ausgewählten Zeitraum."
-                    } else {
-                        "Shows total completed check-ins recorded across all habits per selected period."
-                    },
-                    onClick = onInfoClick
-                )
             }
 
             Spacer(modifier = Modifier.height(14.dp))
@@ -7859,120 +7809,42 @@ fun OverallStatsScreen(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    // Row 1: Current Streak & Best Streak
-                    Row(
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = AppCard),
+                        shape = RoundedCornerShape(20.dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(IntrinsicSize.Max),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            .border(
+                                1.dp,
+                                PrimaryViolet.copy(alpha = if (perfectDaysStats.currentStreak > 0) 0.6f else 0.4f),
+                                RoundedCornerShape(20.dp)
+                            )
                     ) {
-                        // Current Streak Card
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = AppCard),
-                            shape = RoundedCornerShape(20.dp),
+                        Box(
                             modifier = Modifier
-                                .weight(1f)
-                                .border(
-                                    1.dp,
-                                    PrimaryViolet.copy(alpha = if (perfectDaysStats.currentStreak > 0) 0.6f else 0.4f),
-                                    RoundedCornerShape(20.dp)
-                                )
+                                .fillMaxWidth()
+                                .padding(16.dp)
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(12.dp)
-                            ) {
-                                Box(modifier = Modifier.align(Alignment.TopEnd)) {
-                                    InfoIconButton(
-                                        title = if (language == "de") "Aktueller Streak (Perfekte Tage)" else "Current Streak (Perfect Days)",
-                                        explanation = if (language == "de") {
-                                            "Deine derzeitige Serie an aufeinanderfolgenden Tagen, an denen du ALLE aktiven Gewohnheiten vollständig abgeschlossen hast."
-                                        } else {
-                                            "Your current streak of consecutive days where you fully completed ALL active habits."
-                                        },
-                                        onClick = { t, e -> activeExplanation = t to e }
-                                    )
-                                }
-
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 10.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(44.dp)
-                                            .background(PrimaryViolet.copy(alpha = 0.15f), CircleShape),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Whatshot,
-                                            contentDescription = "Current streak",
-                                            tint = PrimaryViolet,
-                                            modifier = Modifier.size(24.dp)
-                                        )
-                                    }
-
-                                    Text(
-                                        text = if (language == "de") "Aktueller Streak" else "Current Streak",
-                                        style = MaterialTheme.typography.labelLarge,
-                                        color = TextSecondary,
-                                        fontWeight = FontWeight.Bold,
-                                        textAlign = TextAlign.Center,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-
-                                    Text(
-                                        text = if (language == "de") "${perfectDaysStats.currentStreak} ${if (perfectDaysStats.currentStreak == 1) "Tag" else "Tage"}" else "${perfectDaysStats.currentStreak} ${if (perfectDaysStats.currentStreak == 1) "Day" else "Days"}",
-                                        style = MaterialTheme.typography.headlineMedium,
-                                        fontSize = 20.sp,
-                                        color = TextPrimary,
-                                        fontWeight = FontWeight.ExtraBold,
-                                        textAlign = TextAlign.Center
-                                    )
-                                }
+                            Box(modifier = Modifier.align(Alignment.TopEnd)) {
+                                InfoIconButton(
+                                    title = if (language == "de") "Perfekte Tage" else "Perfect Days",
+                                    explanation = if (language == "de") {
+                                        "Übersicht über deine perfekten Tage, an denen du alle aktiven Gewohnheiten erfolgreich abgeschlossen hast."
+                                    } else {
+                                        "Overview of your perfect days where you successfully completed all active habits."
+                                    },
+                                    onClick = { t, e -> activeExplanation = t to e }
+                                )
                             }
-                        }
-
-                        // Best Streak Card
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = AppCard),
-                            shape = RoundedCornerShape(20.dp),
-                            modifier = Modifier
-                                .weight(1f)
-                                .border(
-                                    1.dp,
-                                    PrimaryViolet.copy(alpha = if (perfectDaysStats.perfectDaysStreak > 0) 0.6f else 0.4f),
-                                    RoundedCornerShape(20.dp)
-                                )
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(12.dp)
+                            
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(20.dp)
                             ) {
-                                Box(modifier = Modifier.align(Alignment.TopEnd)) {
-                                    InfoIconButton(
-                                        title = if (language == "de") "Längster Streak (Perfekte Tage)" else "Longest Streak (Perfect Days)",
-                                        explanation = if (language == "de") {
-                                            "Deine historische Bestleistung an aufeinanderfolgenden perfekten Tagen (alle Gewohnheiten abgeschlossen)."
-                                        } else {
-                                            "Your highest historical record of consecutive perfect days (all active habits completed)."
-                                        },
-                                        onClick = { t, e -> activeExplanation = t to e }
-                                    )
-                                }
-
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 10.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     Box(
                                         modifier = Modifier
@@ -7982,37 +7854,70 @@ fun OverallStatsScreen(
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.EmojiEvents,
-                                            contentDescription = "Best streak",
+                                            contentDescription = "Perfect Days",
                                             tint = PrimaryViolet,
                                             modifier = Modifier.size(24.dp)
                                         )
                                     }
-
                                     Text(
-                                        text = if (language == "de") "Längster Streak" else "Longest Streak",
-                                        style = MaterialTheme.typography.labelLarge,
-                                        color = TextSecondary,
-                                        fontWeight = FontWeight.Bold,
-                                        textAlign = TextAlign.Center,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-
-                                    Text(
-                                        text = if (language == "de") "${perfectDaysStats.perfectDaysStreak} ${if (perfectDaysStats.perfectDaysStreak == 1) "Tag" else "Tage"}" else "${perfectDaysStats.perfectDaysStreak} ${if (perfectDaysStats.perfectDaysStreak == 1) "Day" else "Days"}",
-                                        style = MaterialTheme.typography.headlineMedium,
-                                        fontSize = 20.sp,
+                                        text = if (language == "de") "Perfekte Tage" else "Perfect Days",
+                                        style = MaterialTheme.typography.titleLarge,
                                         color = TextPrimary,
-                                        fontWeight = FontWeight.ExtraBold,
-                                        textAlign = TextAlign.Center
+                                        fontWeight = FontWeight.Bold
                                     )
+                                }
+                                
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceEvenly
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text(
+                                            text = perfectDaysStats.totalPerfectDays.toString(),
+                                            style = MaterialTheme.typography.headlineMedium,
+                                            color = TextPrimary,
+                                            fontWeight = FontWeight.ExtraBold
+                                        )
+                                        Text(
+                                            text = if (language == "de") "Gesamt" else "Total",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = TextSecondary
+                                        )
+                                    }
+                                    
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text(
+                                            text = perfectDaysStats.currentStreak.toString(),
+                                            style = MaterialTheme.typography.headlineMedium,
+                                            color = TextPrimary,
+                                            fontWeight = FontWeight.ExtraBold
+                                        )
+                                        Text(
+                                            text = if (language == "de") "Aktueller Streak" else "Current Streak",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = TextSecondary
+                                        )
+                                    }
+                                    
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text(
+                                            text = perfectDaysStats.perfectDaysStreak.toString(),
+                                            style = MaterialTheme.typography.headlineMedium,
+                                            color = TextPrimary,
+                                            fontWeight = FontWeight.ExtraBold
+                                        )
+                                        Text(
+                                            text = if (language == "de") "Längster Streak" else "Best Streak",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = TextSecondary
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
-
             // 3. Activity Heatmap Card (GitHub-style, with date check-in navigation!)
             item(key = "overall_calendar") {
                 Card(
@@ -8056,6 +7961,16 @@ fun OverallStatsScreen(
                                     color = TextSecondary,
                                     fontWeight = FontWeight.Bold
                                 )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                InfoIconButton(
+                                    title = if (language == "de") "Aktivitäts-Heatmap" else "Activity Heatmap",
+                                    explanation = if (language == "de") {
+                                        "Zeigt deinen täglichen Gewohnheitsfortschritt für den ausgewählten Zeitraum, ähnlich wie das GitHub-Beitragssystem. Dunklere grüne Felder stehen für eine höhere Anzahl an abgeschlossenen Gewohnheiten an dem Tag."
+                                    } else {
+                                        "Shows your daily habit completion progress for the selected timeframe, styled like GitHub's contribution board. Darker green squares represent a higher ratio of completed habits on that day."
+                                    },
+                                    onClick = { t, e -> activeExplanation = t to e }
+                                )
                                 Spacer(modifier = Modifier.weight(1f))
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
@@ -8075,15 +7990,6 @@ fun OverallStatsScreen(
                                         fontWeight = FontWeight.Medium
                                     )
                                 }
-                                InfoIconButton(
-                                    title = if (language == "de") "Aktivitäts-Heatmap" else "Activity Heatmap",
-                                    explanation = if (language == "de") {
-                                        "Zeigt deinen täglichen Gewohnheitsfortschritt für den ausgewählten Zeitraum, ähnlich wie das GitHub-Beitragssystem. Dunklere grüne Felder stehen für eine höhere Anzahl an abgeschlossenen Gewohnheiten an dem Tag."
-                                    } else {
-                                        "Shows your daily habit completion progress for the selected timeframe, styled like GitHub's contribution board. Darker green squares represent a higher ratio of completed habits on that day."
-                                    },
-                                    onClick = { t, e -> activeExplanation = t to e }
-                                )
                             }
                         }
 
@@ -8382,34 +8288,32 @@ fun OverallStatsScreen(
                         Column(modifier = Modifier.padding(14.dp)) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(28.dp)
-                                            .background(SuccessGreen.copy(alpha = 0.18f), CircleShape),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.TrendingUp,
-                                            contentDescription = "Great performance",
-                                            tint = SuccessGreen,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = if (language == "de") "Läuft super" else "Doing great",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontSize = 11.sp,
-                                        color = TextSecondary,
-                                        fontWeight = FontWeight.Bold,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
+                                Box(
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .background(SuccessGreen.copy(alpha = 0.18f), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.TrendingUp,
+                                        contentDescription = "Great performance",
+                                        tint = SuccessGreen,
+                                        modifier = Modifier.size(16.dp)
                                     )
                                 }
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = if (language == "de") "Läuft super" else "Doing great",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontSize = 11.sp,
+                                    color = TextSecondary,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
                                 InfoIconButton(
                                     title = if (language == "de") "Läuft super" else "Doing great",
                                     explanation = if (language == "de") {
@@ -8485,34 +8389,32 @@ fun OverallStatsScreen(
                         Column(modifier = Modifier.padding(14.dp)) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(28.dp)
-                                            .background(ErrorRed.copy(alpha = 0.18f), CircleShape),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.TrendingDown,
-                                            contentDescription = "Needs focus",
-                                            tint = ErrorRed,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = if (language == "de") "Braucht Fokus" else "Needs focus",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontSize = 11.sp,
-                                        color = TextSecondary,
-                                        fontWeight = FontWeight.Bold,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
+                                Box(
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .background(ErrorRed.copy(alpha = 0.18f), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.TrendingDown,
+                                        contentDescription = "Needs focus",
+                                        tint = ErrorRed,
+                                        modifier = Modifier.size(16.dp)
                                     )
                                 }
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = if (language == "de") "Braucht Fokus" else "Needs focus",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontSize = 11.sp,
+                                    color = TextSecondary,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
                                 InfoIconButton(
                                     title = if (language == "de") "Braucht Fokus" else "Needs focus",
                                     explanation = if (language == "de") {
@@ -8676,223 +8578,23 @@ fun OverallStatsScreen(
             )
         }
         
-        if (showReviewArchive) {
-            Dialog(onDismissRequest = { showReviewArchive = false }) {
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 4.dp, vertical = 16.dp),
-                    color = AppCard,
-                    border = BorderStroke(1.dp, AppBorder),
-                    shape = RoundedCornerShape(24.dp)
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(20.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = if (language == "de") "Deine Rückblicke" else "Your Reviews",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    color = TextPrimary,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                IconButton(
-                                    onClick = { showReviewExplanation = true },
-                                    modifier = Modifier.size(24.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Info,
-                                        contentDescription = "Info",
-                                        tint = PrimaryViolet,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                            }
-                            IconButton(onClick = { showReviewArchive = false }) {
-                                Icon(imageVector = Icons.Default.Close, contentDescription = "Close", tint = TextSecondary)
-                            }
-                        }
-                        
-                        Spacer(modifier = Modifier.height(16.dp))
-                        
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(max = 420.dp)
-                                .verticalScroll(rememberScrollState()),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            if (availableYears.isEmpty() && availableMonths.isEmpty()) {
-                                Text(
-                                    text = if (language == "de") "Noch keine Rückblicke verfügbar." else "No reviews available yet.",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = TextSecondary,
-                                    modifier = Modifier.padding(vertical = 16.dp)
-                                )
-                            }
-                            
-                            // Monthly reviews section
-                            if (availableMonths.isNotEmpty()) {
-                                Text(
-                                    text = if (language == "de") "MONATSRÜCKBLICKE" else "MONTHLY REVIEWS",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = SuccessGreen,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(bottom = 4.dp)
-                                )
-                                for ((y, m) in availableMonths) {
-                                    val monthLogsCount = remember(y, m, allLogs) {
-                                        val prefix = String.format(java.util.Locale.US, "%04d-%02d-", y, m)
-                                        allLogs.count { it.date.startsWith(prefix) && it.value > 0f }
-                                    }
-                                    val mName = when (m) {
-                                        1 -> if (language == "de") "Januar" else "January"
-                                        2 -> if (language == "de") "Februar" else "February"
-                                        3 -> if (language == "de") "März" else "March"
-                                        4 -> if (language == "de") "April" else "April"
-                                        5 -> if (language == "de") "Mai" else "May"
-                                        6 -> if (language == "de") "Juni" else "June"
-                                        7 -> if (language == "de") "Juli" else "July"
-                                        8 -> if (language == "de") "August" else "August"
-                                        9 -> if (language == "de") "September" else "September"
-                                        10 -> if (language == "de") "Oktober" else "October"
-                                        11 -> if (language == "de") "November" else "November"
-                                        else -> if (language == "de") "Dezember" else "December"
-                                    }
-                                    Surface(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clip(RoundedCornerShape(12.dp))
-                                            .clickable {
-                                                selectedReviewMonth = y to m
-                                                showReviewArchive = false
-                                            },
-                                        color = AppBg,
-                                        border = BorderStroke(1.dp, AppBorder),
-                                        shape = RoundedCornerShape(12.dp)
-                                    ) {
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(horizontal = 12.dp, vertical = 10.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Box(
-                                                    modifier = Modifier
-                                                        .size(32.dp)
-                                                        .background(SuccessGreen.copy(alpha = 0.15f), CircleShape),
-                                                    contentAlignment = Alignment.Center
-                                                ) {
-                                                    Text(text = "📊", style = MaterialTheme.typography.bodyMedium)
-                                                }
-                                                Spacer(modifier = Modifier.width(10.dp))
-                                                Column {
-                                                    Text(
-                                                        text = if (language == "de") "Rückblick $mName $y" else "Review $mName $y",
-                                                        style = MaterialTheme.typography.titleSmall,
-                                                        color = TextPrimary,
-                                                        fontWeight = FontWeight.Bold
-                                                    )
-                                                    Text(
-                                                        text = "$monthLogsCount " + (if (language == "de") "Abschlüsse" else "completions"),
-                                                        style = MaterialTheme.typography.labelSmall,
-                                                        color = TextSecondary
-                                                    )
-                                                }
-                                            }
-                                            Icon(
-                                                imageVector = Icons.Default.PlayArrow,
-                                                contentDescription = "Play",
-                                                tint = SuccessGreen,
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                            
-                            // Yearly reviews section
-                            if (availableYears.isNotEmpty()) {
-                                Spacer(modifier = Modifier.height(12.dp))
-                                Text(
-                                    text = if (language == "de") "JAHRESRÜCKBLICKE" else "YEARLY REVIEWS",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = PrimaryViolet,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(bottom = 4.dp)
-                                )
-                                for (y in availableYears) {
-                                    val yearLogsCount = remember(y, allLogs) {
-                                        allLogs.count { it.date.startsWith("$y-") && it.value > 0f }
-                                    }
-                                    Surface(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clip(RoundedCornerShape(12.dp))
-                                            .clickable {
-                                                selectedReviewYear = y
-                                                showReviewArchive = false
-                                            },
-                                        color = AppBg,
-                                        border = BorderStroke(1.dp, AppBorder),
-                                        shape = RoundedCornerShape(12.dp)
-                                    ) {
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(horizontal = 12.dp, vertical = 10.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Box(
-                                                    modifier = Modifier
-                                                        .size(32.dp)
-                                                        .background(PrimaryViolet.copy(alpha = 0.15f), CircleShape),
-                                                    contentAlignment = Alignment.Center
-                                                ) {
-                                                    Text(text = "🎆", style = MaterialTheme.typography.bodyMedium)
-                                                }
-                                                Spacer(modifier = Modifier.width(10.dp))
-                                                Column {
-                                                    Text(
-                                                        text = if (language == "de") "Jahresrückblick $y" else "$y Year in Review",
-                                                        style = MaterialTheme.typography.titleSmall,
-                                                        color = TextPrimary,
-                                                        fontWeight = FontWeight.Bold
-                                                    )
-                                                    Text(
-                                                        text = "$yearLogsCount " + (if (language == "de") "Abschlüsse" else "completions"),
-                                                        style = MaterialTheme.typography.labelSmall,
-                                                        color = TextSecondary
-                                                    )
-                                                }
-                                            }
-                                            Icon(
-                                                imageVector = Icons.Default.PlayArrow,
-                                                contentDescription = "Play",
-                                                tint = PrimaryViolet,
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        ReviewArchiveDialog(
+            showReviewArchive = showReviewArchive,
+            availableYears = availableYears,
+            availableMonths = availableMonths,
+            allLogs = allLogs,
+            language = language,
+            onShowReviewExplanation = { showReviewExplanation = true },
+            onSelectReviewMonth = { (y, m) ->
+                selectedReviewMonth = y to m
+                showReviewArchive = false
+            },
+            onSelectReviewYear = { y ->
+                selectedReviewYear = y
+                showReviewArchive = false
+            },
+            onDismiss = { showReviewArchive = false }
+        )
 
         // Floating Header Overlay with vertical gradient fade-out
         Box(
@@ -8956,17 +8658,18 @@ fun calculateHabitSuccessStatsForPeriod(
     val startSdfStr = habitStartDate.toString()
 
     val startDate = when (periodIndex) {
-        0 -> { // Week (Last 7 days)
-            val mon = today.minusDays(6)
-            if (mon.isBefore(habitStartDate)) habitStartDate else mon
+        0 -> { // This Week
+            val dayOfWeek = today.dayOfWeek.value
+            val weekStart = today.minusDays((dayOfWeek - 1).toLong())
+            if (weekStart.isBefore(habitStartDate)) habitStartDate else weekStart
         }
-        1 -> { // Month (Last 30 days)
-            val m1 = today.minusDays(29)
-            if (m1.isBefore(habitStartDate)) habitStartDate else m1
+        1 -> { // This Month
+            val monthStart = today.withDayOfMonth(1)
+            if (monthStart.isBefore(habitStartDate)) habitStartDate else monthStart
         }
-        2 -> { // Year (Last 365 days)
-            val y1 = today.minusDays(364)
-            if (y1.isBefore(habitStartDate)) habitStartDate else y1
+        2 -> { // This Year
+            val yearStart = today.withDayOfYear(1)
+            if (yearStart.isBefore(habitStartDate)) habitStartDate else yearStart
         }
         else -> habitStartDate
     }
@@ -9028,17 +8731,18 @@ fun calculateOverallSuccessStats(
         val startSdfStr = habitStartDate.toString()
 
         val startDate = when (periodIndex) {
-            0 -> { // Week (Last 7 days)
-                val mon = today.minusDays(6)
-                if (mon.isBefore(habitStartDate)) habitStartDate else mon
+            0 -> { // This Week
+                val dayOfWeek = today.dayOfWeek.value
+                val weekStart = today.minusDays((dayOfWeek - 1).toLong())
+                if (weekStart.isBefore(habitStartDate)) habitStartDate else weekStart
             }
-            1 -> { // Month (Last 30 days)
-                val m1 = today.minusDays(29)
-                if (m1.isBefore(habitStartDate)) habitStartDate else m1
+            1 -> { // This Month
+                val monthStart = today.withDayOfMonth(1)
+                if (monthStart.isBefore(habitStartDate)) habitStartDate else monthStart
             }
-            2 -> { // Year (Last 365 days)
-                val y1 = today.minusDays(364)
-                if (y1.isBefore(habitStartDate)) habitStartDate else y1
+            2 -> { // This Year
+                val yearStart = today.withDayOfYear(1)
+                if (yearStart.isBefore(habitStartDate)) habitStartDate else yearStart
             }
             else -> habitStartDate
         }
@@ -9802,6 +9506,7 @@ fun StreakMilestonesCard(longestStreak: Int, language: String) {
 fun SettingsScreen(
     viewModel: HabitsViewModel,
     language: String,
+    initialSubpage: String? = null,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -9819,7 +9524,10 @@ fun SettingsScreen(
     val profileImageUri by viewModel.profileImageUri.collectAsStateWithLifecycle()
     val isSaskiaUnlocked by viewModel.isSaskiaUnlocked.collectAsStateWithLifecycle()
 
-    var selectedSubpage by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedSubpage by rememberSaveable { mutableStateOf<String?>(initialSubpage) }
+    BackHandler(enabled = selectedSubpage != null) {
+        selectedSubpage = null
+    }
     var showWipeConfirm by remember { mutableStateOf(false) }
     var showArchivedList by remember { mutableStateOf(false) }
 
@@ -11909,6 +11617,25 @@ fun CreateHabitScreen(
                         }
                     }
 
+                    val nestedScrollConnection = remember {
+                        object : NestedScrollConnection {
+                            override fun onPostScroll(
+                                consumed: Offset,
+                                available: Offset,
+                                source: NestedScrollSource
+                            ): Offset {
+                                return available
+                            }
+
+                            override suspend fun onPostFling(
+                                consumed: Velocity,
+                                available: Velocity
+                            ): Velocity {
+                                return available
+                            }
+                        }
+                    }
+
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -11921,7 +11648,9 @@ fun CreateHabitScreen(
                             columns = GridCells.Adaptive(minSize = 48.dp),
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
                             verticalArrangement = Arrangement.spacedBy(10.dp),
-                            modifier = Modifier.fillMaxSize()
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .nestedScroll(nestedScrollConnection)
                         ) {
                             items(filteredIcons) { (key, _) ->
                                 val isSelected = selectedIcon == key
@@ -13971,13 +13700,15 @@ fun GlobalAchievementCard(
 fun ProfileScreen(
     viewModel: HabitsViewModel,
     language: String,
-    onSettingsClick: () -> Unit
+    onSettingsClick: (String?) -> Unit,
+    listState: LazyListState = rememberLazyListState()
 ) {
     val habits by viewModel.allHabits.collectAsStateWithLifecycle()
     val allLogs by viewModel.allLogs.collectAsStateWithLifecycle()
     val profileStats by viewModel.profileStats.collectAsStateWithLifecycle()
     val perfectDaysState by viewModel.perfectDaysStats.collectAsStateWithLifecycle()
     val perfectDaysStreak = perfectDaysState.perfectDaysStreak
+    val currentPerfectStreak = perfectDaysState.currentStreak
 
     val userName by viewModel.userName.collectAsStateWithLifecycle()
     val profileImageUri by viewModel.profileImageUri.collectAsStateWithLifecycle()
@@ -14066,7 +13797,7 @@ fun ProfileScreen(
         )
     }
 
-    val globalPerfectDaysAchievements = remember(perfectDaysStreak, language) {
+    val globalPerfectDaysAchievements = remember(perfectDaysStreak, currentPerfectStreak, language) {
         listOf(
             Achievement(
                 type = "PERFECT_DAYS",
@@ -14074,7 +13805,7 @@ fun ProfileScreen(
                 title = if (language == "de") "Perfekte Woche" else "Perfect Week",
                 description = if (language == "de") "Erreiche eine Serie von 7 perfekten Tagen am Stück." else "Achieve a streak of 7 consecutive perfect days.",
                 targetValue = 7,
-                currentValue = perfectDaysStreak,
+                currentValue = if (perfectDaysStreak >= 7) 7 else currentPerfectStreak,
                 isUnlocked = perfectDaysStreak >= 7
             ),
             Achievement(
@@ -14083,7 +13814,7 @@ fun ProfileScreen(
                 title = if (language == "de") "Perfekter Monat" else "Perfect Month",
                 description = if (language == "de") "Erreiche eine Serie von 30 perfekten Tagen am Stück." else "Achieve a streak of 30 consecutive perfect days.",
                 targetValue = 30,
-                currentValue = perfectDaysStreak,
+                currentValue = if (perfectDaysStreak >= 30) 30 else currentPerfectStreak,
                 isUnlocked = perfectDaysStreak >= 30
             ),
             Achievement(
@@ -14092,7 +13823,7 @@ fun ProfileScreen(
                 title = if (language == "de") "Perfektion" else "Perfection",
                 description = if (language == "de") "Erreiche eine Serie von 100 perfekten Tagen am Stück." else "Achieve a streak of 100 consecutive perfect days.",
                 targetValue = 100,
-                currentValue = perfectDaysStreak,
+                currentValue = if (perfectDaysStreak >= 100) 100 else currentPerfectStreak,
                 isUnlocked = perfectDaysStreak >= 100
             )
         )
@@ -14165,7 +13896,7 @@ fun ProfileScreen(
                     .size(44.dp)
                     .border(1.dp, AppBorder, RoundedCornerShape(12.dp))
                     .background(AppCard, RoundedCornerShape(12.dp))
-                    .clickable { onSettingsClick() }
+                    .clickable { onSettingsClick(null) }
                     .align(Alignment.CenterEnd)
                     .testTag("profile_settings_button"),
                 contentAlignment = Alignment.Center
@@ -14181,6 +13912,7 @@ fun ProfileScreen(
 
         Box(modifier = Modifier.weight(1f)) {
             LazyColumn(
+                state = listState,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 16.dp),
@@ -14198,7 +13930,7 @@ fun ProfileScreen(
                         Box(
                             modifier = Modifier
                                 .size(104.dp)
-                                .clickable { onSettingsClick() },
+                                .clickable { onSettingsClick("profile") },
                             contentAlignment = Alignment.Center
                         ) {
                             Surface(
@@ -14239,7 +13971,7 @@ fun ProfileScreen(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
-                                .clickable { onSettingsClick() }
+                                .clickable { onSettingsClick("profile") }
                                 .padding(horizontal = 16.dp, vertical = 6.dp),
                             contentAlignment = Alignment.Center
                         ) {
@@ -16268,20 +16000,16 @@ fun OnboardingScreen(
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
                     )
                 }
-                if (currentStep < totalSteps - 1) {
-                    TextButton(
-                        onClick = onComplete,
-                        modifier = Modifier.testTag("btn_onboarding_skip")
-                    ) {
-                        Text(
-                            text = if (language == "de") "Überspringen" else "Skip",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                } else {
-                    Spacer(modifier = Modifier.width(60.dp))
+                TextButton(
+                    onClick = onComplete,
+                    modifier = Modifier.testTag("btn_onboarding_skip")
+                ) {
+                    Text(
+                        text = if (language == "de") "Überspringen" else "Skip",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
             }
 
@@ -17943,6 +17671,257 @@ fun getDayOfWeekNameLocalized(dayOfWeek: Int, language: String): String {
         Calendar.SUNDAY to "Sunday"
     )
     return if (language == "de") GermanDays[dayOfWeek] ?: "Montag" else EnglishDays[dayOfWeek] ?: "Monday"
+}
+
+@Composable
+fun ReviewArchiveDialog(
+    showReviewArchive: Boolean,
+    availableYears: List<Int>,
+    availableMonths: List<Pair<Int, Int>>,
+    allLogs: List<com.example.data.HabitLog>,
+    language: String,
+    onShowReviewExplanation: () -> Unit,
+    onSelectReviewMonth: (Pair<Int, Int>) -> Unit,
+    onSelectReviewYear: (Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    if (!showReviewArchive) return
+
+    var selectedTabIndex by remember { mutableStateOf(0) } // 0 = Monthly, 1 = Yearly
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 16.dp),
+            color = AppCard,
+            border = BorderStroke(1.dp, AppBorder),
+            shape = RoundedCornerShape(24.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = if (language == "de") "Deine Rückblicke" else "Your Reviews",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = TextPrimary,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        IconButton(
+                            onClick = onShowReviewExplanation,
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = "Info",
+                                tint = PrimaryViolet,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                    IconButton(onClick = onDismiss) {
+                        Icon(imageVector = Icons.Default.Close, contentDescription = "Close", tint = TextSecondary)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                TabRow(
+                    selectedTabIndex = selectedTabIndex,
+                    containerColor = Color.Transparent,
+                    contentColor = PrimaryViolet
+                ) {
+                    Tab(
+                        selected = selectedTabIndex == 0,
+                        onClick = { selectedTabIndex = 0 },
+                        text = { 
+                            Text(
+                                text = if (language == "de") "Monatlich (${availableMonths.size})" else "Monthly (${availableMonths.size})", 
+                                color = if (selectedTabIndex == 0) PrimaryViolet else TextSecondary
+                            ) 
+                        }
+                    )
+                    Tab(
+                        selected = selectedTabIndex == 1,
+                        onClick = { selectedTabIndex = 1 },
+                        text = { 
+                            Text(
+                                text = if (language == "de") "Jährlich (${availableYears.size})" else "Yearly (${availableYears.size})", 
+                                color = if (selectedTabIndex == 1) PrimaryViolet else TextSecondary
+                            ) 
+                        }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 420.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    if (selectedTabIndex == 0) {
+                        if (availableMonths.isEmpty()) {
+                            item {
+                                Text(
+                                    text = if (language == "de") "Noch keine Monatsrückblicke verfügbar." else "No monthly reviews available yet.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = TextSecondary,
+                                    modifier = Modifier.padding(vertical = 16.dp)
+                                )
+                            }
+                        } else {
+                            items(availableMonths) { (y, m) ->
+                                val monthLogsCount = allLogs.count { 
+                                    val prefix = String.format(java.util.Locale.US, "%04d-%02d-", y, m)
+                                    it.date.startsWith(prefix) && it.value > 0f 
+                                }
+                                val mName = when (m) {
+                                    1 -> if (language == "de") "Januar" else "January"
+                                    2 -> if (language == "de") "Februar" else "February"
+                                    3 -> if (language == "de") "März" else "March"
+                                    4 -> if (language == "de") "April" else "April"
+                                    5 -> if (language == "de") "Mai" else "May"
+                                    6 -> if (language == "de") "Juni" else "June"
+                                    7 -> if (language == "de") "Juli" else "July"
+                                    8 -> if (language == "de") "August" else "August"
+                                    9 -> if (language == "de") "September" else "September"
+                                    10 -> if (language == "de") "Oktober" else "October"
+                                    11 -> if (language == "de") "November" else "November"
+                                    else -> if (language == "de") "Dezember" else "December"
+                                }
+                                Surface(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .clickable {
+                                            onSelectReviewMonth(y to m)
+                                        },
+                                    color = AppBg,
+                                    border = BorderStroke(1.dp, AppBorder),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(32.dp)
+                                                    .background(SuccessGreen.copy(alpha = 0.15f), CircleShape),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(text = "📊", style = MaterialTheme.typography.bodyMedium)
+                                            }
+                                            Spacer(modifier = Modifier.width(10.dp))
+                                            Column {
+                                                Text(
+                                                    text = if (language == "de") "Rückblick $mName $y" else "Review $mName $y",
+                                                    style = MaterialTheme.typography.titleSmall,
+                                                    color = TextPrimary,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                                Text(
+                                                    text = "$monthLogsCount " + (if (language == "de") "Abschlüsse" else "completions"),
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = TextSecondary
+                                                )
+                                            }
+                                        }
+                                        Icon(
+                                            imageVector = Icons.Default.PlayArrow,
+                                            contentDescription = "Play",
+                                            tint = SuccessGreen,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        if (availableYears.isEmpty()) {
+                            item {
+                                Text(
+                                    text = if (language == "de") "Noch keine Jahresrückblicke verfügbar." else "No yearly reviews available yet.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = TextSecondary,
+                                    modifier = Modifier.padding(vertical = 16.dp)
+                                )
+                            }
+                        } else {
+                            items(availableYears) { y ->
+                                val yearLogsCount = allLogs.count { it.date.startsWith("$y-") && it.value > 0f }
+                                Surface(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .clickable {
+                                            onSelectReviewYear(y)
+                                        },
+                                    color = AppBg,
+                                    border = BorderStroke(1.dp, AppBorder),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(32.dp)
+                                                    .background(PrimaryViolet.copy(alpha = 0.15f), CircleShape),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(text = "🎆", style = MaterialTheme.typography.bodyMedium)
+                                            }
+                                            Spacer(modifier = Modifier.width(10.dp))
+                                            Column {
+                                                Text(
+                                                    text = if (language == "de") "Jahresrückblick $y" else "$y Year in Review",
+                                                    style = MaterialTheme.typography.titleSmall,
+                                                    color = TextPrimary,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                                Text(
+                                                    text = "$yearLogsCount " + (if (language == "de") "Abschlüsse" else "completions"),
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = TextSecondary
+                                                )
+                                            }
+                                        }
+                                        Icon(
+                                            imageVector = Icons.Default.PlayArrow,
+                                            contentDescription = "Play",
+                                            tint = PrimaryViolet,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)

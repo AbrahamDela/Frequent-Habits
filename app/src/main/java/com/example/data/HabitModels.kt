@@ -524,7 +524,9 @@ object StreakCalculator {
                     perfectDaysStreak = currentPerfectStreak
                 }
             } else if (checkedAnyOnDay) {
-                currentPerfectStreak = 0
+                if (epochDay < actualTodayEpoch) {
+                    currentPerfectStreak = 0
+                }
             }
         }
 
