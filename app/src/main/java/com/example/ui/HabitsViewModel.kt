@@ -129,7 +129,9 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
         } else {
             System.currentTimeMillis()
         }
-        SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(earliestMs))
+        val oneYearAgoMs = System.currentTimeMillis() - (365L * 24 * 60 * 60 * 1000)
+        val finalEarliestMs = minOf(earliestMs, oneYearAgoMs)
+        SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(finalEarliestMs))
     }.flowOn(kotlinx.coroutines.Dispatchers.Default).stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -1543,7 +1545,9 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
         } else {
             System.currentTimeMillis()
         }
-        return SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(earliestMs))
+        val oneYearAgoMs = System.currentTimeMillis() - (365L * 24 * 60 * 60 * 1000)
+        val finalEarliestMs = minOf(earliestMs, oneYearAgoMs)
+        return SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(finalEarliestMs))
     }
 
     fun adjustDateAndWeekIfOutOfRange() {
@@ -2671,7 +2675,9 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
                     perfectDaysStreak = currentPerfectStreak
                 }
             } else if (checkedAnyOnDay) {
-                currentPerfectStreak = 0
+                if (epochDay < actualTodayEpoch) {
+                    currentPerfectStreak = 0
+                }
             }
         }
 

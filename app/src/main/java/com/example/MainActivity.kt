@@ -352,7 +352,7 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
-            if (currentRoute != null && !currentRoute.startsWith("DETAIL") && currentRoute != "CREATE" && currentRoute != "OVERALL_STATS" && currentRoute != "MORE" && editingHabit == null) {
+            if (currentRoute != null && !currentRoute.startsWith("DETAIL") && currentRoute != "CREATE" && currentRoute != "OVERALL_STATS" && !currentRoute.startsWith("MORE") && editingHabit == null) {
                 HabitBottomNavigation(
                     selectedTab = selectedTab,
                     onTabSelected = { tab ->
@@ -683,7 +683,7 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
             }
 
             // Fading overlay at the bottom so content beautifully fades out behind the floating nav bar
-            if (currentRoute != null && !currentRoute.startsWith("DETAIL") && currentRoute != "CREATE" && currentRoute != "OVERALL_STATS" && currentRoute != "MORE" && editingHabit == null) {
+            if (currentRoute != null && !currentRoute.startsWith("DETAIL") && currentRoute != "CREATE" && currentRoute != "OVERALL_STATS" && !currentRoute.startsWith("MORE") && editingHabit == null) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -826,10 +826,8 @@ fun AudioSoundscapeDialog(
 
     var searchQuery by remember { mutableStateOf("") }
     var isSearchFocused by remember { mutableStateOf(false) }
-    var selectedCategory by remember { mutableStateOf("Alle") }
     var previewFile by remember { mutableStateOf<File?>(null) }
     var previewPlayer by remember { mutableStateOf<android.media.MediaPlayer?>(null) }
-    var editingCategoryForFile by remember { mutableStateOf<File?>(null) }
 
     if (isSearchFocused) {
         BackHandler {
@@ -1076,7 +1074,6 @@ fun AudioSoundscapeDialog(
                         items(filteredAudios, key = { it.absolutePath }) { file ->
                             val isSelected = selectedAudioFile?.absolutePath == file.absolutePath
                             val isPreviewing = previewFile?.absolutePath == file.absolutePath
-                            var currentCategory by remember(file.name) { mutableStateOf(AudioSoundscapeManager.getSoundCategory(context, file.name)) }
 
                             Surface(
                                 onClick = {
@@ -1139,7 +1136,10 @@ fun AudioSoundscapeDialog(
 
                                         Spacer(modifier = Modifier.width(10.dp))
 
-                                        Column(modifier = Modifier.weight(1f)) {
+                                        Column(
+                                            modifier = Modifier.weight(1f),
+                                            verticalArrangement = Arrangement.Center
+                                        ) {
                                             Text(
                                                 text = file.nameWithoutExtension,
                                                 style = MaterialTheme.typography.bodyMedium,
@@ -1148,51 +1148,6 @@ fun AudioSoundscapeDialog(
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis
                                             )
-
-                                            Spacer(modifier = Modifier.height(2.dp))
-
-                                            // Category Tag Chip with Dropdown
-                                            Box {
-                                                Row(
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    modifier = Modifier
-                                                        .background(AppCard, RoundedCornerShape(6.dp))
-                                                        .border(0.5.dp, AppBorder, RoundedCornerShape(6.dp))
-                                                        .clickable { editingCategoryForFile = file }
-                                                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                                                ) {
-                                                    Text(
-                                                        text = currentCategory,
-                                                        style = MaterialTheme.typography.labelSmall,
-                                                        color = HabitCyan,
-                                                        fontSize = 10.sp
-                                                    )
-                                                    Spacer(modifier = Modifier.width(3.dp))
-                                                    Icon(
-                                                        imageVector = Icons.Default.Edit,
-                                                        contentDescription = "Change category",
-                                                        tint = TextSecondary,
-                                                        modifier = Modifier.size(10.dp)
-                                                    )
-                                                }
-
-                                                DropdownMenu(
-                                                    expanded = editingCategoryForFile?.absolutePath == file.absolutePath,
-                                                    onDismissRequest = { editingCategoryForFile = null },
-                                                    modifier = Modifier.background(AppCard).border(1.dp, AppBorder)
-                                                ) {
-                                                    AudioSoundscapeManager.CATEGORIES.filter { it != "Alle" }.forEach { c ->
-                                                        DropdownMenuItem(
-                                                            text = { Text(c, color = TextPrimary) },
-                                                            onClick = {
-                                                                AudioSoundscapeManager.setSoundCategory(context, file.name, c)
-                                                                currentCategory = c
-                                                                editingCategoryForFile = null
-                                                            }
-                                                        )
-                                                    }
-                                                }
-                                            }
                                         }
                                     }
 
@@ -1954,6 +1909,79 @@ fun WidgetAddValueDialog(
                                         }
                                     }
                                 }                                 // 2. SEARCH BAR, CLEAR & UPLOAD BUTTONS
+                                val isActive = selectedAudioFile != null
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = if (isActive) PrimaryViolet.copy(alpha = 0.1f) else AppCard
+                                    ),
+                                    border = BorderStroke(
+                                        1.dp,
+                                        if (isActive) PrimaryViolet.copy(alpha = 0.4f) else AppBorder
+                                    )
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Icon(
+                                                imageVector = if (isActive) Icons.Default.VolumeUp else Icons.Default.VolumeOff,
+                                                contentDescription = null,
+                                                tint = if (isActive) PrimaryViolet else TextSecondary,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(10.dp))
+                                            Column {
+                                                Text(
+                                                    text = if (isActive) selectedAudioFile!!.nameWithoutExtension else (if (language == "de") "Kein Sound (Stumm)" else "No Sound (Muted)"),
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    color = TextPrimary,
+                                                    fontWeight = FontWeight.Bold,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                                Text(
+                                                    text = if (isActive) (if (language == "de") "Aktiver Timer-Sound" else "Active Timer Sound") else (if (language == "de") "Stummgeschaltet" else "Muted"),
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = TextSecondary
+                                                )
+                                            }
+                                        }
+
+                                        if (isActive) {
+                                            IconButton(
+                                                onClick = {
+                                                    selectedAudioFile = null
+                                                    AudioSoundscapeManager.setLastSelectedAudio(context, "")
+                                                    if (isTimerRunning) {
+                                                        try {
+                                                            mediaPlayer?.stop()
+                                                            mediaPlayer?.release()
+                                                            mediaPlayer = null
+                                                        } catch (e: Exception) { e.printStackTrace() }
+                                                    }
+                                                },
+                                                modifier = Modifier.size(32.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Close,
+                                                    contentDescription = if (language == "de") "Sound stummschalten" else "Mute sound",
+                                                    tint = Color(0xFFEF4444),
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically,
@@ -2028,33 +2056,6 @@ fun WidgetAddValueDialog(
                                             modifier = Modifier.size(22.dp)
                                         )
                                     }
-
-                                    if (selectedAudioFile != null) {
-                                        IconButton(
-                                            onClick = {
-                                                selectedAudioFile = null
-                                                AudioSoundscapeManager.setLastSelectedAudio(context, "")
-                                                if (isTimerRunning) {
-                                                    try {
-                                                        mediaPlayer?.stop()
-                                                        mediaPlayer?.release()
-                                                        mediaPlayer = null
-                                                    } catch (e: Exception) { e.printStackTrace() }
-                                                }
-                                            },
-                                            modifier = Modifier
-                                                .size(44.dp)
-                                                .background(AppCard, RoundedCornerShape(14.dp))
-                                                .border(1.dp, Color(0xFFEF4444).copy(alpha = 0.5f), RoundedCornerShape(14.dp))
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Close,
-                                                contentDescription = if (language == "de") "Sound stummschalten" else "Mute sound",
-                                                tint = Color(0xFFEF4444),
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                        }
-                                    }
                                 }
 
                                 // 3. EXPANDABLE SEARCH RESULTS LIST
@@ -2093,21 +2094,6 @@ fun WidgetAddValueDialog(
                                                     fontSize = 11.sp,
                                                     textAlign = TextAlign.Center
                                                 )
-                                                Button(
-                                                    onClick = { audioPickerLauncher.launch("audio/*") },
-                                                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryViolet),
-                                                    shape = RoundedCornerShape(10.dp),
-                                                    modifier = Modifier.fillMaxWidth().height(36.dp)
-                                                ) {
-                                                    Icon(Icons.Default.Add, contentDescription = null, tint = TextPrimary, modifier = Modifier.size(16.dp))
-                                                    Spacer(modifier = Modifier.width(6.dp))
-                                                    Text(
-                                                        text = if (language == "de") "Sound hochladen" else "Upload sound",
-                                                        color = TextPrimary,
-                                                        fontWeight = FontWeight.Bold,
-                                                        fontSize = 12.sp
-                                                    )
-                                                }
                                             }
                                         } else if (filteredList.isEmpty()) {
                                             Text(
@@ -2121,31 +2107,6 @@ fun WidgetAddValueDialog(
                                                 verticalArrangement = Arrangement.spacedBy(4.dp),
                                                 modifier = Modifier.heightIn(max = 160.dp)
                                             ) {
-                                                item {
-                                                    Surface(
-                                                        onClick = { audioPickerLauncher.launch("audio/*") },
-                                                        shape = RoundedCornerShape(8.dp),
-                                                        color = PrimaryViolet.copy(alpha = 0.15f),
-                                                        border = BorderStroke(1.dp, PrimaryViolet.copy(alpha = 0.4f)),
-                                                        modifier = Modifier.fillMaxWidth().padding(bottom = 2.dp)
-                                                    ) {
-                                                        Row(
-                                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                                            verticalAlignment = Alignment.CenterVertically,
-                                                            horizontalArrangement = Arrangement.Center
-                                                        ) {
-                                                            Icon(Icons.Default.Add, contentDescription = null, tint = PrimaryViolet, modifier = Modifier.size(16.dp))
-                                                            Spacer(modifier = Modifier.width(6.dp))
-                                                            Text(
-                                                                text = if (language == "de") "+ Sound hochladen" else "+ Upload sound",
-                                                                style = MaterialTheme.typography.bodySmall,
-                                                                color = PrimaryViolet,
-                                                                fontWeight = FontWeight.Bold,
-                                                                fontSize = 11.sp
-                                                            )
-                                                        }
-                                                    }
-                                                }
                                                 items(filteredList) { file ->
                                                     val isSel = selectedAudioFile?.absolutePath == file.absolutePath
                                                     Surface(
@@ -3197,85 +3158,85 @@ fun TodayScreen(
                 .background(AppBg)
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
-            contentPadding = PaddingValues(bottom = 140.dp, top = 16.dp)
+            contentPadding = PaddingValues(bottom = 140.dp, top = 28.dp)
         ) {
-        item(key = "today_top_row") {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 12.dp)
-                    .defaultMinSize(minHeight = 44.dp)
-            ) {
-                // Top Left: Daily Note Button (Notizbuch)
+            item(key = "today_top_row") {
                 Box(
                     modifier = Modifier
-                        .size(44.dp)
-                        .border(1.dp, AppBorder, RoundedCornerShape(12.dp))
-                        .background(AppCard, RoundedCornerShape(12.dp))
-                        .clickable { showDailyNoteDialog = true }
-                        .align(Alignment.CenterStart)
-                        .testTag("btn_daily_note"),
-                    contentAlignment = Alignment.Center
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp)
+                        .defaultMinSize(minHeight = 44.dp)
                 ) {
-                    ZettelMitStiftIcon(
-                        modifier = Modifier.size(22.dp),
-                        color = TextPrimary
+                    // Top Left: Daily Note Button (Notizbuch)
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .border(1.dp, AppBorder, RoundedCornerShape(12.dp))
+                            .background(AppCard, RoundedCornerShape(12.dp))
+                            .clickable { showDailyNoteDialog = true }
+                            .align(Alignment.CenterStart)
+                            .testTag("btn_daily_note"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        ZettelMitStiftIcon(
+                            modifier = Modifier.size(22.dp),
+                            color = TextPrimary
+                        )
+                        if (currentNote.isNotEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(top = 6.dp, end = 6.dp)
+                                    .size(6.dp)
+                                    .background(PrimaryViolet, CircleShape)
+                            )
+                        }
+                    }
+
+                    Text(
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .padding(horizontal = 48.dp)
+                            .clickable(
+                                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                                indication = null
+                            ) {
+                                todayClickCount++
+                                if (todayClickCount >= 10) {
+                                    viewModel.unlockSaskia()
+                                    showSaskiaDialog = true
+                                }
+                            },
+                        text = formattedDisplayDate,
+                        style = MaterialTheme.typography.displayLarge,
+                        color = TextPrimary,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
                     )
-                    if (currentNote.isNotEmpty()) {
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .padding(top = 6.dp, end = 6.dp)
-                                .size(6.dp)
-                                .background(PrimaryViolet, CircleShape)
+
+                    // Top Right Action Button: Add Habit (Balanced symmetrical layout)
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .border(1.dp, AppBorder, RoundedCornerShape(12.dp))
+                            .background(AppCard, RoundedCornerShape(12.dp))
+                            .clickable {
+                                onDismissFirstHabitHint()
+                                onAddClick()
+                            }
+                            .align(Alignment.CenterEnd)
+                            .testTag("btn_add_habit"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add Habit",
+                            tint = TextPrimary,
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }
-
-                Text(
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .padding(horizontal = 48.dp)
-                        .clickable(
-                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                            indication = null
-                        ) {
-                            todayClickCount++
-                            if (todayClickCount >= 10) {
-                                viewModel.unlockSaskia()
-                                showSaskiaDialog = true
-                            }
-                        },
-                    text = formattedDisplayDate,
-                    style = MaterialTheme.typography.displayLarge,
-                    color = TextPrimary,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center
-                )
-
-                // Top Right Action Button: Add Habit (Balanced symmetrical layout)
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .border(1.dp, AppBorder, RoundedCornerShape(12.dp))
-                        .background(AppCard, RoundedCornerShape(12.dp))
-                        .clickable {
-                            onDismissFirstHabitHint()
-                            onAddClick()
-                        }
-                        .align(Alignment.CenterEnd)
-                        .testTag("btn_add_habit"),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = "Add Habit",
-                        tint = TextPrimary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
             }
-        }
 
         item(key = "today_calendar_strip") {
             val coroutineScope = rememberCoroutineScope()
@@ -3847,7 +3808,7 @@ fun TodayScreen(
                 )
             }
         }
-    }
+    } // Close LazyColumn
 
     if (showDailyNoteDialog) {
         DailyNoteDialog(
@@ -3860,7 +3821,6 @@ fun TodayScreen(
             }
         )
     }
-}
 
     if (longPressedHabit != null) {
         val habit = longPressedHabit!!
@@ -4192,6 +4152,7 @@ fun TodayScreen(
             }
         }
     }
+} // Close parent Box
 }
 
 @Composable
@@ -4963,13 +4924,13 @@ fun StatsScreen(
                 .background(AppBg)
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
-            contentPadding = PaddingValues(bottom = 140.dp, top = 16.dp)
+            contentPadding = PaddingValues(bottom = 140.dp, top = 28.dp)
         ) {
             item(key = "stats_top_row") {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 12.dp)
+                        .padding(bottom = 12.dp)
                         .defaultMinSize(minHeight = 44.dp),
                     contentAlignment = Alignment.Center
                 ) {
@@ -5237,7 +5198,7 @@ fun StatsScreen(
                     )
                 }
             }
-        }
+        } // Close LazyColumn
 
         if (activeExplanation != null) {
             ExplanationDialog(
@@ -5326,7 +5287,7 @@ fun StatsScreen(
             },
             onDismiss = { showReviewArchive = false }
         )
-    }
+} // Close parent Box
 }
 
 @Composable
@@ -6928,7 +6889,12 @@ fun HabitScoreTrendCard(
             TimeframeSelectorPills(
                 selectedTimeframeIndex = selectedTimeframeIndex,
                 onTimeframeSelected = { selectedTimeframeIndex = it },
-                language = language
+                language = language,
+                customLabels = if (language == "de") {
+                    listOf("Wöchentlich", "Monatlich", "Jährlich")
+                } else {
+                    listOf("Weekly", "Monthly", "Yearly")
+                }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -7021,7 +6987,12 @@ fun HabitVolumeProgressionCard(
             TimeframeSelectorPills(
                 selectedTimeframeIndex = selectedTimeframeIndex,
                 onTimeframeSelected = { selectedTimeframeIndex = it },
-                language = language
+                language = language,
+                customLabels = if (language == "de") {
+                    listOf("Wöchentlich", "Monatlich", "Jährlich")
+                } else {
+                    listOf("Weekly", "Monthly", "Yearly")
+                }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -7391,7 +7362,12 @@ fun OverallScoreTrendCard(
             TimeframeSelectorPills(
                 selectedTimeframeIndex = selectedTimeframeIndex,
                 onTimeframeSelected = { selectedTimeframeIndex = it },
-                language = language
+                language = language,
+                customLabels = if (language == "de") {
+                    listOf("Wöchentlich", "Monatlich", "Jährlich")
+                } else {
+                    listOf("Weekly", "Monthly", "Yearly")
+                }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -7482,7 +7458,12 @@ fun OverallVolumeProgressionCard(
             TimeframeSelectorPills(
                 selectedTimeframeIndex = selectedTimeframeIndex,
                 onTimeframeSelected = { selectedTimeframeIndex = it },
-                language = language
+                language = language,
+                customLabels = if (language == "de") {
+                    listOf("Wöchentlich", "Monatlich", "Jährlich")
+                } else {
+                    listOf("Weekly", "Monthly", "Yearly")
+                }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -7820,12 +7801,33 @@ fun OverallStatsScreen(
                                 RoundedCornerShape(20.dp)
                             )
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp)
-                        ) {
-                            Box(modifier = Modifier.align(Alignment.TopEnd)) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            // Header Row
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .background(PrimaryViolet.copy(alpha = 0.15f), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.EmojiEvents,
+                                        contentDescription = "Perfect Days",
+                                        tint = PrimaryViolet,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = if (language == "de") "PERFEKTE TAGE" else "PERFECT DAYS",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = TextSecondary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
                                 InfoIconButton(
                                     title = if (language == "de") "Perfekte Tage" else "Perfect Days",
                                     explanation = if (language == "de") {
@@ -7836,82 +7838,66 @@ fun OverallStatsScreen(
                                     onClick = { t, e -> activeExplanation = t to e }
                                 )
                             }
-                            
-                            Column(
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(20.dp)
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(44.dp)
-                                            .background(PrimaryViolet.copy(alpha = 0.15f), CircleShape),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.EmojiEvents,
-                                            contentDescription = "Perfect Days",
-                                            tint = PrimaryViolet,
-                                            modifier = Modifier.size(24.dp)
-                                        )
-                                    }
                                     Text(
-                                        text = if (language == "de") "Perfekte Tage" else "Perfect Days",
-                                        style = MaterialTheme.typography.titleLarge,
+                                        text = perfectDaysStats.totalPerfectDays.toString(),
+                                        style = MaterialTheme.typography.headlineMedium,
                                         color = TextPrimary,
-                                        fontWeight = FontWeight.Bold
+                                        fontWeight = FontWeight.ExtraBold
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = if (language == "de") "Gesamt" else "Total",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = TextSecondary
                                     )
                                 }
-                                
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceEvenly
+
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text(
-                                            text = perfectDaysStats.totalPerfectDays.toString(),
-                                            style = MaterialTheme.typography.headlineMedium,
-                                            color = TextPrimary,
-                                            fontWeight = FontWeight.ExtraBold
-                                        )
-                                        Text(
-                                            text = if (language == "de") "Gesamt" else "Total",
-                                            style = MaterialTheme.typography.labelMedium,
-                                            color = TextSecondary
-                                        )
-                                    }
-                                    
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text(
-                                            text = perfectDaysStats.currentStreak.toString(),
-                                            style = MaterialTheme.typography.headlineMedium,
-                                            color = TextPrimary,
-                                            fontWeight = FontWeight.ExtraBold
-                                        )
-                                        Text(
-                                            text = if (language == "de") "Aktueller Streak" else "Current Streak",
-                                            style = MaterialTheme.typography.labelMedium,
-                                            color = TextSecondary
-                                        )
-                                    }
-                                    
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text(
-                                            text = perfectDaysStats.perfectDaysStreak.toString(),
-                                            style = MaterialTheme.typography.headlineMedium,
-                                            color = TextPrimary,
-                                            fontWeight = FontWeight.ExtraBold
-                                        )
-                                        Text(
-                                            text = if (language == "de") "Längster Streak" else "Best Streak",
-                                            style = MaterialTheme.typography.labelMedium,
-                                            color = TextSecondary
-                                        )
-                                    }
+                                    Text(
+                                        text = perfectDaysStats.currentStreak.toString(),
+                                        style = MaterialTheme.typography.headlineMedium,
+                                        color = TextPrimary,
+                                        fontWeight = FontWeight.ExtraBold
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = if (language == "de") "Aktueller Streak" else "Current Streak",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = TextSecondary
+                                    )
+                                }
+
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = perfectDaysStats.perfectDaysStreak.toString(),
+                                        style = MaterialTheme.typography.headlineMedium,
+                                        color = TextPrimary,
+                                        fontWeight = FontWeight.ExtraBold
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = if (language == "de") "Längster Streak" else "Best Streak",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = TextSecondary
+                                    )
                                 }
                             }
                         }
@@ -9867,8 +9853,8 @@ fun SettingsScreen(
                 .fillMaxSize()
                 .padding(horizontal = 16.dp)
                 .navigationBarsPadding(),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = PaddingValues(bottom = 32.dp, top = 84.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(bottom = 24.dp, top = 74.dp)
         ) {
             if (selectedSubpage == null) {
                 // MAIN SETTINGS CATEGORY LIST (Android System Settings Style)
@@ -9898,7 +9884,7 @@ fun SettingsScreen(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clickable { selectedSubpage = key }
-                                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                                        .padding(horizontal = 16.dp, vertical = 11.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
@@ -9966,15 +9952,15 @@ fun SettingsScreen(
                             .fillMaxWidth()
                             .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
                     ) {
-                        Column(modifier = Modifier.padding(18.dp)) {
-                            // Header
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            // Compact Header Row
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(bottom = 14.dp)
+                                modifier = Modifier.fillMaxWidth()
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .size(38.dp)
+                                        .size(32.dp)
                                         .background(PrimaryViolet.copy(alpha = 0.15f), CircleShape),
                                     contentAlignment = Alignment.Center
                                 ) {
@@ -9982,248 +9968,131 @@ fun SettingsScreen(
                                         imageVector = Icons.Default.Favorite,
                                         contentDescription = null,
                                         tint = PrimaryViolet,
-                                        modifier = Modifier.size(20.dp)
+                                        modifier = Modifier.size(16.dp)
                                     )
                                 }
-                                Spacer(modifier = Modifier.width(12.dp))
+                                Spacer(modifier = Modifier.width(10.dp))
                                 Column {
                                     Text(
-                                        text = if (language == "de") "Community, Support & Feedback" else "Community, Support & Feedback",
+                                        text = if (language == "de") "Support & Feedback" else "Support & Feedback",
                                         style = MaterialTheme.typography.titleMedium,
                                         color = TextPrimary,
                                         fontWeight = FontWeight.Bold
                                     )
                                     Text(
-                                        text = if (language == "de") "Hilf mit, Frequent Habits noch besser zu machen" else "Help make Frequent Habits even better",
+                                        text = if (language == "de") "Hilf mit, die App zu verbessern" else "Help make the app even better",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = TextSecondary
                                     )
                                 }
                             }
 
-                            // Feature Request Hero Banner
-                            Card(
-                                colors = CardDefaults.cardColors(
-                                    containerColor = PrimaryViolet.copy(alpha = 0.12f)
-                                ),
-                                shape = RoundedCornerShape(14.dp),
-                                border = BorderStroke(1.dp, PrimaryViolet.copy(alpha = 0.35f)),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        uriHandler.openUri("https://github.com/FrequeNCy144/Frequent-Habits/issues/new")
-                                    }
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(14.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(42.dp)
-                                            .background(PrimaryViolet, CircleShape),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.AutoAwesome,
-                                            contentDescription = null,
-                                            tint = Color.White,
-                                            modifier = Modifier.size(22.dp)
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = if (language == "de") "Feature vorschlagen / Request" else "Suggest a Feature / Request",
-                                            style = MaterialTheme.typography.bodyLarge,
-                                            color = TextPrimary,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                        Text(
-                                            text = if (language == "de") "Hast du eine Idee? Teile deine Wünsche!" else "Have an idea? Share your request!",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = TextSecondary
-                                        )
-                                    }
-                                    Icon(
-                                        imageVector = Icons.Default.ChevronRight,
-                                        contentDescription = null,
-                                        tint = PrimaryViolet,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                            }
-
                             Spacer(modifier = Modifier.height(10.dp))
 
-                            // Grid for Bug Report & Email
+                            // Grid with 4 beautiful, compact icon support actions
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                horizontalArrangement = Arrangement.SpaceEvenly,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                OutlinedButton(
-                                    onClick = { uriHandler.openUri("https://github.com/FrequeNCy144/Frequent-Habits/issues/new") },
-                                    colors = ButtonDefaults.outlinedButtonColors(
-                                        contentColor = TextPrimary,
-                                        containerColor = ProgressTrack
-                                    ),
-                                    border = BorderStroke(1.dp, AppBorder),
-                                    shape = RoundedCornerShape(12.dp),
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.BugReport,
-                                        contentDescription = null,
-                                        tint = TextSecondary,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = if (language == "de") "Bug melden" else "Report Bug",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                }
-
-                                OutlinedButton(
-                                    onClick = {
-                                        val emailIntent = Intent(Intent.ACTION_SENDTO).apply {
-                                            data = android.net.Uri.parse("mailto:support@frequncy-apps.com")
-                                        }
-                                        try {
-                                            context.startActivity(emailIntent)
-                                        } catch (e: Exception) {
-                                            Toast.makeText(
-                                                context,
-                                                if (language == "de") "Keine E-Mail-App gefunden" else "No email app found",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        }
-                                    },
-                                    colors = ButtonDefaults.outlinedButtonColors(
-                                        contentColor = TextPrimary,
-                                        containerColor = ProgressTrack
-                                    ),
-                                    border = BorderStroke(1.dp, AppBorder),
-                                    shape = RoundedCornerShape(12.dp),
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Email,
-                                        contentDescription = null,
-                                        tint = TextSecondary,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = if (language == "de") "E-Mail Support" else "Email Support",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(10.dp))
-
-                            // Share with a friend
-                            Button(
-                                onClick = {
-                                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                        type = "text/plain"
-                                        putExtra(Intent.EXTRA_SUBJECT, if (language == "de") "Empfehlung: Frequent Habits" else "Recommendation: Frequent Habits")
-                                        putExtra(Intent.EXTRA_TEXT, if (language == "de") {
-                                            "Hey! Ich nutze die App 'Frequent Habits', um meine Gewohnheiten zu tracken und meinen Alltag zu verbessern. Komplett werbefrei, open-source und offline-first! Schau sie dir an: https://github.com/FrequeNCy144/Frequent-Habits"
-                                        } else {
-                                            "Hey! I'm using 'Frequent Habits' to track my daily habits and improve my routine. Fully ad-free, open-source, and offline-first! Check it out: https://github.com/FrequeNCy144/Frequent-Habits"
-                                        })
-                                    }
-                                    context.startActivity(Intent.createChooser(shareIntent, if (language == "de") "Teilen mit..." else "Share with..."))
-                                },
-                                colors = ButtonDefaults.buttonColors(containerColor = SuccessGreen),
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Share,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = if (language == "de") "App mit Freunden teilen" else "Share with a friend",
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(12.dp))
-                            HorizontalDivider(color = AppBorder, thickness = 1.dp)
-                            Spacer(modifier = Modifier.height(12.dp))
-
-                            // Compact GitHub & Website links
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
+                                // 1. GitHub Link
                                 OutlinedButton(
                                     onClick = { uriHandler.openUri("https://github.com/FrequeNCy144/Frequent-Habits") },
                                     colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
                                     border = BorderStroke(1.dp, AppBorder),
                                     shape = RoundedCornerShape(10.dp),
-                                    modifier = Modifier.weight(1f)
+                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                                    modifier = Modifier.weight(1f).padding(horizontal = 2.dp)
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Code,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(text = "GitHub", style = MaterialTheme.typography.bodyMedium)
+                                    Icon(Icons.Default.Code, contentDescription = "GitHub", modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("GitHub", style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 }
 
+                                // 2. Bug report & suggestions (GitHub Issues)
                                 OutlinedButton(
-                                    onClick = { uriHandler.openUri("https://frequency-apps.com") },
+                                    onClick = { uriHandler.openUri("https://github.com/FrequeNCy144/Frequent-Habits/issues/new") },
                                     colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
                                     border = BorderStroke(1.dp, AppBorder),
                                     shape = RoundedCornerShape(10.dp),
-                                    modifier = Modifier.weight(1f)
+                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                                    modifier = Modifier.weight(1.5f).padding(horizontal = 2.dp)
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Language,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(text = "Website", style = MaterialTheme.typography.bodyMedium)
+                                    Icon(Icons.Default.BugReport, contentDescription = "Feedback", modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(if (language == "de") "Bug/Feature" else "Bug/Feature", style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                }
+
+                                // 3. Email support
+                                OutlinedButton(
+                                    onClick = {
+                                        val emailIntent = Intent(Intent.ACTION_SENDTO).apply {
+                                            data = android.net.Uri.parse("mailto:support@frequncy-apps.com")
+                                        }
+                                        try { context.startActivity(emailIntent) } catch (e: Exception) {}
+                                    },
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
+                                    border = BorderStroke(1.dp, AppBorder),
+                                    shape = RoundedCornerShape(10.dp),
+                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                                    modifier = Modifier.weight(1f).padding(horizontal = 2.dp)
+                                ) {
+                                    Icon(Icons.Default.Email, contentDescription = "Email", modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Email", style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                }
+
+                                // 4. Share
+                                OutlinedButton(
+                                    onClick = {
+                                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                            type = "text/plain"
+                                            putExtra(Intent.EXTRA_SUBJECT, if (language == "de") "Empfehlung: Frequent Habits" else "Recommendation: Frequent Habits")
+                                            putExtra(Intent.EXTRA_TEXT, if (language == "de") {
+                                                "Hey! Ich nutze die App 'Frequent Habits', um meine Gewohnheiten zu tracken und meinen Alltag zu verbessern. Komplett werbefrei, open-source und offline-first! Schau sie dir an: https://github.com/FrequeNCy144/Frequent-Habits"
+                                            } else {
+                                                "Hey! I'm using 'Frequent Habits' to track my daily habits and improve my routine. Fully ad-free, open-source, and offline-first! Check it out: https://github.com/FrequeNCy144/Frequent-Habits"
+                                            })
+                                        }
+                                        context.startActivity(Intent.createChooser(shareIntent, if (language == "de") "Teilen mit..." else "Share with..."))
+                                    },
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
+                                    border = BorderStroke(1.dp, AppBorder),
+                                    shape = RoundedCornerShape(10.dp),
+                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                                    modifier = Modifier.weight(1f).padding(horizontal = 2.dp)
+                                ) {
+                                    Icon(Icons.Default.Share, contentDescription = "Share", modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(if (language == "de") "Teilen" else "Share", style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 }
                             }
 
                             Spacer(modifier = Modifier.height(10.dp))
 
-                            // Authentic Liberapay Styled Donate Button
+                            // Beautiful, prominent Ko-fi Button
                             Button(
-                                onClick = { uriHandler.openUri("https://liberapay.com/FrequeNCy/donate") },
+                                onClick = { uriHandler.openUri("https://ko-fi.com/frequency_144") },
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = androidx.compose.ui.graphics.Color(0xFFF6C915)
+                                    containerColor = Color(0xFFFF5E5B) // Signature Ko-fi brand color
                                 ),
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(12.dp),
-                                elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
+                                elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp),
+                                contentPadding = PaddingValues(vertical = 10.dp)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Favorite,
                                     contentDescription = null,
-                                    tint = androidx.compose.ui.graphics.Color(0xFF1A1A1A),
-                                    modifier = Modifier.size(18.dp)
+                                    tint = Color.White,
+                                    modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = if (language == "de") "Spenden via Liberapay" else "Donate via Liberapay",
-                                    color = androidx.compose.ui.graphics.Color(0xFF1A1A1A),
-                                    fontWeight = FontWeight.Bold
+                                    text = if (language == "de") "Unterstützen via Ko-fi" else "Support via Ko-fi",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.bodyMedium
                                 )
                             }
                         }
