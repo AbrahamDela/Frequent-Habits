@@ -99,12 +99,46 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
         initialValue = emptyList()
     )
 
-    val minWeekStartMillis: StateFlow<Long> = allHabits.map { habits ->
-        val earliestMs = if (habits.isNotEmpty()) {
+    val archivedHabits: StateFlow<List<Habit>> = repository.allHabits.map { habits ->
+        habits.filter { it.isArchived }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
+    val allLogs: StateFlow<List<HabitLog>> = repository.allLogs.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
+    val minWeekStartMillis: StateFlow<Long> = combine(
+        allHabits,
+        archivedHabits,
+        allLogs
+    ) { activeHabits, archHabits, logs ->
+        val habits = activeHabits + archHabits
+        var earliestMs = if (habits.isNotEmpty()) {
             habits.map { if (it.startDate > 946684800000L) it.startDate else it.createdAt }.minOrNull() ?: System.currentTimeMillis()
         } else {
             System.currentTimeMillis()
         }
+
+        if (logs.isNotEmpty()) {
+            val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+            val earliestLogMs = logs.mapNotNull { log ->
+                try {
+                    sdf.parse(log.date)?.time
+                } catch (e: Exception) {
+                    null
+                }
+            }.minOrNull()
+            if (earliestLogMs != null) {
+                earliestMs = minOf(earliestMs, earliestLogMs)
+            }
+        }
+
         val cal = Calendar.getInstance().apply {
             firstDayOfWeek = Calendar.MONDAY
             timeInMillis = earliestMs
@@ -123,12 +157,32 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
         initialValue = System.currentTimeMillis()
     )
 
-    val minDateStr: StateFlow<String> = allHabits.map { habits ->
-        val earliestMs = if (habits.isNotEmpty()) {
+    val minDateStr: StateFlow<String> = combine(
+        allHabits,
+        archivedHabits,
+        allLogs
+    ) { activeHabits, archHabits, logs ->
+        val habits = activeHabits + archHabits
+        var earliestMs = if (habits.isNotEmpty()) {
             habits.map { if (it.startDate > 946684800000L) it.startDate else it.createdAt }.minOrNull() ?: System.currentTimeMillis()
         } else {
             System.currentTimeMillis()
         }
+
+        if (logs.isNotEmpty()) {
+            val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+            val earliestLogMs = logs.mapNotNull { log ->
+                try {
+                    sdf.parse(log.date)?.time
+                } catch (e: Exception) {
+                    null
+                }
+            }.minOrNull()
+            if (earliestLogMs != null) {
+                earliestMs = minOf(earliestMs, earliestLogMs)
+            }
+        }
+
         val oneYearAgoMs = System.currentTimeMillis() - (365L * 24 * 60 * 60 * 1000)
         val finalEarliestMs = minOf(earliestMs, oneYearAgoMs)
         SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(finalEarliestMs))
@@ -136,20 +190,6 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = ""
-    )
-
-    val archivedHabits: StateFlow<List<Habit>> = repository.allHabits.map { habits ->
-        habits.filter { it.isArchived }
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = emptyList()
-    )
-
-    val allLogs: StateFlow<List<HabitLog>> = repository.allLogs.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = emptyList()
     )
 
     val allDailyNotes: StateFlow<List<DailyNote>> = repository.allDailyNotes.stateIn(
@@ -182,6 +222,9 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
 
     private val _dismissedReviews = MutableStateFlow(sharedPrefs.getStringSet("dismissed_reviews", emptySet()) ?: emptySet())
     val dismissedReviews: StateFlow<Set<String>> = _dismissedReviews.asStateFlow()
+
+    private val _insightNotificationsEnabled = MutableStateFlow(sharedPrefs.getBoolean("insight_notifications_enabled", true))
+    val insightNotificationsEnabled: StateFlow<Boolean> = _insightNotificationsEnabled.asStateFlow()
 
     private val _monthlyReviewEnabled = MutableStateFlow(sharedPrefs.getBoolean("monthly_review_enabled", true))
     val monthlyReviewEnabled: StateFlow<Boolean> = _monthlyReviewEnabled.asStateFlow()
@@ -570,8 +613,9 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
         initialValue = 0 to 0
     )
 
-    val activeHabitsForSelectedDate: StateFlow<List<Habit>> = combine(allHabits, selectedDate) { habits, date ->
-        habits.filter { isHabitActiveOnDate(it, date) }
+    val activeHabitsForSelectedDate: StateFlow<List<Habit>> = combine(repository.allHabits, allLogs, selectedDate) { habits, logs, date ->
+        val loggedIds = logs.filter { it.date == date }.map { it.habitId }.toSet()
+        habits.filter { isHabitActiveOnDate(it, date) || loggedIds.contains(it.id) }
     }.flowOn(kotlinx.coroutines.Dispatchers.Default).stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -579,12 +623,12 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
     )
 
     val activeHabitUiItemsForSelectedDate: StateFlow<List<HabitUiItem>> = combine(
-        allHabits,
+        repository.allHabits,
         allLogs,
         selectedDate
     ) { habits, logs, date ->
-        val activeHabits = habits.filter { isHabitActiveOnDate(it, date) }
         val logsForDateMap = logs.filter { it.date == date }.associateBy { it.habitId }
+        val activeHabits = habits.filter { isHabitActiveOnDate(it, date) || logsForDateMap.containsKey(it.id) }
         activeHabits.map { habit ->
             val log = logsForDateMap[habit.id]
             val currentValue = log?.value ?: 0f
@@ -890,8 +934,33 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
         cal
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), Calendar.getInstance().apply { set(Calendar.DAY_OF_MONTH, 1) })
 
-    val heatmapCanPrevMonth: StateFlow<Boolean> = combine(heatmapMonthCalendar, allHabits) { monthCal, habits ->
-        val oldestHabitDateMs = habits.map { if (it.startDate > 946684800000L) it.startDate else it.createdAt }.minOrNull() ?: System.currentTimeMillis()
+    val heatmapCanPrevMonth: StateFlow<Boolean> = combine(
+        heatmapMonthCalendar,
+        allHabits,
+        archivedHabits,
+        allLogs
+    ) { monthCal, activeHabits, archHabits, logs ->
+        val habits = activeHabits + archHabits
+        var oldestHabitDateMs = if (habits.isNotEmpty()) {
+            habits.map { if (it.startDate > 946684800000L) it.startDate else it.createdAt }.minOrNull() ?: System.currentTimeMillis()
+        } else {
+            System.currentTimeMillis()
+        }
+
+        if (logs.isNotEmpty()) {
+            val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+            val earliestLogMs = logs.mapNotNull { log ->
+                try {
+                    sdf.parse(log.date)?.time
+                } catch (e: Exception) {
+                    null
+                }
+            }.minOrNull()
+            if (earliestLogMs != null) {
+                oldestHabitDateMs = minOf(oldestHabitDateMs, earliestLogMs)
+            }
+        }
+
         val oldestCal = Calendar.getInstance().apply { timeInMillis = oldestHabitDateMs }
         val currentCalMonth = monthCal.get(Calendar.MONTH) + monthCal.get(Calendar.YEAR) * 12
         val oldestCalMonth = oldestCal.get(Calendar.MONTH) + oldestCal.get(Calendar.YEAR) * 12
@@ -1111,8 +1180,32 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
     }.flowOn(kotlinx.coroutines.Dispatchers.Default)
      .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
 
-    val oldestHabitDateMs: StateFlow<Long> = allHabits.map { habits ->
-        habits.map { if (it.startDate > 946684800000L) it.startDate else it.createdAt }.minOrNull() ?: System.currentTimeMillis()
+    val oldestHabitDateMs: StateFlow<Long> = combine(
+        allHabits,
+        archivedHabits,
+        allLogs
+    ) { activeHabits, archHabits, logs ->
+        val habits = activeHabits + archHabits
+        var oldestMs = if (habits.isNotEmpty()) {
+            habits.map { if (it.startDate > 946684800000L) it.startDate else it.createdAt }.minOrNull() ?: System.currentTimeMillis()
+        } else {
+            System.currentTimeMillis()
+        }
+
+        if (logs.isNotEmpty()) {
+            val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+            val earliestLogMs = logs.mapNotNull { log ->
+                try {
+                    sdf.parse(log.date)?.time
+                } catch (e: Exception) {
+                    null
+                }
+            }.minOrNull()
+            if (earliestLogMs != null) {
+                oldestMs = minOf(oldestMs, earliestLogMs)
+            }
+        }
+        oldestMs
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), System.currentTimeMillis())
 
     val statsScreenData: StateFlow<List<HabitStatModel>> = combine(
@@ -1518,12 +1611,28 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun getMinWeekStartMillis(): Long {
-        val habits = allHabits.value
-        val earliestMs = if (habits.isNotEmpty()) {
+        val habits = allHabits.value + archivedHabits.value
+        var earliestMs = if (habits.isNotEmpty()) {
             habits.map { if (it.startDate > 946684800000L) it.startDate else it.createdAt }.minOrNull() ?: System.currentTimeMillis()
         } else {
             System.currentTimeMillis()
         }
+
+        val logs = allLogs.value
+        if (logs.isNotEmpty()) {
+            val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+            val earliestLogMs = logs.mapNotNull { log ->
+                try {
+                    sdf.parse(log.date)?.time
+                } catch (e: Exception) {
+                    null
+                }
+            }.minOrNull()
+            if (earliestLogMs != null) {
+                earliestMs = minOf(earliestMs, earliestLogMs)
+            }
+        }
+
         val cal = Calendar.getInstance().apply {
             firstDayOfWeek = Calendar.MONDAY
             timeInMillis = earliestMs
@@ -1539,12 +1648,28 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun getMinDateStr(): String {
-        val habits = allHabits.value
-        val earliestMs = if (habits.isNotEmpty()) {
+        val habits = allHabits.value + archivedHabits.value
+        var earliestMs = if (habits.isNotEmpty()) {
             habits.map { if (it.startDate > 946684800000L) it.startDate else it.createdAt }.minOrNull() ?: System.currentTimeMillis()
         } else {
             System.currentTimeMillis()
         }
+
+        val logs = allLogs.value
+        if (logs.isNotEmpty()) {
+            val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+            val earliestLogMs = logs.mapNotNull { log ->
+                try {
+                    sdf.parse(log.date)?.time
+                } catch (e: Exception) {
+                    null
+                }
+            }.minOrNull()
+            if (earliestLogMs != null) {
+                earliestMs = minOf(earliestMs, earliestLogMs)
+            }
+        }
+
         val oneYearAgoMs = System.currentTimeMillis() - (365L * 24 * 60 * 60 * 1000)
         val finalEarliestMs = minOf(earliestMs, oneYearAgoMs)
         return SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(finalEarliestMs))
@@ -1720,6 +1845,16 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
         _monthlyReviewEnabled.value = enabled
         sharedPrefs.edit().putBoolean("monthly_review_enabled", enabled).apply()
         com.example.NotificationHelper.scheduleReviewNotifications(getApplication())
+    }
+
+    fun setInsightNotificationsEnabled(enabled: Boolean) {
+        _insightNotificationsEnabled.value = enabled
+        sharedPrefs.edit().putBoolean("insight_notifications_enabled", enabled).apply()
+        if (enabled) {
+            com.example.NotificationHelper.scheduleSmartInsightNotifications(getApplication())
+        } else {
+            com.example.NotificationHelper.cancelSmartInsightNotifications(getApplication())
+        }
     }
 
 
@@ -2055,12 +2190,47 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             _syncStatus.value = if (language.value == "de") "Daten werden wiederhergestellt..." else "Restoring data..."
             val success = BackupManager.restoreDatabaseFromJson(getApplication(), jsonString)
+            if (success) {
+                reloadSettingsFromPrefs()
+            }
             _syncStatus.value = if (success) {
                 if (language.value == "de") "Sicherung erfolgreich wiederhergestellt! 🎉" else "Backup successfully restored! 🎉"
             } else {
                 if (language.value == "de") "Fehler bei der Wiederherstellung! Ungültige Datei." else "Error during restore! Invalid file."
             }
         }
+    }
+
+    fun reloadSettingsFromPrefs() {
+        val uName = sharedPrefs.getString("user_name", "") ?: ""
+        _userName.value = if (uName == "Inlitx") "" else uName
+        
+        val pUri = sharedPrefs.getString("profile_image_uri", "") ?: ""
+        _profileImageUri.value = when {
+            avatarFile.exists() && avatarFile.length() > 0 -> android.net.Uri.fromFile(avatarFile).toString()
+            pUri.startsWith("file://") -> {
+                val f = File(pUri.removePrefix("file://"))
+                if (f.exists() && f.length() > 0) pUri else ""
+            }
+            else -> pUri
+        }
+        _smartInsightDismissedDate.value = sharedPrefs.getString("smart_insight_dismissed_date", "") ?: ""
+        _language.value = sharedPrefs.getString("language", "en") ?: "en"
+        _accentColorName.value = sharedPrefs.getString("accent_color_name", "PURPLE") ?: "PURPLE"
+        _darkModeEnabled.value = sharedPrefs.getBoolean("dark_mode_enabled", true)
+        _vibrationEnabled.value = sharedPrefs.getBoolean("vibration_enabled", true)
+        _infoCardsEnabled.value = sharedPrefs.getBoolean("info_cards_enabled", true)
+        _reviewNotificationsEnabled.value = sharedPrefs.getBoolean("notifications_enabled", true)
+        _dismissedReviews.value = sharedPrefs.getStringSet("dismissed_reviews", emptySet()) ?: emptySet()
+        _insightNotificationsEnabled.value = sharedPrefs.getBoolean("insight_notifications_enabled", true)
+        _monthlyReviewEnabled.value = sharedPrefs.getBoolean("monthly_review_enabled", true)
+        _yearlyReviewEnabled.value = sharedPrefs.getBoolean("yearly_review_enabled", true)
+        _hasOnboarded.value = sharedPrefs.getBoolean("has_onboarded", false)
+        _backupFolderUri.value = sharedPrefs.getString("backup_folder_uri", "") ?: ""
+        _notificationsEnabled.value = sharedPrefs.getBoolean("reminder_enabled", false)
+        _notificationsHour.value = sharedPrefs.getInt("reminder_hour", 18)
+        _notificationsMinute.value = sharedPrefs.getInt("reminder_minute", 0)
+        _isSaskiaUnlocked.value = sharedPrefs.getBoolean("is_saskia_unlocked", false)
     }
 
     fun clearSyncStatus() {
@@ -2393,14 +2563,21 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
 
         if (maxDays <= 0) return 0
 
+        val realTodayEpoch = java.time.LocalDate.now().toEpochDay().toInt()
+
         for (i in 0 until maxDays) {
             val currentEpoch = todayEpoch - i
-            val dayWeight = maxDays - i
+            val dayWeight = 20 + (totalDaysToCheck - i)
             
             val successful = if (habit.isNegative) {
                 !loggedEpochDays.contains(currentEpoch)
             } else {
                 completedEpochDays.contains(currentEpoch)
+            }
+            
+            val isPendingRealToday = (currentEpoch == realTodayEpoch) && !habit.isNegative && !loggedEpochDays.contains(currentEpoch)
+            if (isPendingRealToday) {
+                continue
             }
             
             if (successful) {

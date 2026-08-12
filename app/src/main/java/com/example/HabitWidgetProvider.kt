@@ -409,7 +409,7 @@ class HabitWidgetProvider : AppWidgetProvider() {
                 }
 
                 val allLogs = db.habitDao().getAllLogsRaw()
-                val perfectStats = com.example.data.StreakCalculator.calculate(allHabits, allLogs)
+                val perfectStats = com.example.data.StreakCalculator.calculate(allHabits, allLogs, targetDateStr = todayStr)
                 val currentStreak = perfectStats.currentStreak
 
                 val sharedPrefs = context.getSharedPreferences("habit_prefs", Context.MODE_PRIVATE)
@@ -448,9 +448,10 @@ class HabitWidgetProvider : AppWidgetProvider() {
                     views.setPendingIntentTemplate(R.id.widget_habits_list, clickPIntent)
 
                     appWidgetManager.updateAppWidget(widgetId, views)
+                } else {
+                    appWidgetManager.partiallyUpdateAppWidget(widgetId, views)
                 }
 
-                appWidgetManager.partiallyUpdateAppWidget(widgetId, views)
                 appWidgetManager.notifyAppWidgetViewDataChanged(widgetId, R.id.widget_habits_list)
             }
         }

@@ -96,6 +96,9 @@ interface HabitDao {
     @Delete
     suspend fun deleteTimeCapsuleNote(note: TimeCapsuleNote)
 
+    @Query("SELECT * FROM time_capsule_notes")
+    suspend fun getAllTimeCapsuleNotesRaw(): List<TimeCapsuleNote>
+
     @Query("DELETE FROM time_capsule_notes")
     suspend fun clearAllTimeCapsuleNotes()
 
@@ -119,4 +122,7 @@ interface HabitDao {
 
     @Query("DELETE FROM milestone_rewards WHERE habitId = :habitId")
     suspend fun deleteMilestoneRewardsForHabit(habitId: Int)
+
+    @Query("DELETE FROM milestone_rewards")
+    suspend fun clearAllMilestoneRewards()
 }

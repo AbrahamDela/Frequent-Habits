@@ -16,7 +16,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
-import androidx.compose.animation.core.*
+
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.*
 import androidx.compose.foundation.pager.HorizontalPager
@@ -27,6 +27,17 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.ui.zIndex
+
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
+import androidx.compose.animation.core.*
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -60,7 +71,7 @@ import com.example.ui.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
+
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 
@@ -70,13 +81,11 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.draw.drawWithContent
+
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -85,7 +94,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.drawscope.Stroke
+
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.focus.FocusRequester
@@ -103,7 +112,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.unit.dp
+
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.painterResource
 import androidx.lifecycle.Lifecycle
@@ -1846,69 +1855,7 @@ fun WidgetAddValueDialog(
                                     else importedAudios.take(3)
                                 }
 
-                                if (recentFiles.isNotEmpty()) {
-                                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        Text(
-                                            text = if (language == "de") "Zuletzt genutzt:" else "Recent:",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = TextSecondary,
-                                            fontSize = 11.sp
-                                        )
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                        ) {
-                                            recentFiles.forEach { file ->
-                                                val isSel = selectedAudioFile?.absolutePath == file.absolutePath
-                                                Surface(
-                                                    onClick = {
-                                                        selectedAudioFile = file
-                                                        AudioSoundscapeManager.setLastSelectedAudio(context, file.name)
-                                                        if (isTimerRunning) {
-                                                            try {
-                                                                mediaPlayer?.stop()
-                                                                mediaPlayer?.release()
-                                                                mediaPlayer = MediaPlayer().apply {
-                                                                    setDataSource(file.absolutePath)
-                                                                    isLooping = true
-                                                                    prepare()
-                                                                    start()
-                                                                }
-                                                            } catch (e: Exception) { e.printStackTrace() }
-                                                        }
-                                                    },
-                                                    shape = RoundedCornerShape(8.dp),
-                                                    color = if (isSel) PrimaryViolet.copy(alpha = 0.25f) else AppCard,
-                                                    border = BorderStroke(1.dp, if (isSel) PrimaryViolet else AppBorder),
-                                                    modifier = Modifier.weight(1f).height(36.dp)
-                                                ) {
-                                                    Row(
-                                                        verticalAlignment = Alignment.CenterVertically,
-                                                        horizontalArrangement = Arrangement.Center,
-                                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
-                                                    ) {
-                                                        Icon(
-                                                            imageVector = Icons.Default.MusicNote,
-                                                            contentDescription = null,
-                                                            tint = if (isSel) PrimaryViolet else TextSecondary,
-                                                            modifier = Modifier.size(13.dp)
-                                                        )
-                                                        Spacer(modifier = Modifier.width(4.dp))
-                                                        Text(
-                                                            text = file.nameWithoutExtension,
-                                                            style = MaterialTheme.typography.labelSmall,
-                                                            color = if (isSel) TextPrimary else TextSecondary,
-                                                            fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium,
-                                                            maxLines = 1,
-                                                            overflow = TextOverflow.Ellipsis,
-                                                            fontSize = 11.sp
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }                                 // 2. SEARCH BAR, CLEAR & UPLOAD BUTTONS
+                                // 2. SEARCH BAR, CLEAR & UPLOAD BUTTONS
                                 val isActive = selectedAudioFile != null
                                 Card(
                                     modifier = Modifier.fillMaxWidth(),
@@ -2063,6 +2010,12 @@ fun WidgetAddValueDialog(
                                 AnimatedVisibility(visible = showList) {
                                     val filteredList = remember(importedAudios, audioSearchQuery) {
                                         importedAudios.filter { audioSearchQuery.isBlank() || it.name.contains(audioSearchQuery, ignoreCase = true) }
+                                    }
+                                    val dropdownRecentFiles = remember(recentFiles, audioSearchQuery) {
+                                        if (audioSearchQuery.isBlank()) recentFiles else emptyList()
+                                    }
+                                    val dropdownOtherFiles = remember(filteredList, dropdownRecentFiles) {
+                                        filteredList.filter { it !in dropdownRecentFiles }
                                     }
 
                                     Column(
@@ -2938,11 +2891,218 @@ fun SmartInsightCard(
                     type = "HIGH_MOMENTUM",
                     text = if (language == "de") {
                         "${greeting}dein Habit **'${highMomentum.habit.name}'** hat eine fantastische Stärke von **${highMomentum.strength}%** erreicht! 💎"
+                    } else if (language == "ka") {
+                        "${greeting}შენმა ჩვევამ **'${highMomentum.habit.name}'** მიაღწია ფანტასტიკურ სიძლიერეს **${highMomentum.strength}%**! 💎"
                     } else {
                         "${greeting}your habit **'${highMomentum.habit.name}'** has reached a fantastic strength of **${highMomentum.strength}%**! 💎"
                     },
                     icon = Icons.Default.AutoAwesome,
                     color = PrimaryViolet
+                ))
+            }
+        }
+
+        // 9. Least active weekday (Constructive)
+        if (!isInsightTypeInCooldown(context, "LEAST_ACTIVE_DAY", todayDateString)) {
+            val weekdayCompletionsMap = IntArray(8)
+            val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+            allLogs.forEach { log ->
+                if (log.value > 0f && !log.isPaused) {
+                    try {
+                        val dateVal = sdf.parse(log.date)
+                        if (dateVal != null) {
+                            val calDay = Calendar.getInstance()
+                            calDay.time = dateVal
+                            val dayOfWeek = calDay.get(Calendar.DAY_OF_WEEK)
+                            if (dayOfWeek in 1..7) {
+                                weekdayCompletionsMap[dayOfWeek]++
+                            }
+                        }
+                    } catch (e: Exception) {}
+                }
+            }
+            var minDayIndex = -1
+            var minCount = Int.MAX_VALUE
+            var maxCount = 0
+            for (i in 1..7) {
+                if (weekdayCompletionsMap[i] > maxCount) maxCount = weekdayCompletionsMap[i]
+                if (weekdayCompletionsMap[i] < minCount) {
+                    minCount = weekdayCompletionsMap[i]
+                    minDayIndex = i
+                }
+            }
+            if (minDayIndex != -1 && maxCount >= 5) {
+                val dayName = when (minDayIndex) {
+                    Calendar.MONDAY -> tr(language, "Montag", "Monday")
+                    Calendar.TUESDAY -> tr(language, "Dienstag", "Tuesday")
+                    Calendar.WEDNESDAY -> tr(language, "Mittwoch", "Wednesday")
+                    Calendar.THURSDAY -> tr(language, "Donnerstag", "Thursday")
+                    Calendar.FRIDAY -> tr(language, "Freitag", "Friday")
+                    Calendar.SATURDAY -> tr(language, "Samstag", "Saturday")
+                    Calendar.SUNDAY -> tr(language, "Sonntag", "Sunday")
+                    else -> ""
+                }
+                if (dayName.isNotEmpty()) {
+                    list.add(InsightOption(
+                        type = "LEAST_ACTIVE_DAY",
+                        text = if (language == "de") {
+                            "${greeting}am **$dayName** fällt dir das Abhaken noch am schwersten ($minCount Abschlüsse). Ein kleiner Schritt reicht schon aus, um deinen Rhythmus zu stärken! 💡"
+                        } else if (language == "ka") {
+                            "${greeting}დღეს **$dayName**-ს ჩვევების შესრულება შედარებით გიჭირს ($minCount შესრულება). პატარა ნაბიჯიც კი დაგეხმარება! 💡"
+                        } else {
+                            "${greeting}on **$dayName** you find it a bit harder to complete habits ($minCount completions). A small step today can help boost your momentum! 💡"
+                        },
+                        icon = Icons.Default.Lightbulb,
+                        color = HabitOrange
+                    ))
+                }
+            }
+        }
+
+        // 10. Lowest performing habit / Needs attention (Constructive)
+        if (!isInsightTypeInCooldown(context, "LOWEST_PERFORMER", todayDateString)) {
+            val activeHabits = habitsWithStats.filter { !it.habit.isArchived }
+            if (activeHabits.size >= 2) {
+                val lowestHabit = activeHabits.minByOrNull { it.strength }
+                if (lowestHabit != null && lowestHabit.strength < 50) {
+                    list.add(InsightOption(
+                        type = "LOWEST_PERFORMER",
+                        text = if (language == "de") {
+                            "${greeting}dein Habit **'${lowestHabit.habit.name}'** könnte etwas zusätzliche Aufmerksamkeit gebrauchen (Stärke: **${lowestHabit.strength}%**). Wie wäre es heute mit einem kleinen Neustart? 🎯"
+                        } else if (language == "ka") {
+                            "${greeting}შენს ჩვევას **'${lowestHabit.habit.name}'** ცოტა მეტი ყურადღება სჭირდება (სიძლიერე: **${lowestHabit.strength}%**). მზად ხარ დღეს დასაბრუნებლად? 🎯"
+                        } else {
+                            "${greeting}your habit **'${lowestHabit.habit.name}'** could use a little extra attention (strength: **${lowestHabit.strength}%**). How about a fresh start today? 🎯"
+                        },
+                        icon = Icons.Default.TrendingDown,
+                        color = HabitRed
+                    ))
+                }
+            }
+        }
+
+        // 11. Month-over-Month comparison
+        if (!isInsightTypeInCooldown(context, "MONTH_OVER_MONTH", todayDateString)) {
+            val now = Calendar.getInstance()
+            val currentMonth = now.get(Calendar.MONTH)
+            val currentYear = now.get(Calendar.YEAR)
+            
+            val prevCal = Calendar.getInstance().apply {
+                add(Calendar.MONTH, -1)
+            }
+            val prevMonth = prevCal.get(Calendar.MONTH)
+            val prevYear = prevCal.get(Calendar.YEAR)
+            
+            val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+            var currMonthCount = 0
+            var prevMonthCount = 0
+            
+            allLogs.forEach { log ->
+                if (log.value > 0f && !log.isPaused) {
+                    try {
+                        val dateVal = sdf.parse(log.date)
+                        if (dateVal != null) {
+                            val logCal = Calendar.getInstance()
+                            logCal.time = dateVal
+                            if (logCal.get(Calendar.YEAR) == currentYear && logCal.get(Calendar.MONTH) == currentMonth) {
+                                currMonthCount++
+                            } else if (logCal.get(Calendar.YEAR) == prevYear && logCal.get(Calendar.MONTH) == prevMonth) {
+                                prevMonthCount++
+                            }
+                        }
+                    } catch (e: Exception) {}
+                }
+            }
+            
+            if (prevMonthCount > 0 || currMonthCount > 0) {
+                list.add(InsightOption(
+                    type = "MONTH_OVER_MONTH",
+                    text = if (language == "de") {
+                        if (currMonthCount >= prevMonthCount) {
+                            "${greeting}diesen Monat hast du bereits **$currMonthCount** Abschlüsse geschafft (im Vormonat waren es **$prevMonthCount**). Du bist auf einem richtig guten Weg! 📈"
+                        } else {
+                            "${greeting}diesen Monat stehst du aktuell bei **$currMonthCount** Abschlüssen im Vergleich zu **$prevMonthCount** im Vormonat. Noch ist genug Zeit, um aufzuholen! 💪"
+                        }
+                    } else if (language == "ka") {
+                        if (currMonthCount >= prevMonthCount) {
+                            "${greeting}ამ თვეში უკვე **$currMonthCount** შესრულება გაქვს (გასულ თვეს: **$prevMonthCount**). შესანიშნავი პროგრესია! 📈"
+                        } else {
+                            "${greeting}ამ თვეში გაქვს **$currMonthCount** შესრულება (გასულ თვეს: **$prevMonthCount**). კიდევ გაქვს დრო წინსვლისთვის! 💪"
+                        }
+                    } else {
+                        if (currMonthCount >= prevMonthCount) {
+                            "${greeting}you've achieved **$currMonthCount** completions this month compared to **$prevMonthCount** last month. You're on a great trajectory! 📈"
+                        } else {
+                            "${greeting}you currently have **$currMonthCount** completions this month compared to **$prevMonthCount** last month. Plenty of time to catch up! 💪"
+                        }
+                    },
+                    icon = Icons.Default.DateRange,
+                    color = PrimaryViolet
+                ))
+            }
+        }
+
+        // 12. Week-over-Week comparison
+        if (!isInsightTypeInCooldown(context, "WEEK_OVER_WEEK", todayDateString)) {
+            val nowTime = System.currentTimeMillis()
+            val oneWeekMillis = 7 * 24 * 60 * 60 * 1000L
+            val twoWeeksMillis = 14 * 24 * 60 * 60 * 1000L
+            
+            val thisWeekCount = allLogs.count { log -> log.value > 0f && !log.isPaused && (nowTime - log.timestamp) <= oneWeekMillis }
+            val prevWeekCount = allLogs.count { log -> log.value > 0f && !log.isPaused && (nowTime - log.timestamp) in (oneWeekMillis + 1)..twoWeeksMillis }
+            
+            if (thisWeekCount > 0 || prevWeekCount > 0) {
+                list.add(InsightOption(
+                    type = "WEEK_OVER_WEEK",
+                    text = if (language == "de") {
+                        "${greeting}in den letzten 7 Tagen hast du **$thisWeekCount** Abschlüsse verzeichnet, verglichen mit **$prevWeekCount** in der Vorwoche. ${if (thisWeekCount >= prevWeekCount) "Klasse Steigerung! 🚀" else "Bleib weiter am Ball! ⚡"}"
+                    } else if (language == "ka") {
+                        "${greeting}ბოლო 7 დღეში გაქვს **$thisWeekCount** შესრულება, წინა კვირის **$prevWeekCount**-თან შედარებით. ${if (thisWeekCount >= prevWeekCount) "შესანიშნავი ზრდაა! 🚀" else "არ გაჩერდე! ⚡"}"
+                    } else {
+                        "${greeting}in the last 7 days you logged **$thisWeekCount** completions, compared to **$prevWeekCount** the previous week. ${if (thisWeekCount >= prevWeekCount) "Great increase! 🚀" else "Keep staying on track! ⚡"}"
+                    },
+                    icon = Icons.Default.ShowChart,
+                    color = SecondaryViolet
+                ))
+            }
+        }
+
+        // 13. Habit-specific improvement
+        if (!isInsightTypeInCooldown(context, "HABIT_IMPROVEMENT", todayDateString)) {
+            val nowTime = System.currentTimeMillis()
+            val oneWeekMillis = 7 * 24 * 60 * 60 * 1000L
+            val twoWeeksMillis = 14 * 24 * 60 * 60 * 1000L
+            
+            var bestHabit: com.example.data.Habit? = null
+            var maxDiff = 0
+            var bestThisWeek = 0
+            var bestLastWeek = 0
+            
+            allHabits.filter { !it.isArchived }.forEach { habit ->
+                val thisWeek = allLogs.count { it.habitId == habit.id && it.value > 0f && !it.isPaused && (nowTime - it.timestamp) <= oneWeekMillis }
+                val lastWeek = allLogs.count { it.habitId == habit.id && it.value > 0f && !it.isPaused && (nowTime - it.timestamp) in (oneWeekMillis + 1)..twoWeeksMillis }
+                val diff = thisWeek - lastWeek
+                if (diff > maxDiff && thisWeek >= 2) {
+                    maxDiff = diff
+                    bestHabit = habit
+                    bestThisWeek = thisWeek
+                    bestLastWeek = lastWeek
+                }
+            }
+            
+            if (bestHabit != null) {
+                val habitName = bestHabit!!.name
+                list.add(InsightOption(
+                    type = "HABIT_IMPROVEMENT",
+                    text = if (language == "de") {
+                        "${greeting}dein Habit **'$habitName'** läuft diese Woche spürbar besser als in der Vorwoche (**$bestThisWeek** vs. **$bestLastWeek** Abschlüsse)! 🎉"
+                    } else if (language == "ka") {
+                        "${greeting}შენი ჩვევა **'$habitName'** ამ კვირაში უკეთესად მიდის, ვიდრე გასულ კვირას (**$bestThisWeek** vs **$bestLastWeek** შესრულება)! 🎉"
+                    } else {
+                        "${greeting}your habit **'$habitName'** is going noticeably better this week than last week (**$bestThisWeek** vs **$bestLastWeek** completions)! 🎉"
+                    },
+                    icon = Icons.Default.ArrowUpward,
+                    color = HabitGreen
                 ))
             }
         }
@@ -3516,10 +3676,10 @@ fun TodayScreen(
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 6.dp),
+                            .padding(vertical = 6.dp)
+                            .animatedGlowingBorder(PrimaryViolet, 22.dp, 2.dp, PrimaryViolet),
                         colors = CardDefaults.cardColors(containerColor = AppCard),
-                        shape = RoundedCornerShape(22.dp),
-                        border = BorderStroke(2.dp, PrimaryViolet)
+                        shape = RoundedCornerShape(22.dp)
                     ) {
                         Row(
                             modifier = Modifier
@@ -5517,9 +5677,9 @@ fun HabitDetailScreen(
                         InfoIconButton(
                             title = if (language == "de") "Stärke-Wert" else "Strength Score",
                             explanation = if (language == "de") {
-                                "Die gewichtete Stärke dieser Gewohnheit. Neuere Einträge haben ein deutlich höheres Gewicht, sodass sich dein Score schnell auf 100/100 erholen kann, wenn du am Ball bleibst."
+                                "Die gewichtete Stärke dieser Gewohnheit (0-100) basierend auf den letzten 30 Tagen. Neuere Einträge werden etwas stärker gewichtet, sodass sich dein Score schneller erholen kann. Ausstehende Aufgaben für den heutigen Tag reduzieren den Score nicht, solange sie unmarkiert bleiben."
                             } else {
-                                "The weighted strength score of this habit. Recent entries carry significantly more weight, allowing your score to recover to 100/100 quickly if you stay consistent."
+                                "The strength score of this habit (0-100) based on the last 30 days. Recent entries carry slightly more weight, allowing your score to recover faster. Pending tasks for today do not reduce your score as long as they remain unmarked."
                             },
                             onClick = { t, e -> activeExplanation = t to e }
                         )
@@ -6197,14 +6357,6 @@ fun WeekdayFrequencySection(
                                                 .size(size)
                                                 .background(color, CircleShape)
                                         )
-                                        if (hasNote) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .align(Alignment.TopEnd)
-                                                    .size(4.dp)
-                                                    .background(PrimaryViolet, CircleShape)
-                                            )
-                                        }
                                     }
                                 }
                             }
@@ -6490,116 +6642,38 @@ fun calculateHabitTrendPoints(
     timeframeIndex: Int
 ): List<TrendPoint> {
     val today = java.time.LocalDate.now()
-    val todayStr = today.toString()
     val points = mutableListOf<TrendPoint>()
-    
-    val validStartMillis = if (habit.startDate > 946684800000L) habit.startDate else habit.createdAt
-    val habitStartDate = try {
-        java.time.Instant.ofEpochMilli(validStartMillis.coerceAtLeast(946684800000L))
-            .atZone(java.time.ZoneId.systemDefault())
-            .toLocalDate()
-    } catch (e: Exception) {
-        today.minusYears(1)
-    }
-    val startSdfStr = habitStartDate.toString()
-    
-    val logsMap = logs.filter { it.habitId == habit.id }.associateBy { it.date }
 
     when (timeframeIndex) {
-        0 -> { // Weekly Interval: Group data by Calendar Week (Last 6 weeks)
+        0 -> { // Weekly
             for (i in 5 downTo 0) {
                 val weekStart = today.minusWeeks(i.toLong()).with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY))
                 val weekEnd = weekStart.plusDays(6)
-
-                var completions = 0
-                var activeDays = 0
-
                 val actualEnd = if (weekEnd.isAfter(today)) today else weekEnd
-                var current = weekStart
-                while (!current.isAfter(actualEnd)) {
-                    val dateStr = current.toString()
-                    if (isHabitActiveOnDate(habit, dateStr)) {
-                        activeDays++
-                        val log = logsMap[dateStr]
-                        val status = getLogStatus(habit, log, dateStr, startSdfStr, todayStr)
-                        if (status == "SUCCESS") {
-                            completions++
-                        }
-                    }
-                    current = current.plusDays(1)
-                }
-
-                val score = if (activeDays > 0) {
-                    (completions.toFloat() / activeDays.toFloat() * 100f).coerceIn(0f, 100f)
-                } else 0f
-
+                val score = calculateHabitStrengthOnDate(habit, logs, actualEnd.toString()).toFloat()
                 val weekNum = weekStart.get(java.time.temporal.IsoFields.WEEK_OF_WEEK_BASED_YEAR)
                 val label = "KW$weekNum"
-                points.add(TrendPoint(label, score, completions))
+                points.add(TrendPoint(label, score, 0))
             }
         }
-        1 -> { // Monthly Interval: Group data by Month (Last 6 months)
+        1 -> { // Monthly
             for (i in 5 downTo 0) {
                 val monthDate = today.minusMonths(i.toLong())
-                val monthStart = monthDate.withDayOfMonth(1)
                 val monthEnd = monthDate.withDayOfMonth(monthDate.lengthOfMonth())
-
-                var completions = 0
-                var activeDays = 0
-
                 val actualEnd = if (monthEnd.isAfter(today)) today else monthEnd
-                var current = monthStart
-                while (!current.isAfter(actualEnd)) {
-                    val dateStr = current.toString()
-                    if (isHabitActiveOnDate(habit, dateStr)) {
-                        activeDays++
-                        val log = logsMap[dateStr]
-                        val status = getLogStatus(habit, log, dateStr, startSdfStr, todayStr)
-                        if (status == "SUCCESS") {
-                            completions++
-                        }
-                    }
-                    current = current.plusDays(1)
-                }
-
-                val score = if (activeDays > 0) {
-                    (completions.toFloat() / activeDays.toFloat() * 100f).coerceIn(0f, 100f)
-                } else 0f
-
+                val score = calculateHabitStrengthOnDate(habit, logs, actualEnd.toString()).toFloat()
                 val monthName = monthDate.month.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.getDefault())
-                points.add(TrendPoint(monthName, score, completions))
+                points.add(TrendPoint(monthName, score, 0))
             }
         }
-        2 -> { // Yearly Interval: Group data by Year (Recent 4 years)
+        2 -> { // Yearly
             for (i in 3 downTo 0) {
                 val yearDate = today.minusYears(i.toLong())
-                val yearStart = yearDate.withDayOfYear(1)
                 val yearEnd = yearDate.withDayOfYear(yearDate.lengthOfYear())
-
-                var completions = 0
-                var activeDays = 0
-
                 val actualEnd = if (yearEnd.isAfter(today)) today else yearEnd
-                var current = yearStart
-                while (!current.isAfter(actualEnd)) {
-                    val dateStr = current.toString()
-                    if (isHabitActiveOnDate(habit, dateStr)) {
-                        activeDays++
-                        val log = logsMap[dateStr]
-                        val status = getLogStatus(habit, log, dateStr, startSdfStr, todayStr)
-                        if (status == "SUCCESS") {
-                            completions++
-                        }
-                    }
-                    current = current.plusDays(1)
-                }
-
-                val score = if (activeDays > 0) {
-                    (completions.toFloat() / activeDays.toFloat() * 100f).coerceIn(0f, 100f)
-                } else 0f
-
+                val score = calculateHabitStrengthOnDate(habit, logs, actualEnd.toString()).toFloat()
                 val yearLabel = yearDate.year.toString()
-                points.add(TrendPoint(yearLabel, score, completions))
+                points.add(TrendPoint(yearLabel, score, 0))
             }
         }
     }
@@ -6612,16 +6686,14 @@ fun calculateOverallTrendPoints(
     timeframeIndex: Int
 ): List<TrendPoint> {
     val today = java.time.LocalDate.now()
-    val todayStr = today.toString()
     val points = mutableListOf<TrendPoint>()
     val activeHabits = allHabits.filter { !it.isArchived }
-    
+
     if (activeHabits.isEmpty()) {
         val labels = when (timeframeIndex) {
             0 -> (5 downTo 0).map { i ->
                 val weekStart = today.minusWeeks(i.toLong()).with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY))
-                val weekNum = weekStart.get(java.time.temporal.IsoFields.WEEK_OF_WEEK_BASED_YEAR)
-                "KW$weekNum"
+                "KW${weekStart.get(java.time.temporal.IsoFields.WEEK_OF_WEEK_BASED_YEAR)}"
             }
             1 -> (5 downTo 0).map { i ->
                 today.minusMonths(i.toLong()).month.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.getDefault())
@@ -6630,130 +6702,39 @@ fun calculateOverallTrendPoints(
                 today.minusYears(i.toLong()).year.toString()
             }
         }
-        labels.forEach { label ->
-            points.add(TrendPoint(label, 0f, 0))
-        }
-        return points
-    }
-
-    val logsMap = allLogs.groupBy { it.habitId to it.date }
-
-    val habitStartDates = activeHabits.associateWith { habit ->
-        val validStartMillis = if (habit.startDate > 946684800000L) habit.startDate else habit.createdAt
-        try {
-            java.time.Instant.ofEpochMilli(validStartMillis.coerceAtLeast(946684800000L))
-                .atZone(java.time.ZoneId.systemDefault())
-                .toLocalDate()
-                .toString()
-        } catch (e: Exception) {
-            today.minusYears(1).toString()
-        }
+        return labels.map { TrendPoint(it, 0f, 0) }
     }
 
     when (timeframeIndex) {
-        0 -> { // Weekly Interval: Group data by Calendar Week (Last 6 weeks)
+        0 -> { // Weekly
             for (i in 5 downTo 0) {
                 val weekStart = today.minusWeeks(i.toLong()).with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY))
                 val weekEnd = weekStart.plusDays(6)
-
-                var completions = 0
-                var activeDays = 0
-
-                activeHabits.forEach { habit ->
-                    val startSdfStr = habitStartDates[habit] ?: "1970-01-01"
-                    val actualEnd = if (weekEnd.isAfter(today)) today else weekEnd
-                    var current = weekStart
-                    while (!current.isAfter(actualEnd)) {
-                        val dateStr = current.toString()
-                        if (isHabitActiveOnDate(habit, dateStr)) {
-                            activeDays++
-                            val log = logsMap[habit.id to dateStr]?.firstOrNull()
-                            val status = getLogStatus(habit, log, dateStr, startSdfStr, todayStr)
-                            if (status == "SUCCESS") {
-                                completions++
-                            }
-                        }
-                        current = current.plusDays(1)
-                    }
-                }
-
-                val score = if (activeDays > 0) {
-                    (completions.toFloat() / activeDays.toFloat() * 100f).coerceIn(0f, 100f)
-                } else 0f
-
+                val actualEnd = if (weekEnd.isAfter(today)) today else weekEnd
+                val score = activeHabits.map { calculateHabitStrengthOnDate(it, allLogs, actualEnd.toString()) }.average().toFloat()
                 val weekNum = weekStart.get(java.time.temporal.IsoFields.WEEK_OF_WEEK_BASED_YEAR)
                 val label = "KW$weekNum"
-                points.add(TrendPoint(label, score, completions))
+                points.add(TrendPoint(label, score, 0))
             }
         }
-        1 -> { // Monthly Interval: Group data by Month (Last 6 months)
+        1 -> { // Monthly
             for (i in 5 downTo 0) {
                 val monthDate = today.minusMonths(i.toLong())
-                val monthStart = monthDate.withDayOfMonth(1)
                 val monthEnd = monthDate.withDayOfMonth(monthDate.lengthOfMonth())
-
-                var completions = 0
-                var activeDays = 0
-
-                activeHabits.forEach { habit ->
-                    val startSdfStr = habitStartDates[habit] ?: "1970-01-01"
-                    val actualEnd = if (monthEnd.isAfter(today)) today else monthEnd
-                    var current = monthStart
-                    while (!current.isAfter(actualEnd)) {
-                        val dateStr = current.toString()
-                        if (isHabitActiveOnDate(habit, dateStr)) {
-                            activeDays++
-                            val log = logsMap[habit.id to dateStr]?.firstOrNull()
-                            val status = getLogStatus(habit, log, dateStr, startSdfStr, todayStr)
-                            if (status == "SUCCESS") {
-                                completions++
-                            }
-                        }
-                        current = current.plusDays(1)
-                    }
-                }
-
-                val score = if (activeDays > 0) {
-                    (completions.toFloat() / activeDays.toFloat() * 100f).coerceIn(0f, 100f)
-                } else 0f
-
+                val actualEnd = if (monthEnd.isAfter(today)) today else monthEnd
+                val score = activeHabits.map { calculateHabitStrengthOnDate(it, allLogs, actualEnd.toString()) }.average().toFloat()
                 val monthName = monthDate.month.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.getDefault())
-                points.add(TrendPoint(monthName, score, completions))
+                points.add(TrendPoint(monthName, score, 0))
             }
         }
-        2 -> { // Yearly Interval: Group data by Year (Recent 4 years)
+        2 -> { // Yearly
             for (i in 3 downTo 0) {
                 val yearDate = today.minusYears(i.toLong())
-                val yearStart = yearDate.withDayOfYear(1)
                 val yearEnd = yearDate.withDayOfYear(yearDate.lengthOfYear())
-
-                var completions = 0
-                var activeDays = 0
-
-                activeHabits.forEach { habit ->
-                    val startSdfStr = habitStartDates[habit] ?: "1970-01-01"
-                    val actualEnd = if (yearEnd.isAfter(today)) today else yearEnd
-                    var current = yearStart
-                    while (!current.isAfter(actualEnd)) {
-                        val dateStr = current.toString()
-                        if (isHabitActiveOnDate(habit, dateStr)) {
-                            activeDays++
-                            val log = logsMap[habit.id to dateStr]?.firstOrNull()
-                            val status = getLogStatus(habit, log, dateStr, startSdfStr, todayStr)
-                            if (status == "SUCCESS") {
-                                completions++
-                            }
-                        }
-                        current = current.plusDays(1)
-                    }
-                }
-
-                val score = if (activeDays > 0) {
-                    (completions.toFloat() / activeDays.toFloat() * 100f).coerceIn(0f, 100f)
-                } else 0f
-
+                val actualEnd = if (yearEnd.isAfter(today)) today else yearEnd
+                val score = activeHabits.map { calculateHabitStrengthOnDate(it, allLogs, actualEnd.toString()) }.average().toFloat()
                 val yearLabel = yearDate.year.toString()
-                points.add(TrendPoint(yearLabel, score, completions))
+                points.add(TrendPoint(yearLabel, score, 0))
             }
         }
     }
@@ -7126,7 +7107,7 @@ fun ScoreTrendLineChart(
                 selectedPointIndex?.let { idx ->
                     val pt = pathPoints[idx]
                     val trendPoint = points[idx]
-                    val text = "${trendPoint.score.toInt()}%"
+                    val text = "${trendPoint.score.toInt()}"
                     
                     val paint = android.graphics.Paint().apply {
                         color = android.graphics.Color.WHITE
@@ -7180,7 +7161,7 @@ fun ScoreTrendLineChart(
                     .padding(bottom = 24.dp),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                listOf("100%", "75%", "50%", "25%", "0%").forEach { pct ->
+                listOf("100", "75", "50", "25", "0").forEach { pct ->
                     Text(
                         text = pct,
                         style = MaterialTheme.typography.labelSmall,
@@ -7709,9 +7690,9 @@ fun OverallStatsScreen(
                         InfoIconButton(
                             title = if (language == "de") "Gesamt-Stärke Score" else "Overall Strength Score",
                             explanation = if (language == "de") {
-                                "Gesamt-Stärke aller aktiven Gewohnheiten. Die durchschnittliche gewichtete Stärke aller deiner Gewohnheiten zusammen."
+                                "Der Durchschnitt der Stärke-Scores (0-100) all deiner aktiven Gewohnheiten. Der Score jeder Gewohnheit basiert auf den letzten 30 Tagen, wobei jüngere Einträge leicht höher gewichtet werden und heute noch ausstehende Aufgaben den Score nicht reduzieren."
                             } else {
-                                "Your overall strength score across all active habits. The average weighted strength score of all of your active habits combined."
+                                "The average strength score (0-100) of all your active habits. Each habit's score is based on the last 30 days, with recent entries weighted slightly higher. Pending tasks for today do not reduce the score."
                             },
                             onClick = { t, e -> activeExplanation = t to e },
                             modifier = Modifier.size(28.dp)
@@ -9503,6 +9484,7 @@ fun SettingsScreen(
     val darkModeEnabled by viewModel.darkModeEnabled.collectAsStateWithLifecycle()
     val infoCardsEnabled by viewModel.infoCardsEnabled.collectAsStateWithLifecycle()
     val reviewNotificationsEnabled by viewModel.reviewNotificationsEnabled.collectAsStateWithLifecycle()
+    val insightNotificationsEnabled by viewModel.insightNotificationsEnabled.collectAsStateWithLifecycle()
     val monthlyReviewEnabled by viewModel.monthlyReviewEnabled.collectAsStateWithLifecycle()
     val yearlyReviewEnabled by viewModel.yearlyReviewEnabled.collectAsStateWithLifecycle()
 
@@ -9950,7 +9932,7 @@ fun SettingsScreen(
                         shape = RoundedCornerShape(20.dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
+                            .animatedGlowingBorder(PrimaryViolet, 20.dp, 2.dp, PrimaryViolet)
                     ) {
                         Column(modifier = Modifier.padding(14.dp)) {
                             // Compact Header Row
@@ -10238,7 +10220,7 @@ fun SettingsScreen(
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            text = if (language == "de") "Allgemein & Personalisierung" else "General & Personalization",
+                            text = tr(language, "Allgemein & Personalisierung", "General & Personalization"),
                             style = MaterialTheme.typography.titleMedium,
                             color = PrimaryViolet,
                             fontWeight = FontWeight.Bold,
@@ -10248,32 +10230,45 @@ fun SettingsScreen(
                         // Option: Sprache
                         Column {
                             Text(
-                                text = if (language == "de") "Sprache" else "Language",
+                                text = tr(language, "Sprache", "Language"),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = TextPrimary,
                                 fontWeight = FontWeight.Medium
                             )
                             Spacer(modifier = Modifier.height(8.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
                                 Button(
                                     onClick = { viewModel.setLanguage("de") },
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = if (language == "de") PrimaryViolet else ProgressTrack
                                     ),
                                     shape = RoundedCornerShape(12.dp),
-                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
                                 ) {
                                     Text("Deutsch")
-                               }
+                                }
                                 Button(
                                     onClick = { viewModel.setLanguage("en") },
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = if (language == "en") PrimaryViolet else ProgressTrack
                                     ),
                                     shape = RoundedCornerShape(12.dp),
-                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
                                 ) {
                                     Text("English")
+                                }
+                                Button(
+                                    onClick = { viewModel.setLanguage("ka") },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (language == "ka") PrimaryViolet else ProgressTrack
+                                    ),
+                                    shape = RoundedCornerShape(12.dp),
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+                                ) {
+                                    Text("ქართული")
                                 }
                             }
                         }
@@ -10744,6 +10739,63 @@ fun SettingsScreen(
                                         }
                                     } else {
                                         viewModel.setReviewNotificationsEnabled(false)
+                                    }
+                                },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = Color.White,
+                                    checkedTrackColor = PrimaryViolet,
+                                    uncheckedThumbColor = TextSecondary,
+                                    uncheckedTrackColor = ProgressTrack
+                                )
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+                        HorizontalDivider(color = AppBorder, thickness = 1.dp)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        // Option: Smart Insights Notifications
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Lightbulb,
+                                    contentDescription = "Insights",
+                                    tint = PrimaryViolet,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = if (language == "de") "Smart Insights" else "Smart Insights",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = TextPrimary,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Text(
+                                        text = tr(language, "1x pro Woche eine Push-Benachrichtigung mit deinen spannendsten Insights & Highlights", "Weekly push notification with your most interesting insights & highlights"),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = TextSecondary
+                                    )
+                                }
+                            }
+                            Switch(
+                                checked = insightNotificationsEnabled && hasNotificationPermission,
+                                onCheckedChange = { isChecked ->
+                                    if (isChecked) {
+                                        if (android.os.Build.VERSION.SDK_INT >= 33 && !hasNotificationPermission) {
+                                            permissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                                        } else {
+                                            viewModel.setInsightNotificationsEnabled(true)
+                                        }
+                                    } else {
+                                        viewModel.setInsightNotificationsEnabled(false)
                                     }
                                 },
                                 colors = SwitchDefaults.colors(
@@ -11775,13 +11827,15 @@ fun CreateHabitScreen(
                                 OutlinedTextField(
                                     value = unit,
                                     onValueChange = { unit = it },
-                                    label = { Text(if (language == "de") "Eigene Einheit" else "Custom Unit") },
-                                    placeholder = { Text(if (language == "de") "z. B. Tassen" else "e.g. cups") },
+                                    label = { Text(tr(language, "Eigene Einheit", "Custom Unit")) },
+                                    placeholder = { Text(tr(language, "z. B. Tassen", "e.g. cups")) },
                                     modifier = Modifier.weight(1f),
                                     singleLine = true,
                                     colors = OutlinedTextFieldDefaults.colors(
                                         focusedBorderColor = PrimaryViolet,
                                         unfocusedBorderColor = AppBorder,
+                                        focusedContainerColor = AppCard,
+                                        unfocusedContainerColor = AppCard,
                                         focusedLabelColor = PrimaryViolet,
                                         focusedTextColor = TextPrimary,
                                         unfocusedTextColor = TextPrimary
@@ -11792,13 +11846,15 @@ fun CreateHabitScreen(
                             OutlinedTextField(
                                 value = targetValueStr,
                                 onValueChange = { targetValueStr = it },
-                                label = { Text(if (language == "de") "Tagesziel" else "Daily Target") },
+                                label = { Text(tr(language, "Tagesziel", "Daily Target")) },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 modifier = Modifier.weight(1f),
                                 singleLine = true,
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedBorderColor = PrimaryViolet,
                                     unfocusedBorderColor = AppBorder,
+                                    focusedContainerColor = AppCard,
+                                    unfocusedContainerColor = AppCard,
                                     focusedLabelColor = PrimaryViolet,
                                     focusedTextColor = TextPrimary,
                                     unfocusedTextColor = TextPrimary
@@ -12532,7 +12588,7 @@ fun AddMilestoneRewardDialog(
         containerColor = AppCard,
         title = {
             Text(
-                text = if (language == "de") "Belohnung definieren" else "Define Reward",
+                text = tr(language, "Belohnung definieren", "Define Reward"),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = TextPrimary
@@ -12544,10 +12600,12 @@ fun AddMilestoneRewardDialog(
                 OutlinedTextField(
                     value = rewardText,
                     onValueChange = { rewardText = it },
-                    label = { Text(if (language == "de") "Belohnung (z.B. Neues Buch)" else "Reward (e.g., New Book)", color = TextSecondary) },
+                    label = { Text(tr(language, "Belohnung (z.B. Neues Buch)", "Reward (e.g., New Book)"), color = TextSecondary) },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = PrimaryViolet,
                         unfocusedBorderColor = AppBorder,
+                        focusedContainerColor = Color(0xFF3A3A44),
+                        unfocusedContainerColor = Color(0xFF3A3A44),
                         focusedTextColor = TextPrimary,
                         unfocusedTextColor = TextPrimary
                     ),
@@ -12559,7 +12617,7 @@ fun AddMilestoneRewardDialog(
                     FilterChip(
                         selected = mode == "TROPHY",
                         onClick = { mode = "TROPHY" },
-                        label = { Text(if (language == "de") "Trophäe" else "Trophy") },
+                        label = { Text(tr(language, "Trophäe", "Trophy")) },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = PrimaryViolet,
                             selectedLabelColor = Color.White
@@ -12568,7 +12626,7 @@ fun AddMilestoneRewardDialog(
                     FilterChip(
                         selected = mode == "CUSTOM",
                         onClick = { mode = "CUSTOM" },
-                        label = { Text(if (language == "de") "Manuell" else "Manual") },
+                        label = { Text(tr(language, "Manuell", "Manual")) },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = PrimaryViolet,
                             selectedLabelColor = Color.White
@@ -12578,7 +12636,7 @@ fun AddMilestoneRewardDialog(
                 
                 if (mode == "CUSTOM") {
                     Text(
-                        text = if (language == "de") "Bedingung:" else "Condition:",
+                        text = tr(language, "Bedingung:", "Condition:"),
                         color = TextPrimary,
                         fontWeight = FontWeight.Bold
                     )
@@ -12587,7 +12645,7 @@ fun AddMilestoneRewardDialog(
                         FilterChip(
                             selected = conditionType == "STREAK",
                             onClick = { conditionType = "STREAK" },
-                            label = { Text(if (language == "de") "Streak (Tage)" else "Streak (Days)") },
+                            label = { Text(tr(language, "Streak (Tage)", "Streak (Days)")) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = PrimaryViolet,
                                 selectedLabelColor = Color.White
@@ -12596,7 +12654,7 @@ fun AddMilestoneRewardDialog(
                         FilterChip(
                             selected = conditionType == "COMPLETIONS",
                             onClick = { conditionType = "COMPLETIONS" },
-                            label = { Text(if (language == "de") "Gesamt (Mal)" else "Total (Times)") },
+                            label = { Text(tr(language, "Gesamt (Mal)", "Total (Times)")) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = PrimaryViolet,
                                 selectedLabelColor = Color.White
@@ -12607,11 +12665,13 @@ fun AddMilestoneRewardDialog(
                     OutlinedTextField(
                         value = conditionValueStr,
                         onValueChange = { conditionValueStr = it.filter { ch -> ch.isDigit() } },
-                        label = { Text(if (language == "de") "Ziel-Wert" else "Target Value", color = TextSecondary) },
+                        label = { Text(tr(language, "Ziel-Wert", "Target Value"), color = TextSecondary) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = PrimaryViolet,
                             unfocusedBorderColor = AppBorder,
+                            focusedContainerColor = Color(0xFF3A3A44),
+                            unfocusedContainerColor = Color(0xFF3A3A44),
                             focusedTextColor = TextPrimary,
                             unfocusedTextColor = TextPrimary
                         ),
@@ -12620,7 +12680,7 @@ fun AddMilestoneRewardDialog(
                     )
                 } else {
                     Text(
-                        text = if (language == "de") "Gewohnheitsspezifische Trophäe:" else "Habit Trophy:",
+                        text = tr(language, "Gewohnheitsspezifische Trophäe:", "Habit Trophy:"),
                         color = TextPrimary,
                         fontWeight = FontWeight.Bold
                     )
@@ -15832,7 +15892,7 @@ fun OnboardingScreen(
 ) {
     val context = LocalContext.current
     var currentStep by remember { mutableIntStateOf(0) }
-    val totalSteps = 7
+    val totalSteps = 8
     var dragOffset by remember { mutableFloatStateOf(0f) }
 
     Box(
@@ -15874,7 +15934,7 @@ fun OnboardingScreen(
                     modifier = Modifier.testTag("btn_onboarding_skip")
                 ) {
                     Text(
-                        text = if (language == "de") "Überspringen" else "Skip",
+                        text = if (language == "de") "Überspringen" else if (language == "ka") "გამოტოვება" else "Skip",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium
@@ -15932,11 +15992,12 @@ fun OnboardingScreen(
                     when (step) {
                         0 -> OnboardingStepWelcome(language)
                         1 -> OnboardingStepPersonalize(language, viewModel)
-                        2 -> OnboardingStepFastTracking(language)
-                        3 -> OnboardingStepAnalyticsInsights(language)
-                        4 -> OnboardingStepReviewsRewards(language)
-                        5 -> OnboardingStepStayConnected(language, viewModel)
-                        6 -> OnboardingStepSecureDataLaunch(language, viewModel)
+                        2 -> OnboardingStepTransition(language)
+                        3 -> OnboardingStepSmartInsights(language)
+                        4 -> OnboardingStepReviewTimeCapsule(language)
+                        5 -> OnboardingStepMilestoneRewards(language)
+                        6 -> OnboardingStepAndMuchMore(language)
+                        7 -> OnboardingStepFinalLaunch(language, onComplete)
                     }
                 }
             }
@@ -15985,7 +16046,7 @@ fun OnboardingScreen(
                         horizontalArrangement = Arrangement.Center
                     ) {
                         Text(
-                            text = if (language == "de") "Weiter" else "Next",
+                            text = if (language == "de") "Weiter" else if (language == "ka") "შემდეგი" else "Next",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
@@ -16014,7 +16075,7 @@ fun OnboardingScreen(
                         horizontalArrangement = Arrangement.Center
                     ) {
                         Text(
-                            text = if (language == "de") "Los geht's! 🚀" else "Get Started! 🚀",
+                            text = if (language == "de") "Starte deine Reise 🚀" else if (language == "ka") "დაიწყე შენი მოგზაურობა 🚀" else "Begin your journey 🚀",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
@@ -16026,787 +16087,64 @@ fun OnboardingScreen(
     }
 }
 
+// 1. WELCOME
 @Composable
 private fun OnboardingStepWelcome(language: String) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
-        modifier = Modifier.fillMaxWidth().padding(12.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
-        Card(
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            shape = RoundedCornerShape(28.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f), RoundedCornerShape(28.dp))
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Image(
-                    painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                    contentDescription = "Frequent Habits Logo",
-                    modifier = Modifier.size(110.dp)
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                Surface(
-                    color = SuccessBg,
-                    shape = RoundedCornerShape(100.dp),
-                    border = BorderStroke(1.dp, SuccessGreen.copy(alpha = 0.4f))
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Lock,
-                            contentDescription = null,
-                            tint = SuccessGreen,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = if (language == "de") "100% PRIVAT & OFFLINE" else "100% PRIVATE & OFFLINE",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = SuccessGreen,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-            }
-        }
+        Image(
+            painter = painterResource(id = R.drawable.ic_launcher_foreground),
+            contentDescription = "Frequent Habits Logo",
+            modifier = Modifier.size(200.dp)
+        )
+
         Spacer(modifier = Modifier.height(24.dp))
+
         Text(
-            text = if (language == "de") "Willkommen bei Frequent Habits" else "Welcome to Frequent Habits",
-            style = MaterialTheme.typography.titleLarge,
+            text = if (language == "de") "Willkommen" else if (language == "ka") "მოგესალმებით" else "Welcome",
+            style = MaterialTheme.typography.displayLarge.copy(fontSize = 54.sp),
             color = MaterialTheme.colorScheme.onBackground,
+            fontWeight = FontWeight.ExtraBold,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = if (language == "de") "bei Frequent Habits" else if (language == "ka") "Frequent Habits-ში" else "to Frequent Habits",
+            style = MaterialTheme.typography.headlineLarge.copy(fontSize = 32.sp),
+            color = MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
         )
-        Spacer(modifier = Modifier.height(8.dp))
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         Text(
-            text = if (language == "de") "Baue nachhaltige Routinen auf — 100% privat, offline und Cloud-frei." else "Build sustainable routines — 100% private, offline, and cloud-free.",
-            style = MaterialTheme.typography.bodyMedium,
+            text = "Frequent Habits, Permanent Results",
+            style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 8.dp)
+            fontWeight = FontWeight.Medium,
+            textAlign = TextAlign.Center
         )
     }
 }
 
+// 2. PERSONALISIERUNG (Language, Theme, Notifications & SAF Backup Folder)
 @Composable
 private fun OnboardingStepPersonalize(language: String, viewModel: HabitsViewModel) {
     val accentColorName by viewModel.accentColorName.collectAsStateWithLifecycle()
     val darkModeEnabled by viewModel.darkModeEnabled.collectAsStateWithLifecycle()
-    
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-        modifier = Modifier.fillMaxWidth().padding(12.dp)
-    ) {
-        Text(
-            text = if (language == "de") "Gestalte deine App" else "Make It Yours",
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onBackground,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = if (language == "de") "Wähle deine bevorzugte Akzentfarbe und deinen gewünschten Design-Modus." else "Select your preferred theme and accent color.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 8.dp)
-        )
-        
-        Spacer(modifier = Modifier.height(32.dp))
-        
-        Text(
-            text = if (language == "de") "DESIGN MODUS" else "DESIGN THEME",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.align(Alignment.Start)
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Button(
-                onClick = { viewModel.setDarkModeEnabled(true) },
-                modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (darkModeEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
-                ),
-                shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(1.dp, if (darkModeEnabled) Color.Transparent else MaterialTheme.colorScheme.outline)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.DarkMode,
-                        contentDescription = null,
-                        tint = if (darkModeEnabled) Color.White else MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = if (language == "de") "Dunkel" else "Dark",
-                        color = if (darkModeEnabled) Color.White else MaterialTheme.colorScheme.onSurface,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-            Button(
-                onClick = { viewModel.setDarkModeEnabled(false) },
-                modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (!darkModeEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
-                ),
-                shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(1.dp, if (!darkModeEnabled) Color.Transparent else MaterialTheme.colorScheme.outline)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.LightMode,
-                        contentDescription = null,
-                        tint = if (!darkModeEnabled) Color.White else MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = if (language == "de") "Hell" else "Light",
-                        color = if (!darkModeEnabled) Color.White else MaterialTheme.colorScheme.onSurface,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-        }
-        
-        Spacer(modifier = Modifier.height(32.dp))
-        
-        Text(
-            text = if (language == "de") "AKZENTFARBE" else "ACCENT COLOR",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.align(Alignment.Start)
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        com.example.ui.components.ColorPaletteSelector(
-            selectedColorKey = accentColorName,
-            onColorSelected = { viewModel.setAccentColorName(it) },
-            language = language
-        )
-    }
-}
-
-@Composable
-private fun OnboardingStepFastTracking(language: String) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-        modifier = Modifier.fillMaxWidth().padding(12.dp)
-    ) {
-        Card(
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            shape = RoundedCornerShape(28.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f), RoundedCornerShape(28.dp))
-        ) {
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // Interactive Widget Mockup
-                Surface(
-                    color = AppCard,
-                    shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, AppBorder),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth().padding(14.dp)
-                    ) {
-                        // Header Row (Progress bar and streak)
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            // Progress bar
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(10.dp)
-                                    .clip(RoundedCornerShape(5.dp))
-                                    .background(ProgressTrack)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxHeight()
-                                        .fillMaxWidth(0.66f) // 66% progress
-                                        .clip(RoundedCornerShape(5.dp))
-                                        .background(SuccessGreen)
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(16.dp))
-                            // Streak badge
-                            Row(
-                                modifier = Modifier
-                                    .background(Color(0xFFFFF3E0), RoundedCornerShape(8.dp))
-                                    .border(1.dp, Color(0xFFFFB74D), RoundedCornerShape(8.dp))
-                                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "🔥",
-                                    style = MaterialTheme.typography.labelSmall
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = "5",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = Color(0xFFFF9800),
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-
-                        // Habit 1 (Binary, Unchecked)
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(ProgressTrack.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
-                                .border(1.dp, AppBorder, RoundedCornerShape(12.dp))
-                                .padding(10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(32.dp)
-                                        .background(PrimaryViolet.copy(alpha = 0.15f), CircleShape),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.WaterDrop,
-                                        contentDescription = null,
-                                        tint = PrimaryViolet,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    text = if (language == "de") "Wasser trinken" else "Drink Water",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = TextPrimary,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                            // Circular checkbox unchecked icon
-                            Box(
-                                modifier = Modifier
-                                    .size(22.dp)
-                                    .border(2.dp, TextSecondary.copy(alpha = 0.6f), CircleShape)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        // Habit 2 (Binary, Checked)
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(ProgressTrack.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
-                                .border(1.dp, AppBorder, RoundedCornerShape(12.dp))
-                                .padding(10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(32.dp)
-                                        .background(SuccessGreen.copy(alpha = 0.15f), CircleShape),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.SelfImprovement,
-                                        contentDescription = null,
-                                        tint = SuccessGreen,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    text = if (language == "de") "Meditation" else "Meditation",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = TextPrimary,
-                                    fontWeight = FontWeight.Bold,
-                                    textDecoration = TextDecoration.LineThrough
-                                )
-                            }
-                            // Circular checkbox checked green icon
-                            Box(
-                                modifier = Modifier
-                                    .size(22.dp)
-                                    .background(SuccessGreen, CircleShape),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(12.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                // Audio Timer Mockup
-                Surface(
-                    color = AppCard,
-                    shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, AppBorder),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth().padding(14.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        // Real-style Circular Clock with minute ticks
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Box(
-                                modifier = Modifier.size(140.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                // Background outer glow
-                                Box(
-                                    modifier = Modifier
-                                        .size(135.dp)
-                                        .clip(CircleShape)
-                                        .background(
-                                            Brush.radialGradient(
-                                                colors = listOf(
-                                                    PrimaryViolet.copy(alpha = 0.18f),
-                                                    PrimaryViolet.copy(alpha = 0.04f),
-                                                    Color.Transparent
-                                                )
-                                            )
-                                        )
-                                )
-
-                                // Canvas to draw ticks & sweep
-                                Box(
-                                    contentAlignment = Alignment.Center,
-                                    modifier = Modifier
-                                        .size(110.dp)
-                                        .drawWithCache {
-                                            val strokeWidth = 5.dp.toPx()
-                                            val activeColor = PrimaryViolet
-                                            val inactiveColor = ProgressTrack
-                                            val sweepAngle = 360f * 0.75f // 18:45 of 25 mins is 75%
-
-                                            onDrawBehind {
-                                                val radius = size.minDimension / 2f - strokeWidth
-                                                val centerPoint = Offset(size.width / 2f, size.height / 2f)
-
-                                                // Draw track circle
-                                                drawCircle(
-                                                    color = inactiveColor,
-                                                    radius = radius,
-                                                    style = Stroke(width = strokeWidth)
-                                                )
-
-                                                // Draw sweep arc
-                                                drawArc(
-                                                    color = activeColor,
-                                                    startAngle = -90f,
-                                                    sweepAngle = sweepAngle,
-                                                    useCenter = false,
-                                                    style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
-                                                )
-
-                                                // Draw 60 ticks
-                                                for (i in 0 until 60) {
-                                                    val angleRad = Math.toRadians((i * 6 - 90).toDouble())
-                                                    val isMajor = i % 5 == 0
-                                                    val tickLength = if (isMajor) 5.dp.toPx() else 2.5.dp.toPx()
-                                                    val innerR = radius - strokeWidth / 2f - 2.5.dp.toPx()
-                                                    val outerR = innerR - tickLength
-
-                                                    val startX = centerPoint.x + innerR * Math.cos(angleRad).toFloat()
-                                                    val startY = centerPoint.y + innerR * Math.sin(angleRad).toFloat()
-                                                    val endX = centerPoint.x + outerR * Math.cos(angleRad).toFloat()
-                                                    val endY = centerPoint.y + outerR * Math.sin(angleRad).toFloat()
-
-                                                    val tickProgress = (i * 6).toFloat()
-                                                    val isPassed = tickProgress <= sweepAngle
-                                                    drawLine(
-                                                        color = if (isPassed) activeColor.copy(alpha = 0.8f) else AppBorder.copy(alpha = 0.5f),
-                                                        start = Offset(startX, startY),
-                                                        end = Offset(endX, endY),
-                                                        strokeWidth = if (isMajor) 1.2.dp.toPx() else 0.6.dp.toPx()
-                                                    )
-                                                }
-
-                                                // Endpoint dot indicator
-                                                val endAngleRad = Math.toRadians((sweepAngle - 90).toDouble())
-                                                val dotX = centerPoint.x + radius * Math.cos(endAngleRad).toFloat()
-                                                val dotY = centerPoint.y + radius * Math.sin(endAngleRad).toFloat()
-                                                drawCircle(
-                                                    color = Color.White,
-                                                    radius = strokeWidth / 1.3f,
-                                                    center = Offset(dotX, dotY)
-                                                )
-                                                drawCircle(
-                                                    color = PrimaryViolet,
-                                                    radius = strokeWidth / 2f,
-                                                    center = Offset(dotX, dotY)
-                                                )
-                                            }
-                                        }
-                                ) {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text(
-                                            text = "18:45",
-                                            style = MaterialTheme.typography.titleMedium,
-                                            color = TextPrimary,
-                                            fontWeight = FontWeight.Black
-                                        )
-                                        Text(
-                                            text = if (language == "de") "Fokus" else "Focus",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = TextSecondary
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        // Play/Pause control and soundscape selection pill
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
-                        ) {
-                            // Soundscape pill
-                            Row(
-                                modifier = Modifier
-                                    .background(ProgressTrack, RoundedCornerShape(12.dp))
-                                    .padding(horizontal = 10.dp, vertical = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.MusicNote,
-                                    contentDescription = null,
-                                    tint = PrimaryViolet,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = if (language == "de") "Regenschauer" else "Rainfall",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = TextPrimary,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-
-                            // Play/Pause button
-                            Box(
-                                modifier = Modifier
-                                    .size(32.dp)
-                                    .background(PrimaryViolet, CircleShape),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Pause,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        
-        Spacer(modifier = Modifier.height(24.dp))
-        Text(
-            text = if (language == "de") "Widgets & Fokus Timer" else "Widgets & Focus Timer",
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onBackground,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = if (language == "de") "Erfasse Gewohnheiten direkt vom Homescreen mit interaktiven Widgets, oder nutze den integrierten Audio-Timer für konzentrierte Sessions." else "Track habits straight from your homescreen with interactive widgets, or use the built-in Audio Timer for focused sessions.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 8.dp)
-        )
-    }
-}
-
-@Composable
-private fun OnboardingStepAnalyticsInsights(language: String) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-        modifier = Modifier.fillMaxWidth().padding(12.dp)
-    ) {
-        Card(
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            shape = RoundedCornerShape(28.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f), RoundedCornerShape(28.dp))
-        ) {
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Surface(
-                    color = MaterialTheme.colorScheme.surface,
-                    shape = RoundedCornerShape(20.dp),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.BarChart, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(if (language == "de") "Wochenübersicht" else "Weekly Overview", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                        }
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth().height(60.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.Bottom
-                        ) {
-                            listOf(0.4f, 0.7f, 0.5f, 0.9f, 0.2f, 0.8f, 1.0f).forEach { height ->
-                                Box(
-                                    modifier = Modifier
-                                        .width(20.dp)
-                                        .fillMaxHeight(height)
-                                        .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
-                                        .background(MaterialTheme.colorScheme.primary)
-                                )
-                            }
-                        }
-                    }
-                }
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                Surface(
-                    color = MaterialTheme.colorScheme.secondaryContainer,
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Default.Lightbulb, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer)
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                if (language == "de") "Smart Insights" else "Smart Insights",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                            Text(
-                                if (language == "de") "Wird in 7 Tagen freigeschaltet" else "Unlocks in 7 Days",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
-                            )
-                        }
-                    }
-                }
-            }
-        }
-        
-        Spacer(modifier = Modifier.height(24.dp))
-        Text(
-            text = if (language == "de") "Detaillierte Statistiken & Smart Insights" else "Detailed Stats & Smart Insights",
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onBackground,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = if (language == "de") "Analysiere umfassende Diagramme sofort. Dokumentiere Gewohnheiten für 7 Tage, um smarte Mustererkennung freizuschalten." else "Explore comprehensive charts and statistics immediately. Log habits for 7 days to also unlock smart pattern analysis.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 8.dp)
-        )
-    }
-}
-
-@Composable
-private fun OnboardingStepReviewsRewards(language: String) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-        modifier = Modifier.fillMaxWidth().padding(12.dp)
-    ) {
-        Card(
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            shape = RoundedCornerShape(28.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f), RoundedCornerShape(28.dp))
-        ) {
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // Monthly Review Mockup (Looks like MonthlyReviewCoverSlide!)
-                Surface(
-                    color = Color(0xFF1E1B2E), // cover slide background
-                    shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, Color(0xFF4C3A7A).copy(alpha = 0.5f)),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth().padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .background(Color.White.copy(alpha = 0.12f), CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.CalendarToday,
-                                contentDescription = "Calendar",
-                                tint = Color(0xFFA78BFA),
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Surface(
-                            color = PrimaryViolet.copy(alpha = 0.3f),
-                            shape = RoundedCornerShape(12.dp),
-                            border = BorderStroke(1.dp, PrimaryViolet.copy(alpha = 0.6f))
-                        ) {
-                            Text(
-                                text = "✨ AUGUST 2026 ✨",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = if (language == "de") "Dein Monatsrückblick" else "Your Monthly Review",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = Color.White,
-                            fontWeight = FontWeight.ExtraBold,
-                            textAlign = TextAlign.Center
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = if (language == "de") "Routine & Fortschritt im Rückblick" else "Routine & progress in review",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.White.copy(alpha = 0.7f),
-                            textAlign = TextAlign.Center
-                        )
-                    }
-                }
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                // Milestone Reward Mockup (Uses actual AchievementBadge!)
-                Surface(
-                    color = AppCard,
-                    shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, AppBorder),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier.size(48.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            AchievementBadge(
-                                type = "STREAK",
-                                tier = "GOLD",
-                                isUnlocked = true,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = if (language == "de") "Gold-Streak freigeschaltet!" else "Gold Streak Unlocked!",
-                                style = MaterialTheme.typography.titleSmall,
-                                color = TextPrimary,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = if (language == "de") "Belohnung: Kinobesuch (Meilenstein: 60 Tage)" else "Reward: Movie night (Milestone: 60 Days)",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextSecondary
-                            )
-                        }
-                    }
-                }
-            }
-        }
-        
-        Spacer(modifier = Modifier.height(24.dp))
-        Text(
-            text = if (language == "de") "Rückblicke & Belohnungen" else "Reviews & Milestone Rewards",
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onBackground,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = if (language == "de") "Reflektiere dein Wachstum mit Monats- und Jahresrückblicken (inkl. Zeitkapseln für dein zukünftiges Ich) und verknüpfe Erfolge mit echten Belohnungen." else "Reflect on your growth with Monthly and Yearly Reviews (featuring Time Capsules for your future self) and link habit achievements to real-life rewards.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 8.dp)
-        )
-    }
-}
-
-@Composable
-private fun OnboardingStepStayConnected(language: String, viewModel: HabitsViewModel) {
+    val backupFolderUri by viewModel.backupFolderUri.collectAsStateWithLifecycle()
+    val isFolderSet = backupFolderUri.isNotBlank()
     val context = LocalContext.current
-    var hasPermission by remember {
+
+    var hasNotificationPermission by remember {
         mutableStateOf(
             if (android.os.Build.VERSION.SDK_INT >= 33) {
                 androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED
@@ -16814,107 +16152,16 @@ private fun OnboardingStepStayConnected(language: String, viewModel: HabitsViewM
         )
     }
 
-    val launcher = rememberLauncherForActivityResult(
+    val notificationLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted: Boolean ->
-        hasPermission = isGranted
+    ) { isGranted ->
+        hasNotificationPermission = isGranted
         if (isGranted) {
             viewModel.setReviewNotificationsEnabled(true)
+            viewModel.setInsightNotificationsEnabled(true)
         }
     }
 
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-        modifier = Modifier.fillMaxWidth().padding(12.dp)
-    ) {
-        Icon(
-            imageVector = Icons.Default.NotificationsActive,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(80.dp).padding(bottom = 16.dp)
-        )
-        Text(
-            text = if (language == "de") "Verpasse keinen Rückblick" else "Never Miss a Review",
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onBackground,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = if (language == "de") "Aktiviere Benachrichtigungen, um tägliche Erinnerungen und pünktliche Monats-/Jahresrückblick-Alarme zu erhalten." else "Enable notifications to receive daily habit reminders and timely Monthly/Yearly Review alerts.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 8.dp)
-        )
-        
-        Spacer(modifier = Modifier.height(32.dp))
-        
-        if (hasPermission) {
-            Surface(
-                color = SuccessBg,
-                shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, SuccessGreen.copy(alpha = 0.5f)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = SuccessGreen)
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = if (language == "de") "Benachrichtigungen aktiviert!" else "Notifications Enabled!",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = SuccessGreen
-                    )
-                }
-            }
-        } else {
-            Button(
-                onClick = {
-                    if (android.os.Build.VERSION.SDK_INT >= 33) {
-                        launcher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-                    } else {
-                        viewModel.setReviewNotificationsEnabled(true)
-                        hasPermission = true
-                    }
-                },
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Icon(Icons.Default.Notifications, contentDescription = null, tint = Color.White)
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    text = if (language == "de") "Benachrichtigungen aktivieren" else "Enable Notifications",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        Text(
-            text = if (language == "de") "Kann später in den Einstellungen geändert werden" else "Can be changed later in Settings",
-            color = Color.Transparent,
-            style = MaterialTheme.typography.bodySmall,
-            fontWeight = FontWeight.Medium
-        )
-    }
-}
-
-@Composable
-private fun OnboardingStepSecureDataLaunch(language: String, viewModel: HabitsViewModel) {
-    val backupFolderUri by viewModel.backupFolderUri.collectAsStateWithLifecycle()
-    val isFolderSet = backupFolderUri.isNotBlank()
-    val context = LocalContext.current
-    
     val folderPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree()
     ) { uri ->
@@ -16933,79 +16180,954 @@ private fun OnboardingStepSecureDataLaunch(language: String, viewModel: HabitsVi
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Top,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)
+    ) {
+        Text(
+            text = if (language == "de") "Personalisiere deine Erfahrung!" else if (language == "ka") "მოახდინე შენი გამოცდილების პერსონალიზაცია!" else "Personalize your experience!",
+            style = MaterialTheme.typography.headlineLarge.copy(fontSize = 32.sp, lineHeight = 38.sp),
+            color = MaterialTheme.colorScheme.onBackground,
+            fontWeight = FontWeight.ExtraBold,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Language Picker
+        Text(
+            text = if (language == "de") "SPRACHE / LANGUAGE" else "LANGUAGE",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.align(Alignment.Start)
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            listOf(
+                "de" to "Deutsch 🇩🇪",
+                "en" to "English 🇬🇧",
+                "ka" to "ქართული 🇬🇪"
+            ).forEach { (code, label) ->
+                val isSel = language == code
+                Button(
+                    onClick = { viewModel.setLanguage(code) },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isSel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
+                    ),
+                    shape = RoundedCornerShape(10.dp),
+                    border = BorderStroke(1.dp, if (isSel) Color.Transparent else MaterialTheme.colorScheme.outline),
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
+                ) {
+                    Text(
+                        text = label,
+                        color = if (isSel) Color.White else MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Design Mode
+        Text(
+            text = if (language == "de") "DESIGN MODUS" else "DESIGN THEME",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.align(Alignment.Start)
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Button(
+                onClick = { viewModel.setDarkModeEnabled(true) },
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (darkModeEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
+                ),
+                shape = RoundedCornerShape(10.dp),
+                border = BorderStroke(1.dp, if (darkModeEnabled) Color.Transparent else MaterialTheme.colorScheme.outline)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.DarkMode,
+                        contentDescription = null,
+                        tint = if (darkModeEnabled) Color.White else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = if (language == "de") "Dunkel" else "Dark",
+                        color = if (darkModeEnabled) Color.White else MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+            Button(
+                onClick = { viewModel.setDarkModeEnabled(false) },
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (!darkModeEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
+                ),
+                shape = RoundedCornerShape(10.dp),
+                border = BorderStroke(1.dp, if (!darkModeEnabled) Color.Transparent else MaterialTheme.colorScheme.outline)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.LightMode,
+                        contentDescription = null,
+                        tint = if (!darkModeEnabled) Color.White else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = if (language == "de") "Hell" else "Light",
+                        color = if (!darkModeEnabled) Color.White else MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        // Color Palette Selector
+        Text(
+            text = if (language == "de") "AKZENTFARBE" else "ACCENT COLOR",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.align(Alignment.Start)
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        com.example.ui.components.ColorPaletteSelector(
+            selectedColorKey = accentColorName,
+            onColorSelected = { viewModel.setAccentColorName(it) },
+            language = language
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Notification Permission Section
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            shape = RoundedCornerShape(14.dp),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier.padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Notifications,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column {
+                        Text(
+                            text = if (language == "de") "Benachrichtigungen" else "Notifications",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = if (hasNotificationPermission) {
+                                if (language == "de") "Erinnerungen & Smart Insights aktiv ✓" else "Reminders & Smart Insights active ✓"
+                            } else {
+                                if (language == "de") "Tägliche Erinnerungen & Insights" else "Daily reminders & Smart Insights"
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (hasNotificationPermission) SuccessGreen else TextSecondary
+                        )
+                    }
+                }
+                if (!hasNotificationPermission) {
+                    Button(
+                        onClick = {
+                            if (android.os.Build.VERSION.SDK_INT >= 33) {
+                                notificationLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                            } else {
+                                viewModel.setReviewNotificationsEnabled(true)
+                                viewModel.setInsightNotificationsEnabled(true)
+                                hasNotificationPermission = true
+                            }
+                        },
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Text(if (language == "de") "Aktivieren" else "Enable", style = MaterialTheme.typography.labelSmall)
+                    }
+                } else {
+                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = SuccessGreen, modifier = Modifier.size(22.dp))
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // SAF Backup Folder Section
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            shape = RoundedCornerShape(14.dp),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier.padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.FolderSpecial,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column {
+                        Text(
+                            text = if (language == "de") "Auto-Backup Ordner" else "Auto-Backup Folder",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = if (isFolderSet) {
+                                if (language == "de") "Speicherort festgelegt ✓" else "Backup folder set ✓"
+                            } else {
+                                if (language == "de") "Lokalen Ordner für Backups wählen" else "Pick local folder for auto backups"
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (isFolderSet) SuccessGreen else TextSecondary
+                        )
+                    }
+                }
+                Button(
+                    onClick = { folderPickerLauncher.launch(null) },
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isFolderSet) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.primary
+                    ),
+                    border = if (isFolderSet) BorderStroke(1.dp, MaterialTheme.colorScheme.outline) else null,
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = if (isFolderSet) (if (language == "de") "Ändern" else "Change") else (if (language == "de") "Wählen" else "Select"),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (isFolderSet) MaterialTheme.colorScheme.onSurface else Color.White
+                    )
+                }
+            }
+        }
+    }
+}
+
+// 3. TRANSITION PAGE
+@Composable
+private fun OnboardingStepTransition(language: String) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Top,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+    ) {
+        Text(
+            text = if (language == "de") "Nutze fantastische Funktionen wie..." else if (language == "ka") "გამოიყენე ფანტასტიკური ფუნქციები, როგორიცაა..." else "Use incredible features such as...",
+            style = MaterialTheme.typography.headlineLarge.copy(fontSize = 32.sp, lineHeight = 38.sp),
+            color = MaterialTheme.colorScheme.onBackground,
+            fontWeight = FontWeight.ExtraBold,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(28.dp))
+
+        // Feature Showcase List
+        Column(
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            // Feature 1: Smart Insights
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f), RoundedCornerShape(16.dp))
+                    .padding(16.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .background(PrimaryViolet.copy(alpha = 0.15f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Lightbulb,
+                        contentDescription = null,
+                        tint = PrimaryViolet,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Smart Insights",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = if (language == "de") {
+                            "Tägliche Mustererkennung und wöchentliche Highlights basierend auf deinen Routinen."
+                        } else {
+                            "Daily pattern recognition and weekly highlights tailored to your personal habits."
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            // Feature 2: Review & Time Capsule
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f), RoundedCornerShape(16.dp))
+                    .padding(16.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .background(SuccessGreen.copy(alpha = 0.15f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Lock,
+                        contentDescription = null,
+                        tint = SuccessGreen,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = if (language == "de") "Rückblick & Zeitkapsel" else "Review & Time Capsule",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = if (language == "de") {
+                            "Sichere deine Notizen, Meilensteine und Fortschritte absolut offline und privat."
+                        } else {
+                            "Secure your notes, milestones, and progress completely offline and privately."
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            // Feature 3: Custom Rewards
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f), RoundedCornerShape(16.dp))
+                    .padding(16.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .background(SecondaryViolet.copy(alpha = 0.15f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Star,
+                        contentDescription = null,
+                        tint = SecondaryViolet,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = if (language == "de") "Eigene Meilensteine" else "Custom Milestone Rewards",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = if (language == "de") {
+                            "Belohne deine Disziplin mit selbstdefinierten Zielen und freischaltbaren Erfolgen."
+                        } else {
+                            "Reward your consistency with self-defined targets and unlockable achievements."
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(28.dp))
+
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(44.dp)
+        )
+    }
+}
+
+// 4. SMART INSIGHTS
+@Composable
+private fun OnboardingStepSmartInsights(language: String) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
         modifier = Modifier.fillMaxWidth().padding(12.dp)
     ) {
-        Icon(
-            imageVector = Icons.Default.FolderSpecial,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(80.dp).padding(bottom = 16.dp)
-        )
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+            shape = RoundedCornerShape(28.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f), RoundedCornerShape(28.dp))
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Surface(
+                    color = AppCard,
+                    shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(1.dp, PrimaryViolet.copy(alpha = 0.3f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Surface(
+                                color = PrimaryViolet.copy(alpha = 0.15f),
+                                shape = RoundedCornerShape(100.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Lightbulb,
+                                        contentDescription = null,
+                                        tint = PrimaryViolet,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "SMART INSIGHT",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = PrimaryViolet,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                            Text(
+                                text = "💡 Live",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = TextSecondary
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Text(
+                            text = androidx.compose.ui.text.buildAnnotatedString {
+                                if (language == "de") {
+                                    append("In den letzten 7 Tagen hast du ")
+                                    withStyle(style = androidx.compose.ui.text.SpanStyle(fontWeight = FontWeight.Bold)) {
+                                        append("18 Abschlüsse")
+                                    }
+                                    append(" verzeichnet, verglichen mit ")
+                                    withStyle(style = androidx.compose.ui.text.SpanStyle(fontWeight = FontWeight.Bold)) {
+                                        append("12")
+                                    }
+                                    append(" in der Vorwoche. Klasse Steigerung! 🚀")
+                                } else {
+                                    append("In the last 7 days you achieved ")
+                                    withStyle(style = androidx.compose.ui.text.SpanStyle(fontWeight = FontWeight.Bold)) {
+                                        append("18 completions")
+                                    }
+                                    append(", compared to ")
+                                    withStyle(style = androidx.compose.ui.text.SpanStyle(fontWeight = FontWeight.Bold)) {
+                                        append("12")
+                                    }
+                                    append(" the previous week. Great increase! 🚀")
+                                }
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextPrimary
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
         Text(
-            text = if (language == "de") "Sichere deine Daten" else "Protect Your Data",
-            style = MaterialTheme.typography.titleLarge,
+            text = "Smart Insights",
+            style = MaterialTheme.typography.headlineLarge.copy(fontSize = 32.sp, lineHeight = 38.sp),
             color = MaterialTheme.colorScheme.onBackground,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.ExtraBold,
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = if (language == "de") "Da deine Daten 100% lokal gespeichert werden, wähle einen Ordner (z.B. Downloads, SD-Karte), in dem automatische Backups abgelegt werden." else "Since your data is stored 100% locally, select a folder (e.g., Downloads, SD Card) where automatic SAF backups can be saved.",
+            text = if (language == "de") {
+                "Intelligente tägliche Auswertungen & wöchentliche Highlights auf deinen persönlichen Rhythmus abgestimmt."
+            } else if (language == "ka") {
+                "ინტელექტუალური ყოველდღიური ანალიზი და კვირეული მიმოხილვა."
+            } else {
+                "Intelligent daily analytics & weekly highlights tailored to your personal habit rhythm."
+            },
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(horizontal = 8.dp)
         )
-        
-        Spacer(modifier = Modifier.height(32.dp))
-        
-        if (isFolderSet) {
-            Surface(
-                color = SuccessBg,
-                shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, SuccessGreen.copy(alpha = 0.5f)),
-                modifier = Modifier.fillMaxWidth()
+    }
+}
+
+// 5. REVIEW FEATURE MIT ZEITKAPSEL
+@Composable
+private fun OnboardingStepReviewTimeCapsule(language: String) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier.fillMaxWidth().padding(12.dp)
+    ) {
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+            shape = RoundedCornerShape(28.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f), RoundedCornerShape(28.dp))
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
+                // Monthly Review Cover Slide Preview
+                Surface(
+                    color = Color(0xFF1E1B2E),
+                    shape = RoundedCornerShape(18.dp),
+                    border = BorderStroke(1.dp, Color(0xFF4C3A7A)),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = SuccessGreen)
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = if (language == "de") "Backup-Ordner festgelegt ✓" else "Backup Folder Set ✓",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = SuccessGreen
-                    )
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .background(Color.White.copy(alpha = 0.12f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CalendarToday,
+                                contentDescription = null,
+                                tint = Color(0xFFA78BFA),
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = if (language == "de") "Dein Monatsrückblick" else "Your Monthly Review",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Surface(
+                            color = PrimaryViolet.copy(alpha = 0.3f),
+                            shape = RoundedCornerShape(100.dp),
+                            border = BorderStroke(1.dp, PrimaryViolet)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.Lock, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = if (language == "de") "Zeitkapsel enthalten" else "Time Capsule included",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
                 }
             }
-        } else {
-            Button(
-                onClick = { folderPickerLauncher.launch(null) },
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                shape = RoundedCornerShape(16.dp)
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = if (language == "de") "Rückblick & Zeitkapsel" else if (language == "ka") "მიმოხილვა და დროის კაფსულა" else "Review & Time Capsule",
+            style = MaterialTheme.typography.headlineLarge.copy(fontSize = 32.sp, lineHeight = 38.sp),
+            color = MaterialTheme.colorScheme.onBackground,
+            fontWeight = FontWeight.ExtraBold,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = if (language == "de") {
+                "Feiere deine Meilensteine mit Monats- und Jahresrückblicken inklusive persönlicher Zeitkapsel zum Reflektieren."
+            } else if (language == "ka") {
+                "ყოველთვიური და ყოველწლიური მიმოხილვა შენს დროის კაფსულასთან ერთად."
+            } else {
+                "Celebrate your growth with Monthly & Yearly Reviews featuring personal Time Capsules for reflection."
+            },
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 8.dp)
+        )
+    }
+}
+
+// 6. EIGENE MEILENSTEIN-BELOHNUNGEN
+@Composable
+private fun OnboardingStepMilestoneRewards(language: String) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier.fillMaxWidth().padding(12.dp)
+    ) {
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+            shape = RoundedCornerShape(28.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f), RoundedCornerShape(28.dp))
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Icon(Icons.Default.CreateNewFolder, contentDescription = null, tint = Color.White)
-                Spacer(modifier = Modifier.width(12.dp))
+                Surface(
+                    color = AppCard,
+                    shape = RoundedCornerShape(18.dp),
+                    border = BorderStroke(1.dp, AppBorder),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier.size(52.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            AchievementBadge(
+                                type = "STREAK",
+                                tier = "GOLD",
+                                isUnlocked = true,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = if (language == "de") "Kinobesuch 🎬" else "Movie Night 🎬",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = TextPrimary,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = if (language == "de") "Eigene Belohnung (30 Tage Streak)" else "Custom Reward (30 Day Streak)",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextSecondary
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = if (language == "de") "Eigene Meilenstein-Belohnungen" else if (language == "ka") "საკუთარი ჯილდოები" else "Custom Milestone Rewards",
+            style = MaterialTheme.typography.headlineLarge.copy(fontSize = 32.sp, lineHeight = 38.sp),
+            color = MaterialTheme.colorScheme.onBackground,
+            fontWeight = FontWeight.ExtraBold,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = if (language == "de") {
+                "Setze dir eigene Belohnungen für erreichte Serien und Ziele, um deine Motivation dauerhaft hoch zu halten."
+            } else if (language == "ka") {
+                "დააწესე საკუთარი ჯილდოები მიღწეული შედეგებისთვის."
+            } else {
+                "Set custom rewards for reaching streaks and milestones to stay consistently motivated."
+            },
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 8.dp)
+        )
+    }
+}
+
+// 7. "AND MUCH MORE" (Asymmetrisch verteilte kleine Felder)
+@Composable
+private fun OnboardingStepAndMuchMore(language: String) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier.fillMaxWidth().padding(12.dp)
+    ) {
+        Text(
+            text = if (language == "de") "Und vieles mehr" else if (language == "ka") "და კიდევ ბევრი რამ" else "And much more",
+            style = MaterialTheme.typography.headlineLarge.copy(fontSize = 32.sp, lineHeight = 38.sp),
+            color = MaterialTheme.colorScheme.onBackground,
+            fontWeight = FontWeight.ExtraBold,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = if (language == "de") "Entdecke viele weitere durchdachte Funktionen:" else "Discover many more thoughtfully crafted features:",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Asymmetric Feature Mosaic Grid
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            // Row 1 (Asymmetric widths: 1.3f vs 1.0f)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                FeatureTile(
+                    icon = Icons.Default.MusicNote,
+                    title = if (language == "de") "Audio Timer" else "Audio Timer",
+                    subtitle = if (language == "de") "Fokus & Soundscapes" else "Focus & Soundscapes",
+                    color = PrimaryViolet,
+                    modifier = Modifier.weight(1.3f)
+                )
+                FeatureTile(
+                    icon = Icons.Default.BarChart,
+                    title = if (language == "de") "Unrivaled Analytics" else "Unrivaled Analytics",
+                    subtitle = if (language == "de") "Heatmaps & Trends" else "Heatmaps & Trends",
+                    color = HabitBlue,
+                    modifier = Modifier.weight(1.0f)
+                )
+            }
+
+            // Row 2 (Asymmetric widths: 1.0f vs 1.4f)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                FeatureTile(
+                    icon = Icons.Default.EditNote,
+                    title = if (language == "de") "Mini Notebook" else "Mini Notebook",
+                    subtitle = if (language == "de") "Notizen zu Habits" else "Notes & Reflections",
+                    color = HabitOrange,
+                    modifier = Modifier.weight(1.0f)
+                )
+                FeatureTile(
+                    icon = Icons.Default.Share,
+                    title = if (language == "de") "Sharing Options" else "Sharing Options",
+                    subtitle = if (language == "de") "Karten & Export" else "Cards & Export",
+                    color = HabitGreen,
+                    modifier = Modifier.weight(1.4f)
+                )
+            }
+
+            // Row 3 (Asymmetric widths: 1.2f vs 1.0f)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                FeatureTile(
+                    icon = Icons.Default.Widgets,
+                    title = if (language == "de") "Homescreen Widget" else "Homescreen Widget",
+                    subtitle = if (language == "de") "Schnelles Abhaken" else "Quick Checking",
+                    color = SecondaryViolet,
+                    modifier = Modifier.weight(1.2f)
+                )
+                FeatureTile(
+                    icon = Icons.Default.EmojiEvents,
+                    title = if (language == "de") "Gamification" else "Gamification",
+                    subtitle = if (language == "de") "Trophäen & Level" else "Trophies & Badges",
+                    color = HabitYellow,
+                    modifier = Modifier.weight(1.0f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FeatureTile(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .background(color.copy(alpha = 0.15f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = color,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+// 8. FINAL LAUNCH PAGE
+@Composable
+private fun OnboardingStepFinalLaunch(
+    language: String,
+    onComplete: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 24.dp)
+    ) {
+        Surface(
+            color = SuccessBg,
+            shape = RoundedCornerShape(100.dp),
+            border = BorderStroke(1.dp, SuccessGreen.copy(alpha = 0.5f))
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Lock,
+                    contentDescription = null,
+                    tint = SuccessGreen,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = if (language == "de") "Backup-Ordner auswählen" else "Select Backup Folder",
-                    style = MaterialTheme.typography.titleSmall,
+                    text = "OPEN SOURCE & OFFLINE",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = SuccessGreen,
                     fontWeight = FontWeight.Bold
                 )
             }
         }
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
+
+        Spacer(modifier = Modifier.height(28.dp))
+
         Text(
-            text = if (language == "de") "Kann später in den Einstellungen geändert werden" else "Can be changed later in Settings",
+            text = if (language == "de") {
+                "All das 100% Open-Source & Offline — deine Daten gehören nur dir"
+            } else if (language == "ka") {
+                "ყველაფერი 100% ღია კოდით და ოფლაინში — შენი მონაცემები შენია"
+            } else {
+                "All that 100% Open source and offline — you own your data"
+            },
+            style = MaterialTheme.typography.headlineLarge.copy(fontSize = 32.sp, lineHeight = 38.sp),
+            color = MaterialTheme.colorScheme.onBackground,
+            fontWeight = FontWeight.ExtraBold,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(36.dp))
+
+        // Footer with Love Heart Emoji
+        Text(
+            text = "created with ❤️ by FrequNCy",
+            style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.bodySmall,
-            fontWeight = FontWeight.Medium
+            fontWeight = FontWeight.Medium,
+            textAlign = TextAlign.Center
         )
     }
 }
@@ -17126,14 +17248,22 @@ fun calculateHabitStrengthOnDate(habit: Habit, logs: List<HabitLog>, targetDateS
     
     if (maxDays <= 0) return 0
     
+    val realTodayEpoch = java.time.LocalDate.now().toEpochDay().toInt()
+    
     for (i in 0 until maxDays) {
         val currentEpoch = todayEpoch - i
-        val dayWeight = maxDays - i
+        val dayWeight = 20 + (totalDaysToCheck - i)
         
         val successful = if (habit.isNegative) {
             !loggedEpochDays.contains(currentEpoch)
         } else {
             completedEpochDays.contains(currentEpoch)
+        }
+        
+        // Skip penalizing if it's the actual today, it's a positive habit, and hasn't been logged yet
+        val isPendingRealToday = (currentEpoch == realTodayEpoch) && !habit.isNegative && !loggedEpochDays.contains(currentEpoch)
+        if (isPendingRealToday) {
+            continue
         }
         
         if (successful) {
@@ -20757,6 +20887,7 @@ fun RewardsOverviewSheet(
     onDismiss: () -> Unit
 ) {
     val allRewards by viewModel.allMilestoneRewards.collectAsStateWithLifecycle(initialValue = emptyList())
+    val allHabits by viewModel.allHabits.collectAsStateWithLifecycle(initialValue = emptyList())
     val profileStats by viewModel.profileStats.collectAsStateWithLifecycle(initialValue = com.example.data.ProfileStats())
     
     var selectedTabIndex by remember { mutableStateOf(0) }
@@ -20869,7 +21000,37 @@ fun RewardsOverviewSheet(
                                                 fontWeight = FontWeight.Bold
                                             )
                                         }
+                                        
+                                        val habit = allHabits.find { it.id == reward.habitId }
+                                        if (habit != null) {
+                                            Spacer(modifier = Modifier.height(6.dp))
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                modifier = Modifier
+                                                    .background(
+                                                        parseHabitColor(habit.color).copy(alpha = 0.15f),
+                                                        RoundedCornerShape(6.dp)
+                                                    )
+                                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = HabitIconMapping.getIcon(habit.icon),
+                                                    contentDescription = null,
+                                                    tint = parseHabitColor(habit.color),
+                                                    modifier = Modifier.size(14.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text(
+                                                    text = habit.name,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = parseHabitColor(habit.color),
+                                                    fontWeight = FontWeight.SemiBold
+                                                )
+                                            }
+                                        }
+
                                         Spacer(modifier = Modifier.height(10.dp))
+                                        
                                         if (reward.conditionType != "TROPHY_COUPLED") {
                                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                                 Text(
@@ -20953,6 +21114,34 @@ fun RewardsOverviewSheet(
                                                     style = MaterialTheme.typography.bodySmall,
                                                     color = if (reward.isRedeemed) TextSecondary else PrimaryViolet
                                                 )
+                                                
+                                                val habit = allHabits.find { it.id == reward.habitId }
+                                                if (habit != null) {
+                                                    Spacer(modifier = Modifier.height(4.dp))
+                                                    Row(
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        modifier = Modifier
+                                                            .background(
+                                                                parseHabitColor(habit.color).copy(alpha = 0.15f),
+                                                                RoundedCornerShape(6.dp)
+                                                            )
+                                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = HabitIconMapping.getIcon(habit.icon),
+                                                            contentDescription = null,
+                                                            tint = parseHabitColor(habit.color),
+                                                            modifier = Modifier.size(12.dp)
+                                                        )
+                                                        Spacer(modifier = Modifier.width(4.dp))
+                                                        Text(
+                                                            text = habit.name,
+                                                            style = MaterialTheme.typography.labelSmall,
+                                                            color = parseHabitColor(habit.color),
+                                                            fontWeight = FontWeight.SemiBold
+                                                        )
+                                                    }
+                                                }
                                             }
                                         }
                                         if (!reward.isRedeemed) {
@@ -20976,5 +21165,80 @@ fun RewardsOverviewSheet(
                 }
             }
         }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+fun Modifier.animatedGlowingBorder(
+    glowColor: Color,
+    cornerRadius: Dp = 20.dp,
+    borderWidth: Dp = 2.dp,
+    baseColor: Color? = null
+): Modifier = composed {
+    val infiniteTransition = rememberInfiniteTransition()
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.4f,
+        targetValue = 0.9f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        )
+    )
+
+    this.drawBehind {
+        val radiusPx = cornerRadius.toPx()
+        
+        // Broad very soft outer glow
+        drawRoundRect(
+            color = glowColor.copy(alpha = 0.04f * pulseAlpha),
+            size = androidx.compose.ui.geometry.Size(
+                width = size.width + 16.dp.toPx(),
+                height = size.height + 16.dp.toPx()
+            ),
+            topLeft = androidx.compose.ui.geometry.Offset(-8.dp.toPx(), -8.dp.toPx()),
+            cornerRadius = CornerRadius(radiusPx + 8.dp.toPx(), radiusPx + 8.dp.toPx())
+        )
+        
+        // Medium soft glow
+        drawRoundRect(
+            color = glowColor.copy(alpha = 0.12f * pulseAlpha),
+            size = androidx.compose.ui.geometry.Size(
+                width = size.width + 10.dp.toPx(),
+                height = size.height + 10.dp.toPx()
+            ),
+            topLeft = androidx.compose.ui.geometry.Offset(-5.dp.toPx(), -5.dp.toPx()),
+            cornerRadius = CornerRadius(radiusPx + 5.dp.toPx(), radiusPx + 5.dp.toPx())
+        )
+
+        // Close glowing edge
+        drawRoundRect(
+            color = glowColor.copy(alpha = 0.22f * pulseAlpha),
+            size = androidx.compose.ui.geometry.Size(
+                width = size.width + 4.dp.toPx(),
+                height = size.height + 4.dp.toPx()
+            ),
+            topLeft = androidx.compose.ui.geometry.Offset(-2.dp.toPx(), -2.dp.toPx()),
+            cornerRadius = CornerRadius(radiusPx + 2.dp.toPx(), radiusPx + 2.dp.toPx())
+        )
+    }.drawWithContent {
+        drawContent()
+        val radiusPx = cornerRadius.toPx()
+        val widthPx = borderWidth.toPx()
+        
+        // Solid border outline to keep the card container sharp
+        drawRoundRect(
+            color = baseColor?.copy(alpha = 0.3f) ?: glowColor.copy(alpha = 0.3f),
+            size = size,
+            cornerRadius = CornerRadius(radiusPx, radiusPx),
+            style = Stroke(widthPx)
+        )
     }
 }

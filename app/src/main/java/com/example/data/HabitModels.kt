@@ -331,7 +331,7 @@ fun isLogCompleted(habit: Habit, log: HabitLog?): Boolean {
         -1f -> false
         else -> {
             if (habit.type == "BINARY") {
-                !habit.isNegative
+                if (log.value > 0f) !habit.isNegative else habit.isNegative
             } else {
                 if (habit.isNegative) {
                     log.value < habit.targetValue
@@ -430,7 +430,9 @@ object StreakCalculator {
     fun calculate(habits: List<Habit>, logs: List<HabitLog>, targetDateStr: String? = null): PerfectDaysStats {
         if (habits.isEmpty()) return PerfectDaysStats(0, 0, 0, 0)
 
-        val actualTodayEpoch = (System.currentTimeMillis() / (1000L * 60 * 60 * 24)).toInt()
+        val actualTodayDate = java.time.LocalDate.now(java.time.ZoneId.systemDefault())
+        val actualTodayEpoch = actualTodayDate.toEpochDay().toInt()
+
         val targetEpoch = if (targetDateStr != null) {
             try { java.time.LocalDate.parse(targetDateStr).toEpochDay().toInt() } catch (e: Exception) { actualTodayEpoch }
         } else actualTodayEpoch
@@ -445,7 +447,11 @@ object StreakCalculator {
             } else {
                 System.currentTimeMillis()
             }
-            val startEpoch = (validStartMillis / (1000L * 60 * 60 * 24)).toInt()
+            val startEpoch = java.time.Instant.ofEpochMilli(validStartMillis)
+                .atZone(java.time.ZoneId.systemDefault())
+                .toLocalDate()
+                .toEpochDay()
+                .toInt()
             if (startEpoch < oldestStartEpoch) {
                 oldestStartEpoch = startEpoch
             }
@@ -493,21 +499,7 @@ object StreakCalculator {
                 if (!isPaused) {
                     checkedAnyOnDay = true
                     totalPossibleCompletions++
-                    val successful = if (log != null) {
-                        when (log.value) {
-                            -1f -> false
-                            -2f -> true
-                            else -> {
-                                if (habit.type == "BINARY") {
-                                    if (habit.isNegative) false else true
-                                } else {
-                                    if (habit.isNegative) log.value < habit.targetValue else log.value >= habit.targetValue
-                                }
-                            }
-                        }
-                    } else {
-                        habit.isNegative
-                    }
+                    val successful = isLogCompleted(habit, log)
 
                     if (successful) {
                         totalCompletedCompletions++
