@@ -14,17 +14,33 @@
         android:gravity="center_vertical"
         android:layout_marginBottom="10dp">
 
-        <ProgressBar
-            android:id="@+id/widget_progress_bar"
-            style="?android:attr/progressBarStyleHorizontal"
+        <FrameLayout
             android:layout_width="0dp"
             android:layout_height="12dp"
             android:layout_weight="1"
-            android:layout_marginEnd="10dp"
-            android:indeterminate="false"
-            android:max="100"
-            android:progress="0"
-            android:progressDrawable="@drawable/widget_progress_bar_custom" />
+            android:layout_marginEnd="10dp">
+
+            <ProgressBar
+                android:id="@+id/widget_progress_bar"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:indeterminate="false"
+                android:max="100"
+                android:progress="0"
+                android:progressDrawable="@drawable/widget_progress_bar_custom" />
+
+            <ProgressBar
+                android:id="@+id/widget_progress_bar_completed"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:indeterminate="false"
+                android:max="100"
+                android:progress="0"
+                android:visibility="gone"
+                android:progressDrawable="@drawable/widget_progress_bar_completed" />
+        </FrameLayout>
 
         <LinearLayout
             android:id="@+id/widget_streak_container"

@@ -34,7 +34,8 @@ data class Habit(
     val reminderMinute: Int = 0,
     val customReminders: String = "",
     val isArchived: Boolean = false,
-    val description: String = ""
+    val description: String = "",
+    val clickIncrement: Float = 1.0f
 )
 
 @Entity(
@@ -609,7 +610,7 @@ fun calculateHabitStrength(habit: Habit, logs: List<HabitLog>): Int {
         val dayWeight = 20 + (totalDaysToCheck - i)
         
         val successful = if (habit.isNegative) {
-            !loggedEpochDays.contains(currentEpoch)
+            !loggedEpochDays.contains(currentEpoch) || completedEpochDays.contains(currentEpoch)
         } else {
             completedEpochDays.contains(currentEpoch)
         }

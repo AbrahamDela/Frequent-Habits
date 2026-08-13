@@ -5449,6 +5449,7 @@ fun StatsScreen(
             showReviewArchive = showReviewArchive,
             availableYears = availableYears,
             availableMonths = availableMonths,
+            allHabits = allHabits,
             allLogs = allLogs,
             language = language,
             onShowReviewExplanation = { showReviewExplanation = true },
@@ -6014,24 +6015,7 @@ fun HabitDetailScreen(
                             onClick = { t, e -> activeExplanation = t to e }
                         )
                         Spacer(modifier = Modifier.weight(1f))
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(end = 8.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.TouchApp,
-                                contentDescription = null,
-                                tint = TextSecondary.copy(alpha = 0.7f),
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = if (language == "de") "Interaktiv" else "Interactive",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = TextSecondary.copy(alpha = 0.7f),
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
+
                     }
 
                     val habitColor = HabitIconMapping.getColor(habit.color)
@@ -6044,9 +6028,7 @@ fun HabitDetailScreen(
                         canNextMonth = state?.canNextMonth ?: true,
                         onPrevMonth = { viewModel.navigateCalendarMonth(-1) },
                         onNextMonth = { viewModel.navigateCalendarMonth(1) },
-                        onDayClick = { dateStr ->
-                            viewModel.toggleBinaryHabit(habit.id, dateStr, false)
-                        }
+                        onDayClick = null
                     )
                 }
             }
@@ -6657,6 +6639,15 @@ fun getWeekOfYear(date: java.time.LocalDate): Int {
     return cal.get(java.util.Calendar.WEEK_OF_YEAR)
 }
 
+fun getHabitStartLocalDate(habit: Habit): java.time.LocalDate {
+    val validStartMillis = if (habit.startDate > 946684800000L) habit.startDate else habit.createdAt
+    return try {
+        java.time.Instant.ofEpochMilli(validStartMillis).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+    } catch (e: Exception) {
+        java.time.LocalDate.of(2024, 1, 1)
+    }
+}
+
 fun calculateHabitAverageScoreInRange(
     habit: Habit,
     logs: List<HabitLog>,
@@ -6666,15 +6657,19 @@ fun calculateHabitAverageScoreInRange(
     if (startDate.isAfter(endDate)) return 0f
     val today = java.time.LocalDate.now()
     val actualEnd = if (endDate.isAfter(today)) today else endDate
-    if (startDate.isAfter(actualEnd)) return 0f
+    
+    val habitStartDate = getHabitStartLocalDate(habit)
+    val effectiveStart = if (startDate.isBefore(habitStartDate)) habitStartDate else startDate
 
-    val totalDays = java.time.temporal.ChronoUnit.DAYS.between(startDate, actualEnd) + 1
+    if (effectiveStart.isAfter(actualEnd)) return 0f
+
+    val totalDays = java.time.temporal.ChronoUnit.DAYS.between(effectiveStart, actualEnd) + 1
     if (totalDays <= 0) return 0f
 
     val step = if (totalDays > 180) 5L else 1L
     var sum = 0f
     var count = 0
-    var curr = startDate
+    var curr = effectiveStart
     while (!curr.isAfter(actualEnd)) {
         sum += calculateHabitStrengthOnDate(habit, logs, curr.toString()).toFloat()
         count++
@@ -6694,18 +6689,31 @@ fun calculateOverallAverageScoreInRange(
     val actualEnd = if (endDate.isAfter(today)) today else endDate
     if (startDate.isAfter(actualEnd)) return 0f
 
-    val totalDays = java.time.temporal.ChronoUnit.DAYS.between(startDate, actualEnd) + 1
+    val habitsWithStart = activeHabits.map { habit ->
+        habit to getHabitStartLocalDate(habit)
+    }
+
+    val earliestHabitStart = habitsWithStart.minOfOrNull { it.second } ?: startDate
+    val effectiveStart = if (startDate.isBefore(earliestHabitStart)) earliestHabitStart else startDate
+
+    if (effectiveStart.isAfter(actualEnd)) return 0f
+
+    val totalDays = java.time.temporal.ChronoUnit.DAYS.between(effectiveStart, actualEnd) + 1
     if (totalDays <= 0) return 0f
 
     val step = if (totalDays > 180) 7L else 1L
     var sum = 0f
     var count = 0
-    var curr = startDate
+    var curr = effectiveStart
     while (!curr.isAfter(actualEnd)) {
-        val dateStr = curr.toString()
-        val dailyAvg = activeHabits.map { calculateHabitStrengthOnDate(it, allLogs, dateStr) }.average().toFloat()
-        sum += dailyAvg
-        count++
+        val currDate = curr
+        val habitsOnCurr = habitsWithStart.filter { !it.second.isAfter(currDate) }.map { it.first }
+        if (habitsOnCurr.isNotEmpty()) {
+            val dateStr = currDate.toString()
+            val dailyAvg = habitsOnCurr.map { calculateHabitStrengthOnDate(it, allLogs, dateStr) }.average().toFloat()
+            sum += dailyAvg
+            count++
+        }
         curr = curr.plusDays(step)
     }
     return if (count > 0) (sum / count).coerceIn(0f, 100f) else 0f
@@ -7224,7 +7232,7 @@ fun HabitVolumeProgressionCard(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            CompletionsBarChart(points = volumePoints, habitColor = habitColor)
+            CompletionsBarChart(points = volumePoints, habitColor = PrimaryViolet)
         }
     }
 }
@@ -8797,6 +8805,7 @@ fun OverallStatsScreen(
             showReviewArchive = showReviewArchive,
             availableYears = availableYears,
             availableMonths = availableMonths,
+            allHabits = allHabits,
             allLogs = allLogs,
             language = language,
             onShowReviewExplanation = { showReviewExplanation = true },
@@ -9830,6 +9839,9 @@ fun SettingsScreen(
     }
 
     if (showArchivedList) {
+        BackHandler(enabled = true) {
+            showArchivedList = false
+        }
         val archivedHabits by viewModel.archivedHabits.collectAsStateWithLifecycle()
         var showDeleteConfirmInArchive by remember { mutableStateOf<Habit?>(null) }
 
@@ -17589,7 +17601,7 @@ fun calculateHabitStrengthOnDate(habit: Habit, logs: List<HabitLog>, targetDateS
         val dayWeight = 20 + (totalDaysToCheck - i)
         
         val successful = if (habit.isNegative) {
-            !loggedEpochDays.contains(currentEpoch)
+            !loggedEpochDays.contains(currentEpoch) || completedEpochDays.contains(currentEpoch)
         } else {
             completedEpochDays.contains(currentEpoch)
         }
@@ -17663,12 +17675,22 @@ fun calculateMonthlyReviewData(
     
     val activeHabits = allHabits.filter { !it.isArchived }
     
-    val startScore = if (activeHabits.isNotEmpty()) {
-        activeHabits.map { calculateHabitStrengthOnDate(it, allLogs, prevMonthLastDay) }.average().toInt()
+    val habitsAtStart = activeHabits.filter { h ->
+        val startStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+            .format(java.util.Date(if (h.startDate > 946684800000L) h.startDate else h.createdAt))
+        startStr <= prevMonthLastDay
+    }
+    val startScore = if (habitsAtStart.isNotEmpty()) {
+        habitsAtStart.map { calculateHabitStrengthOnDate(it, allLogs, prevMonthLastDay) }.average().toInt()
     } else 0
     
-    val endScore = if (activeHabits.isNotEmpty()) {
-        activeHabits.map { calculateHabitStrengthOnDate(it, allLogs, thisMonthLastDay) }.average().toInt()
+    val habitsAtEnd = activeHabits.filter { h ->
+        val startStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+            .format(java.util.Date(if (h.startDate > 946684800000L) h.startDate else h.createdAt))
+        startStr <= thisMonthLastDay
+    }
+    val endScore = if (habitsAtEnd.isNotEmpty()) {
+        habitsAtEnd.map { calculateHabitStrengthOnDate(it, allLogs, thisMonthLastDay) }.average().toInt()
     } else 0
     
     val scoreDelta = endScore - startScore
@@ -17747,12 +17769,7 @@ fun calculateStreakFast(habit: Habit, logs: List<HabitLog>): Pair<Int, Int> {
     if (habitLogs.isEmpty()) return 0 to 0
 
     val completedDates = habitLogs.filter { log ->
-        val isCompleted = when (log.value) {
-            -1f -> false
-            -2f -> true
-            else -> if (habit.type == "BINARY") true else log.value >= habit.targetValue
-        }
-        isCompleted && !log.isPaused
+        com.example.data.isLogCompleted(habit, log) && !log.isPaused
     }.map { it.date }.toSet()
 
     if (habit.frequency == "TIMES_WEEKLY") {
@@ -17857,12 +17874,22 @@ fun calculateYearlyReviewData(
     val prevYearLastDay = "${year - 1}-12-31"
     val thisYearLastDay = "$year-12-31"
     
-    val startScore = if (activeHabits.isNotEmpty()) {
-        activeHabits.map { calculateHabitStrengthOnDate(it, allLogs, prevYearLastDay) }.average().toInt()
+    val habitsAtStart = activeHabits.filter { h ->
+        val startStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+            .format(java.util.Date(if (h.startDate > 946684800000L) h.startDate else h.createdAt))
+        startStr <= prevYearLastDay
+    }
+    val startScore = if (habitsAtStart.isNotEmpty()) {
+        habitsAtStart.map { calculateHabitStrengthOnDate(it, allLogs, prevYearLastDay) }.average().toInt()
     } else 0
     
-    val endScore = if (activeHabits.isNotEmpty()) {
-        activeHabits.map { calculateHabitStrengthOnDate(it, allLogs, thisYearLastDay) }.average().toInt()
+    val habitsAtEnd = activeHabits.filter { h ->
+        val startStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+            .format(java.util.Date(if (h.startDate > 946684800000L) h.startDate else h.createdAt))
+        startStr <= thisYearLastDay
+    }
+    val endScore = if (habitsAtEnd.isNotEmpty()) {
+        habitsAtEnd.map { calculateHabitStrengthOnDate(it, allLogs, thisYearLastDay) }.average().toInt()
     } else 0
     
     val scoreDelta = endScore - startScore
@@ -18001,6 +18028,7 @@ fun ReviewArchiveDialog(
     showReviewArchive: Boolean,
     availableYears: List<Int>,
     availableMonths: List<Pair<Int, Int>>,
+    allHabits: List<com.example.data.Habit>,
     allLogs: List<com.example.data.HabitLog>,
     language: String,
     onShowReviewExplanation: () -> Unit,
@@ -18105,10 +18133,7 @@ fun ReviewArchiveDialog(
                             }
                         } else {
                             items(availableMonths) { (y, m) ->
-                                val monthLogsCount = allLogs.count { 
-                                    val prefix = String.format(java.util.Locale.US, "%04d-%02d-", y, m)
-                                    it.date.startsWith(prefix) && it.value > 0f 
-                                }
+                                val monthLogsCount = calculateMonthlyReviewData(y, m, allHabits, allLogs, language).totalCompletions
                                 val mName = when (m) {
                                     1 -> if (language == "de") "Januar" else "January"
                                     2 -> if (language == "de") "Februar" else "February"
@@ -18159,7 +18184,7 @@ fun ReviewArchiveDialog(
                                                     fontWeight = FontWeight.Bold
                                                 )
                                                 Text(
-                                                    text = "$monthLogsCount " + (if (language == "de") "Abschlüsse" else "completions"),
+                                                    text = "$monthLogsCount " + (if (language == "de") "Check-ins" else "check-ins"),
                                                     style = MaterialTheme.typography.labelSmall,
                                                     color = TextSecondary
                                                 )
@@ -18187,7 +18212,7 @@ fun ReviewArchiveDialog(
                             }
                         } else {
                             items(availableYears) { y ->
-                                val yearLogsCount = allLogs.count { it.date.startsWith("$y-") && it.value > 0f }
+                                val yearLogsCount = calculateYearlyReviewData(y, allHabits, allLogs, language).totalCompletions
                                 Surface(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -18224,7 +18249,7 @@ fun ReviewArchiveDialog(
                                                     fontWeight = FontWeight.Bold
                                                 )
                                                 Text(
-                                                    text = "$yearLogsCount " + (if (language == "de") "Abschlüsse" else "completions"),
+                                                    text = "$yearLogsCount " + (if (language == "de") "Check-ins" else "check-ins"),
                                                     style = MaterialTheme.typography.labelSmall,
                                                     color = TextSecondary
                                                 )
@@ -19767,7 +19792,7 @@ fun MonthlyReviewSummarySlide(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = if (language == "de") "Gesamt-Checkins:" else "Total Check-ins:",
+                        text = if (language == "de") "Total check ins:" else "Total check ins:",
                         color = Color.White.copy(alpha = 0.8f),
                         style = MaterialTheme.typography.bodyMedium
                     )
@@ -19784,12 +19809,12 @@ fun MonthlyReviewSummarySlide(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = if (language == "de") "Account-Stärke:" else "Account Strength:",
+                        text = if (language == "de") "Score:" else "Score:",
                         color = Color.White.copy(alpha = 0.8f),
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Text(
-                        text = "${reviewData.endScore} (${if (reviewData.scoreDelta >= 0) "+" else ""}${reviewData.scoreDelta})",
+                        text = reviewData.endScore.toString(),
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.bodyMedium
@@ -19803,7 +19828,7 @@ fun MonthlyReviewSummarySlide(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = if (language == "de") "Monats-MVP:" else "Monthly MVP:",
+                            text = if (language == "de") "Habit MVP:" else "Habit MVP:",
                             color = Color.White.copy(alpha = 0.8f),
                             style = MaterialTheme.typography.bodyMedium
                         )
@@ -19830,12 +19855,12 @@ fun MonthlyReviewSummarySlide(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = if (language == "de") "Power-Tag:" else "Power Day:",
+                        text = if (language == "de") "Power day:" else "Power day:",
                         color = Color.White.copy(alpha = 0.8f),
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Text(
-                        text = "${reviewData.bestDayOfWeekName} (${reviewData.bestDayOfWeekRate} Einheiten)",
+                        text = reviewData.bestDayOfWeekName,
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.bodyMedium

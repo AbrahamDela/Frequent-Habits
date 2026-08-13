@@ -132,7 +132,7 @@ class HabitWidgetFactory(private val context: Context, intent: Intent) : RemoteV
             views.setImageViewResource(R.id.widget_habit_check, checkIcon)
             views.setInt(R.id.widget_habit_check, "setColorFilter", 0)
 
-            // 1. Fill-In intent for check toggle
+            // Fill-In intents for widget actions
             val toggleIntent = Intent().apply {
                 putExtra(HabitWidgetProvider.EXTRA_HABIT_ID, habit.id)
                 putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
@@ -140,33 +140,37 @@ class HabitWidgetFactory(private val context: Context, intent: Intent) : RemoteV
             }
 
             if (habit.type == "NUMBER" || habit.type == "NUMERICAL") {
-                views.setViewVisibility(R.id.widget_habit_minus, android.view.View.GONE)
-                views.setViewVisibility(R.id.widget_habit_plus, android.view.View.GONE)
+                views.setViewVisibility(R.id.widget_habit_minus, android.view.View.VISIBLE)
+                views.setViewVisibility(R.id.widget_habit_plus, android.view.View.VISIBLE)
 
-                // For numerical habits, click on the icon or name opens the app.
-                // Do NOT set click on widget_habit_layout to prevent double-firing when clicking the check icon.
-                val openAppIntent = Intent().apply {
+                val minusIntent = Intent().apply {
                     putExtra(HabitWidgetProvider.EXTRA_HABIT_ID, habit.id)
                     putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
-                    putExtra("WIDGET_ACTION", "OPEN_APP")
+                    putExtra(HabitWidgetProvider.EXTRA_DELTA, -1f)
+                    putExtra("WIDGET_ACTION", "DELTA")
                 }
-                views.setOnClickFillInIntent(R.id.widget_habit_icon, openAppIntent)
-                views.setOnClickFillInIntent(R.id.widget_habit_name, openAppIntent)
-
-                // Direct delta increment when clicking the check circle on numerical habits
-                val directIncrementIntent = Intent().apply {
+                val plusIntent = Intent().apply {
                     putExtra(HabitWidgetProvider.EXTRA_HABIT_ID, habit.id)
                     putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
                     putExtra(HabitWidgetProvider.EXTRA_DELTA, 1f)
                     putExtra("WIDGET_ACTION", "DELTA")
                 }
-                views.setOnClickFillInIntent(R.id.widget_habit_check, directIncrementIntent)
+
+                views.setOnClickFillInIntent(R.id.widget_habit_minus, minusIntent)
+                views.setOnClickFillInIntent(R.id.widget_habit_plus, plusIntent)
+                views.setOnClickFillInIntent(R.id.widget_habit_check, toggleIntent)
+                views.setOnClickFillInIntent(R.id.widget_habit_icon, toggleIntent)
+                views.setOnClickFillInIntent(R.id.widget_habit_name, toggleIntent)
+                views.setOnClickFillInIntent(R.id.widget_habit_layout, toggleIntent)
             } else {
                 views.setViewVisibility(R.id.widget_habit_minus, android.view.View.GONE)
                 views.setViewVisibility(R.id.widget_habit_plus, android.view.View.GONE)
-                
-                // For binary habits, click on the layout itself to toggle the habit.
-                // Do NOT set click on widget_habit_check, so clicking it bubbles to the layout and doesn't trigger twice!
+
+                views.setOnClickFillInIntent(R.id.widget_habit_minus, toggleIntent)
+                views.setOnClickFillInIntent(R.id.widget_habit_plus, toggleIntent)
+                views.setOnClickFillInIntent(R.id.widget_habit_check, toggleIntent)
+                views.setOnClickFillInIntent(R.id.widget_habit_icon, toggleIntent)
+                views.setOnClickFillInIntent(R.id.widget_habit_name, toggleIntent)
                 views.setOnClickFillInIntent(R.id.widget_habit_layout, toggleIntent)
             }
 

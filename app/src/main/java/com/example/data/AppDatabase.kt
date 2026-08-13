@@ -96,7 +96,13 @@ val MIGRATION_9_10 = object : Migration(9, 10) {
     }
 }
 
-@Database(entities = [Habit::class, HabitLog::class, DailyNote::class, TimeCapsuleNote::class, MilestoneReward::class], version = 10, exportSchema = false)
+val MIGRATION_10_11 = object : Migration(10, 11) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        safeAddColumn(db, "habits", "clickIncrement", "REAL NOT NULL DEFAULT 1.0")
+    }
+}
+
+@Database(entities = [Habit::class, HabitLog::class, DailyNote::class, TimeCapsuleNote::class, MilestoneReward::class], version = 11, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun habitDao(): HabitDao
 
@@ -120,7 +126,8 @@ abstract class AppDatabase : RoomDatabase() {
                     MIGRATION_6_7,
                     MIGRATION_7_8,
                     MIGRATION_8_9,
-                    MIGRATION_9_10
+                    MIGRATION_9_10,
+                    MIGRATION_10_11
                 )
                 .fallbackToDestructiveMigration()
                 .build()

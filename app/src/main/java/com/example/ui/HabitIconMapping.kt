@@ -193,22 +193,64 @@ object HabitIconMapping {
         return when (name.lowercase()) {
             "dumbbell" -> R.drawable.ic_dumbbell
             "run" -> R.drawable.ic_run
+            "bicycle" -> R.drawable.ic_bicycle
+            "pool" -> R.drawable.ic_pool
             "heart" -> R.drawable.ic_heart
             "meditation" -> R.drawable.ic_meditation
+            "bed" -> R.drawable.ic_bed
+            "spa" -> R.drawable.ic_spa
+            "scale" -> R.drawable.ic_scale
+            "fire" -> R.drawable.ic_fire
+            "pill" -> R.drawable.ic_pill
+            "sport" -> R.drawable.ic_sport
+            "soccer" -> R.drawable.ic_soccer
+            "trophy" -> R.drawable.ic_trophy
             "sparkle" -> R.drawable.ic_sparkle
             "sun" -> R.drawable.ic_sun
             "moon" -> R.drawable.ic_moon
             "water" -> R.drawable.ic_water
             "coffee" -> R.drawable.ic_coffee
+            "tea" -> R.drawable.ic_tea
             "food" -> R.drawable.ic_food
+            "apple" -> R.drawable.ic_apple
+            "smile" -> R.drawable.ic_smile
+            "smoke_free" -> R.drawable.ic_smoke_free
+            "no_cell" -> R.drawable.ic_no_cell
+            "plant" -> R.drawable.ic_plant
+            "pet" -> R.drawable.ic_pet
+            "leaf" -> R.drawable.ic_leaf
+            "drink" -> R.drawable.ic_drink
+            "cake" -> R.drawable.ic_cake
             "book" -> R.drawable.ic_book
+            "school" -> R.drawable.ic_school
             "code" -> R.drawable.ic_code
             "work" -> R.drawable.ic_work
+            "laptop" -> R.drawable.ic_laptop
+            "pencil" -> R.drawable.ic_pencil
+            "brush" -> R.drawable.ic_brush
+            "palette" -> R.drawable.ic_palette
+            "brain" -> R.drawable.ic_brain
+            "language" -> R.drawable.ic_language
+            "lightbulb" -> R.drawable.ic_lightbulb
+            "camera" -> R.drawable.ic_camera
             "music" -> R.drawable.ic_music
+            "headphones" -> R.drawable.ic_headphones
             "clean" -> R.drawable.ic_clean
+            "home" -> R.drawable.ic_home
             "money" -> R.drawable.ic_money
+            "piggy" -> R.drawable.ic_piggy
+            "shopping" -> R.drawable.ic_shopping
             "clock" -> R.drawable.ic_clock
+            "timer" -> R.drawable.ic_timer
+            "calendar" -> R.drawable.ic_calendar
+            "task" -> R.drawable.ic_task
             "phone" -> R.drawable.ic_phone
+            "car" -> R.drawable.ic_car
+            "travel" -> R.drawable.ic_travel
+            "bell" -> R.drawable.ic_bell
+            "party" -> R.drawable.ic_party
+            "star" -> R.drawable.ic_star
+            "shield" -> R.drawable.ic_shield
             else -> R.drawable.ic_sparkle
         }
     }

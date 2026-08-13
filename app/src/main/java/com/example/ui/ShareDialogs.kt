@@ -579,15 +579,13 @@ fun ProfileShareDialog(
             streak
         } ?: 0
     }
-    val userLevel = remember(totalCompletions) { (totalCompletions / 15) + 1 }
 
     // Render bitmap
-    val bitmap = remember(userName, profileImageUri, userLevel, totalCompletions, activeHabitsCount, longestStreak, accentColor, language) {
+    val bitmap = remember(userName, profileImageUri, totalCompletions, activeHabitsCount, longestStreak, accentColor, language) {
         renderProfileShareBitmap(
             context = context,
             userName = userName,
             profileImageUri = profileImageUri,
-            userLevel = userLevel,
             totalCompletions = totalCompletions,
             activeHabits = activeHabitsCount,
             longestStreak = longestStreak,
@@ -1286,7 +1284,6 @@ fun renderProfileShareBitmap(
     context: Context,
     userName: String,
     profileImageUri: String,
-    userLevel: Int,
     totalCompletions: Int,
     activeHabits: Int,
     longestStreak: Int,
@@ -1323,18 +1320,34 @@ fun renderProfileShareBitmap(
     val cardRect = RectF(60f, 60f, width - 60f, height - 60f)
     canvas.drawRoundRect(cardRect, 48f, 48f, borderPaint)
 
-    var currentY = 160f
+    var currentY = 150f
 
-    // App Header Brand
-    val headerPaint = Paint().apply {
-        isAntiAlias = true
-        color = primaryInt
-        textSize = 42f
-        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-        textAlign = Paint.Align.CENTER
-        letterSpacing = 0.15f
+    // Top App Logo
+    val logoDrawable = try {
+        androidx.core.content.ContextCompat.getDrawable(context, com.frequent.habits.R.mipmap.ic_launcher)
+            ?: androidx.core.content.ContextCompat.getDrawable(context, com.frequent.habits.R.mipmap.ic_launcher_round)
+    } catch (e: Exception) {
+        null
     }
-    canvas.drawText("FREQUENT HABITS", width / 2f, currentY, headerPaint)
+
+    if (logoDrawable != null) {
+        val logoSize = 160
+        val logoBitmap = Bitmap.createBitmap(logoSize, logoSize, Bitmap.Config.ARGB_8888)
+        val logoCanvas = Canvas(logoBitmap)
+        logoDrawable.setBounds(0, 0, logoSize, logoSize)
+        logoDrawable.draw(logoCanvas)
+        canvas.drawBitmap(logoBitmap, (width - logoSize) / 2f, currentY - logoSize / 2f, null)
+    } else {
+        val headerPaint = Paint().apply {
+            isAntiAlias = true
+            color = primaryInt
+            textSize = 42f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            textAlign = Paint.Align.CENTER
+            letterSpacing = 0.15f
+        }
+        canvas.drawText("FREQUENT HABITS", width / 2f, currentY, headerPaint)
+    }
     currentY += 160f
 
     // Profile Pic / Avatar
@@ -1382,18 +1395,6 @@ fun renderProfileShareBitmap(
         textAlign = Paint.Align.CENTER
     }
     canvas.drawText(displayName, width / 2f, currentY, namePaint)
-    currentY += 80f
-
-    // Level Badge
-    val levelText = "⚡ LEVEL $userLevel"
-    val levelPaint = Paint().apply {
-        isAntiAlias = true
-        color = primaryInt
-        textSize = 42f
-        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-        textAlign = Paint.Align.CENTER
-    }
-    canvas.drawText(levelText, width / 2f, currentY, levelPaint)
     currentY += 110f
 
     // Horizontal Separator
@@ -1516,22 +1517,21 @@ fun renderMonthlyReviewShareBitmap(
         textAlign = Paint.Align.CENTER
     }
 
-    val totalText = "🏆  ${reviewData.totalCompletions}  ${tr(language, "Check-ins insgesamt", "Total Check-ins")}"
+    val totalText = "🏆  Total check ins: ${reviewData.totalCompletions}"
     canvas.drawText(totalText, width / 2f, currentY, statPaint)
     currentY += 90f
 
-    val deltaSign = if (reviewData.scoreDelta >= 0) "+" else ""
-    val strengthText = "📈  Score: ${reviewData.endScore} ($deltaSign${reviewData.scoreDelta})  ${tr(language, "Routine-Stärke", "Routine Strength")}"
+    val strengthText = "📈  Score: ${reviewData.endScore}"
     canvas.drawText(strengthText, width / 2f, currentY, statPaint)
     currentY += 90f
 
     if (reviewData.mvpHabit != null) {
-        val mvpText = "👑  ${reviewData.mvpHabit.icon} ${reviewData.mvpHabit.name}  ${tr(language, "Gewohnheits-MVP", "Habit MVP")}"
+        val mvpText = "👑  Habit MVP: ${reviewData.mvpHabit.icon} ${reviewData.mvpHabit.name}"
         canvas.drawText(mvpText, width / 2f, currentY, statPaint)
         currentY += 90f
     }
 
-    val powerText = "⚡  ${reviewData.bestDayOfWeekName}  ${tr(language, "Power-Tag", "Power Day")}"
+    val powerText = "⚡  Power day: ${reviewData.bestDayOfWeekName}"
     canvas.drawText(powerText, width / 2f, currentY, statPaint)
 
     // Footer Branding
