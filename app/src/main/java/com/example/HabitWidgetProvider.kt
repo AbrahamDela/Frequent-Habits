@@ -38,6 +38,7 @@ class HabitWidgetProvider : AppWidgetProvider() {
     }
 
     override fun onReceive(context: Context, intent: Intent) {
+        super.onReceive(context, intent)
         val action = intent.action
         val widgetId = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
 
@@ -90,10 +91,14 @@ class HabitWidgetProvider : AppWidgetProvider() {
                                     }
                                 }
                                 
-                                val nextStatus = when (currentStatus) {
-                                    "PENDING" -> "SUCCESS"
-                                    "SUCCESS" -> "FAILED"
-                                    else -> "PENDING"
+                                val nextStatus = if (habit.isNegative) {
+                                    if (currentStatus == "SUCCESS") "FAILED" else "SUCCESS"
+                                } else {
+                                    when (currentStatus) {
+                                        "PENDING" -> "SUCCESS"
+                                        "SUCCESS" -> "FAILED"
+                                        else -> "PENDING"
+                                    }
                                 }
                                 
                                 db.habitDao().deleteLogsForHabitOnDate(habitId, selectedDate)
@@ -224,10 +229,14 @@ class HabitWidgetProvider : AppWidgetProvider() {
                                     }
                                 }
                                 
-                                val nextStatus = when (currentStatus) {
-                                    "PENDING" -> "SUCCESS"
-                                    "SUCCESS" -> "FAILED"
-                                    else -> "PENDING"
+                                val nextStatus = if (habit.isNegative) {
+                                    if (currentStatus == "SUCCESS") "FAILED" else "SUCCESS"
+                                } else {
+                                    when (currentStatus) {
+                                        "PENDING" -> "SUCCESS"
+                                        "SUCCESS" -> "FAILED"
+                                        else -> "PENDING"
+                                    }
                                 }
                                 
                                 db.habitDao().deleteLogsForHabitOnDate(habitId, selectedDate)
@@ -388,25 +397,7 @@ class HabitWidgetProvider : AppWidgetProvider() {
 
                 val views = RemoteViews(context.packageName, R.layout.habit_widget)
                 views.setProgressBar(R.id.widget_progress_bar, 100, progressPercent, false)
-
-                val greenColorInt = android.graphics.Color.parseColor("#10B981")
-                try {
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                        views.setColorStateList(
-                            R.id.widget_progress_bar,
-                            "setProgressTintList",
-                            android.content.res.ColorStateList.valueOf(greenColorInt)
-                        )
-                    } else {
-                        views.setInt(
-                            R.id.widget_progress_bar,
-                            "setProgressTintList",
-                            greenColorInt
-                        )
-                    }
-                } catch (e: Exception) {
-                    // Ignore if tint call fails on older device
-                }
+                views.setInt(R.id.widget_progress_bar, "setProgress", progressPercent)
 
                 val allLogs = db.habitDao().getAllLogsRaw()
                 val perfectStats = com.example.data.StreakCalculator.calculate(allHabits, allLogs, targetDateStr = todayStr)

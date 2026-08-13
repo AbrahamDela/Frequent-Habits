@@ -198,12 +198,17 @@ fun calculateTargetPeriodStats(habit: Habit, logs: List<HabitLog>): HabitTargetS
         }
     }
     
-    // Calculate targets
+    val effectiveEndOfWeek = if (endOfWeek.isAfter(today)) today else endOfWeek
+    val effectiveEndOfMonth = if (endOfMonth.isAfter(today)) today else endOfMonth
+    val effectiveEndOfQuarter = if (endOfQuarter.isAfter(today)) today else endOfQuarter
+    val effectiveEndOfYear = if (endOfYear.isAfter(today)) today else endOfYear
+
+    // Calculate targets for elapsed period so far
     val todayTargetCount = if (isHabitActiveOnDate(habit, todayStr)) 1f else 0f
-    val weekTargetCount = getTargetCount(startOfWeek, endOfWeek)
-    val monthTargetCount = getTargetCount(startOfMonth, endOfMonth)
-    val quarterTargetCount = getTargetCount(startOfQuarter, endOfQuarter)
-    val yearTargetCount = getTargetCount(startOfYear, endOfYear)
+    val weekTargetCount = getTargetCount(startOfWeek, effectiveEndOfWeek)
+    val monthTargetCount = getTargetCount(startOfMonth, effectiveEndOfMonth)
+    val quarterTargetCount = getTargetCount(startOfQuarter, effectiveEndOfQuarter)
+    val yearTargetCount = getTargetCount(startOfYear, effectiveEndOfYear)
     
     // Helper to sum or count logs in a period
     fun getActualStatsInPeriod(start: java.time.LocalDate, end: java.time.LocalDate): Float {
@@ -249,10 +254,10 @@ fun calculateTargetPeriodStats(habit: Habit, logs: List<HabitLog>): HabitTargetS
     val quarterTarget = if (isNumerical) quarterTargetCount * habit.targetValue else quarterTargetCount
     val yearTarget = if (isNumerical) yearTargetCount * habit.targetValue else yearTargetCount
     
-    val weekActual = getActualStatsInPeriod(startOfWeek, endOfWeek)
-    val monthActual = getActualStatsInPeriod(startOfMonth, endOfMonth)
-    val quarterActual = getActualStatsInPeriod(startOfQuarter, endOfQuarter)
-    val yearActual = getActualStatsInPeriod(startOfYear, endOfYear)
+    val weekActual = getActualStatsInPeriod(startOfWeek, effectiveEndOfWeek)
+    val monthActual = getActualStatsInPeriod(startOfMonth, effectiveEndOfMonth)
+    val quarterActual = getActualStatsInPeriod(startOfQuarter, effectiveEndOfQuarter)
+    val yearActual = getActualStatsInPeriod(startOfYear, effectiveEndOfYear)
     
     return HabitTargetStats(
         today = TargetPeriodStats(todayActual, todayTarget, isNumerical),
@@ -537,6 +542,97 @@ object StreakCalculator {
         )
     }
 }
+
+fun calculateHabitStrength(habit: Habit, logs: List<HabitLog>): Int {
+    val validStartMillis = if (habit.startDate > 946684800000L) habit.startDate else habit.createdAt
+    val today = java.time.LocalDate.now()
+    val startSdfStr = try {
+        java.time.Instant.ofEpochMilli(validStartMillis).atZone(java.time.ZoneId.systemDefault()).toLocalDate().toString()
+    } catch (e: Exception) {
+        "2024-01-01"
+    }
+
+    val habitLogs = logs.filter { it.habitId == habit.id && it.date >= startSdfStr }
+    
+    val completedEpochDays = habitLogs.filter { log ->
+        isLogCompleted(habit, log)
+    }.map { 
+        try { java.time.LocalDate.parse(it.date).toEpochDay().toInt() } catch (e: Exception) { 0 }
+    }.toSet()
+    
+    if (habit.frequency == "TIMES_WEEKLY") {
+        val targetTimes = habit.specificDays.toIntOrNull() ?: 3
+        val activeDays = (System.currentTimeMillis() - validStartMillis) / (24 * 3600 * 1000) + 1
+        val activeWeeks = (activeDays / 7.0).coerceAtMost(4.0).coerceAtLeast(1.0)
+        val expectedCompletions = (activeWeeks * targetTimes).toInt().coerceAtLeast(1)
+        
+        val limitMillis = System.currentTimeMillis() - 28L * 24 * 3600 * 1000
+        val limitSdfStr = try {
+            java.time.Instant.ofEpochMilli(limitMillis.coerceAtLeast(validStartMillis)).atZone(java.time.ZoneId.systemDefault()).toLocalDate().toString()
+        } catch (e: Exception) {
+            startSdfStr
+        }
+        val completedInLast4Weeks = habitLogs.filter { log ->
+            isLogCompleted(habit, log) && log.date >= limitSdfStr
+        }.size
+        
+        return (completedInLast4Weeks.toFloat() / expectedCompletions.toFloat() * 100).toInt().coerceIn(0, 100)
+    }
+    
+    val loggedEpochDays = habitLogs.map { 
+        try { java.time.LocalDate.parse(it.date).toEpochDay().toInt() } catch (e: Exception) { 0 }
+    }.toSet()
+
+    val todayEpoch = today.toEpochDay().toInt()
+    val startEpoch = try {
+        java.time.Instant.ofEpochMilli(validStartMillis).atZone(java.time.ZoneId.systemDefault()).toLocalDate().toEpochDay().toInt()
+    } catch (e: Exception) {
+        (validStartMillis / 86400000L).toInt()
+    }
+
+    var weightedCompleted = 0
+    var totalPossibleWeight = 0
+    val totalDaysToCheck = 30
+
+    val maxDays = if (todayEpoch - startEpoch + 1 < totalDaysToCheck) {
+        todayEpoch - startEpoch + 1
+    } else {
+        totalDaysToCheck
+    }
+
+    if (maxDays <= 0) return 0
+
+    val realTodayEpoch = todayEpoch
+
+    for (i in 0 until maxDays) {
+        val currentEpoch = todayEpoch - i
+        val dayWeight = 20 + (totalDaysToCheck - i)
+        
+        val successful = if (habit.isNegative) {
+            !loggedEpochDays.contains(currentEpoch)
+        } else {
+            completedEpochDays.contains(currentEpoch)
+        }
+        
+        val isPendingRealToday = (currentEpoch == realTodayEpoch) && !habit.isNegative && !loggedEpochDays.contains(currentEpoch)
+        if (isPendingRealToday) {
+            continue
+        }
+        
+        if (successful) {
+            weightedCompleted += dayWeight
+        }
+        totalPossibleWeight += dayWeight
+    }
+
+    val percentage = if (totalPossibleWeight > 0) {
+        (weightedCompleted.toFloat() / totalPossibleWeight.toFloat() * 100).toInt()
+    } else {
+        0
+    }
+    return percentage.coerceIn(0, 100)
+}
+
 
 
 

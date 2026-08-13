@@ -188,6 +188,12 @@ class HabitWidgetFactory(private val context: Context, intent: Intent) : RemoteV
     override fun hasStableIds(): Boolean = true
 
     private fun getColorInt(colorName: String): Int {
+        if (colorName.startsWith("#")) {
+            try { return android.graphics.Color.parseColor(colorName) } catch (e: Exception) {}
+        }
+        if (colorName.startsWith("0x") || colorName.startsWith("0X")) {
+            try { return (colorName.substring(2).toLong(16) or 0xFF000000).toInt() } catch (e: Exception) {}
+        }
         return when (colorName.lowercase()) {
             "blue" -> 0xFF3B82F6.toInt()
             "purple" -> 0xFF9333EA.toInt()
@@ -198,7 +204,13 @@ class HabitWidgetFactory(private val context: Context, intent: Intent) : RemoteV
             "red" -> 0xFFEF4444.toInt()
             "pink" -> 0xFFEC4899.toInt()
             "slate", "grey", "gray" -> 0xFF64748B.toInt()
-            else -> 0xFF7356FF.toInt()
+            else -> {
+                try {
+                    android.graphics.Color.parseColor(if (colorName.startsWith("#")) colorName else "#$colorName")
+                } catch (e: Exception) {
+                    0xFF7356FF.toInt()
+                }
+            }
         }
     }
 }

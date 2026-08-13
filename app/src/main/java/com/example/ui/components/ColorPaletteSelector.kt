@@ -30,6 +30,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.tr
 import com.example.ui.HabitIconMapping
 import com.example.ui.theme.*
 import kotlin.math.atan2
@@ -293,7 +294,7 @@ fun CustomColorPickerDialog(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = if (language == "de") "Individuelle Farbe" else "Custom Color",
+                    text = tr(language, "Individuelle Farbe", "Custom Color"),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary
@@ -332,13 +333,13 @@ fun CustomColorPickerDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = if (language == "de") "Gemerkte Farben" else "Saved Slots",
+                            text = tr(language, "Gemerkte Farben", "Saved Slots"),
                             style = MaterialTheme.typography.labelSmall,
                             color = TextSecondary,
                             fontWeight = FontWeight.Medium
                         )
                         Text(
-                            text = if (language == "de") "Tippen: Laden • Halten: Speichern" else "Tap: Load • Hold: Save",
+                            text = tr(language, "Tippen: Laden • Halten: Speichern", "Tap: Load • Hold: Save"),
                             style = MaterialTheme.typography.labelSmall,
                             color = TextSecondary.copy(alpha = 0.6f)
                         )
@@ -446,7 +447,7 @@ fun CustomColorPickerDialog(
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Text(
-                    text = if (language == "de") "Übernehmen" else "Apply",
+                    text = tr(language, "Übernehmen", "Apply"),
                     color = Color.White,
                     fontWeight = FontWeight.Bold
                 )

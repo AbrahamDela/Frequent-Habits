@@ -191,24 +191,24 @@ object HabitIconMapping {
 
     fun getIconDrawableId(name: String): Int {
         return when (name.lowercase()) {
-            "sparkle", "plant", "pet", "smile", "leaf", "bell", "party", "star", "shield" -> R.drawable.ic_sparkle
-            "moon", "bed" -> R.drawable.ic_moon
-            "sun", "fire", "lightbulb" -> R.drawable.ic_sun
-            "water", "drink" -> R.drawable.ic_water
-            "heart", "spa" -> R.drawable.ic_heart
-            "dumbbell", "bicycle", "pool", "sport", "scale", "soccer", "trophy" -> R.drawable.ic_dumbbell
-            "book", "school", "language", "brain" -> R.drawable.ic_book
-            "coffee", "tea" -> R.drawable.ic_coffee
+            "dumbbell" -> R.drawable.ic_dumbbell
             "run" -> R.drawable.ic_run
-            "code", "laptop" -> R.drawable.ic_code
-            "music", "headphones" -> R.drawable.ic_music
-            "phone", "no_cell" -> R.drawable.ic_phone
+            "heart" -> R.drawable.ic_heart
             "meditation" -> R.drawable.ic_meditation
-            "clock", "timer", "calendar" -> R.drawable.ic_clock
-            "food", "apple", "cake" -> R.drawable.ic_food
-            "money", "piggy", "shopping" -> R.drawable.ic_money
-            "work", "pencil", "brush", "palette", "camera", "car", "travel" -> R.drawable.ic_work
-            "clean", "home", "task" -> R.drawable.ic_clean
+            "sparkle" -> R.drawable.ic_sparkle
+            "sun" -> R.drawable.ic_sun
+            "moon" -> R.drawable.ic_moon
+            "water" -> R.drawable.ic_water
+            "coffee" -> R.drawable.ic_coffee
+            "food" -> R.drawable.ic_food
+            "book" -> R.drawable.ic_book
+            "code" -> R.drawable.ic_code
+            "work" -> R.drawable.ic_work
+            "music" -> R.drawable.ic_music
+            "clean" -> R.drawable.ic_clean
+            "money" -> R.drawable.ic_money
+            "clock" -> R.drawable.ic_clock
+            "phone" -> R.drawable.ic_phone
             else -> R.drawable.ic_sparkle
         }
     }

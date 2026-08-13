@@ -258,6 +258,13 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
     private val _syncStatus = MutableStateFlow<String?>(null)
     val syncStatus = _syncStatus.asStateFlow()
 
+    // CSV / ZIP Importer State
+    private val _csvPreviewState = MutableStateFlow<com.example.data.CsvImportPreview?>(null)
+    val csvPreviewState = _csvPreviewState.asStateFlow()
+
+    private val _isAnalyzingCsv = MutableStateFlow(false)
+    val isAnalyzingCsv = _isAnalyzingCsv.asStateFlow()
+
     // Notification Reminder State
     private val _notificationsEnabled = MutableStateFlow(sharedPrefs.getBoolean("reminder_enabled", false))
     val notificationsEnabled = _notificationsEnabled.asStateFlow()
@@ -726,9 +733,8 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
     )
 
     val profileStats: StateFlow<ProfileStats> = combine(allHabits, allLogs, perfectDaysStats) { habits, logs, perfectDaysState ->
-        val totalGlobalCompletions = logs.count { log ->
-            val habit = habits.find { it.id == log.habitId }
-            habit != null && isLogCompleted(habit, log)
+        val totalGlobalCompletions = habits.sumOf { habit ->
+            getCompletedLogsCount(habit, logs, "ALL")
         }
 
         val unlockedCompletions = listOf(10, 50, 200, 500).count { totalGlobalCompletions >= it }
@@ -737,7 +743,7 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
 
         val habitStreaks = habits.map { habit ->
             val (_, longestStreak) = calculateStreak(habit, logs)
-            val completions = logs.count { it.habitId == habit.id && isLogCompleted(habit, it) }
+            val completions = getCompletedLogsCount(habit, logs, "ALL")
             ProfileHabitStreak(habit, longestStreak, completions)
         }
 
@@ -1476,21 +1482,21 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
         val targetStats = com.example.data.calculateTargetPeriodStats(habit, logs)
 
         // 1. Calculate historical weekday frequency (0 = Mon, ..., 6 = Sun)
-        val completedDates = habitLogs.filter { log ->
-            isLogCompleted(habit, log)
-        }.map { it.date }.toSet()
-
         val occurrences = IntArray(7)
         val completions = IntArray(7)
 
         var currentDay = startDate
         if (!currentDay.isAfter(today)) {
             while (!currentDay.isAfter(today)) {
-                val dayOfWeekIndex = currentDay.dayOfWeek.value - 1
-                if (dayOfWeekIndex in 0..6) {
-                    occurrences[dayOfWeekIndex]++
-                    if (completedDates.contains(currentDay.toString())) {
-                        completions[dayOfWeekIndex]++
+                val dateStr = currentDay.toString()
+                if (isHabitActiveOnDate(habit, dateStr)) {
+                    val log = logsByDate[dateStr]
+                    val dayOfWeekIndex = currentDay.dayOfWeek.value - 1
+                    if (dayOfWeekIndex in 0..6) {
+                        occurrences[dayOfWeekIndex]++
+                        if (getLogStatus(habit, log, dateStr, startSdfStr, todayStr) == "SUCCESS") {
+                            completions[dayOfWeekIndex]++
+                        }
                     }
                 }
                 currentDay = currentDay.plusDays(1)
@@ -1512,16 +1518,8 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
             List(7) { dayOffset ->
                 val cellDate = weekStart.plusDays(dayOffset.toLong())
                 val dateStr = cellDate.toString()
-                val isCompleted = completedDates.contains(dateStr)
-                val isFuture = cellDate.isAfter(today)
-                val isBeforeStart = cellDate.isBefore(startDate)
-                
-                val status = when {
-                    isBeforeStart || isFuture -> "INACTIVE"
-                    isCompleted -> "SUCCESS"
-                    else -> "FAILED"
-                }
-                
+                val log = logsByDate[dateStr]
+                val status = getLogStatus(habit, log, dateStr, startSdfStr, todayStr)
                 cellDate to status
             }
         }
@@ -2109,10 +2107,14 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
                 }
             }
 
-            val nextStatus = when (currentStatus) {
-                "PENDING" -> "SUCCESS"
-                "SUCCESS" -> "FAILED"
-                else -> "PENDING"
+            val nextStatus = if (habit.isNegative) {
+                if (currentStatus == "SUCCESS") "FAILED" else "SUCCESS"
+            } else {
+                when (currentStatus) {
+                    "PENDING" -> "SUCCESS"
+                    "SUCCESS" -> "FAILED"
+                    else -> "PENDING"
+                }
             }
 
             if (nextStatus == "PENDING") {
@@ -2235,6 +2237,34 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
 
     fun clearSyncStatus() {
         _syncStatus.value = null
+    }
+
+    fun analyzeCsvImport(uri: android.net.Uri) {
+        viewModelScope.launch {
+            _isAnalyzingCsv.value = true
+            val preview = com.example.data.CsvImporter.analyzeFile(getApplication(), uri)
+            _csvPreviewState.value = preview
+            _isAnalyzingCsv.value = false
+        }
+    }
+
+    fun confirmCsvImport(replaceExisting: Boolean) {
+        val preview = _csvPreviewState.value ?: return
+        viewModelScope.launch {
+            _isAnalyzingCsv.value = true
+            val success = com.example.data.CsvImporter.importDataToDatabase(getApplication(), preview, replaceExisting)
+            _isAnalyzingCsv.value = false
+            _csvPreviewState.value = null
+            _syncStatus.value = if (success) {
+                if (language.value == "de") "CSV-Import erfolgreich! ${preview.habits.size} Gewohnheiten importiert. 🎉" else "CSV Import successful! ${preview.habits.size} habits imported. 🎉"
+            } else {
+                if (language.value == "de") "Fehler beim CSV-Import!" else "Error during CSV import!"
+            }
+        }
+    }
+
+    fun dismissCsvPreview() {
+        _csvPreviewState.value = null
     }
 
     fun wipeAllData() {
@@ -2516,82 +2546,7 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun calculateHabitStrength(habit: Habit, logs: List<HabitLog>): Int {
-        val validStartMillis = if (habit.startDate > 946684800000L) habit.startDate else habit.createdAt
-        val startSdf = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-        val startSdfStr = startSdf.format(Date(validStartMillis))
-
-        val habitLogs = logs.filter { it.habitId == habit.id && it.date >= startSdfStr }
-        
-        val completedEpochDays = habitLogs.filter { log ->
-            isLogCompleted(habit, log)
-        }.map { dateToEpochDaysFast(it.date) }.toSet()
-        
-        if (habit.frequency == "TIMES_WEEKLY") {
-            val targetTimes = habit.specificDays.toIntOrNull() ?: 3
-            val activeDays = (System.currentTimeMillis() - validStartMillis) / (24 * 3600 * 1000) + 1
-            val activeWeeks = (activeDays / 7.0).coerceAtMost(4.0).coerceAtLeast(1.0)
-            val expectedCompletions = (activeWeeks * targetTimes).toInt().coerceAtLeast(1)
-            
-            val limitMillis = System.currentTimeMillis() - 28L * 24 * 3600 * 1000
-            val limitSdfStr = startSdf.format(Date(limitMillis.coerceAtLeast(validStartMillis)))
-            val completedInLast4Weeks = habitLogs.filter { log ->
-                val isCompleted = when (log.value) {
-                    -1f -> false
-                    -2f -> true
-                    else -> if (habit.type == "BINARY") true else log.value >= habit.targetValue
-                }
-                isCompleted && !log.isPaused && log.date >= limitSdfStr
-            }.size
-            
-            return (completedInLast4Weeks.toFloat() / expectedCompletions.toFloat() * 100).toInt().coerceIn(0, 100)
-        }
-        
-        val loggedEpochDays = habitLogs.map { dateToEpochDaysFast(it.date) }.toSet()
-
-        val todayEpoch = millisToEpochDays(System.currentTimeMillis())
-        val startEpoch = millisToEpochDays(validStartMillis)
-
-        var weightedCompleted = 0
-        var totalPossibleWeight = 0
-        val totalDaysToCheck = 30
-
-        val maxDays = if (todayEpoch - startEpoch + 1 < totalDaysToCheck) {
-            todayEpoch - startEpoch + 1
-        } else {
-            totalDaysToCheck
-        }
-
-        if (maxDays <= 0) return 0
-
-        val realTodayEpoch = java.time.LocalDate.now().toEpochDay().toInt()
-
-        for (i in 0 until maxDays) {
-            val currentEpoch = todayEpoch - i
-            val dayWeight = 20 + (totalDaysToCheck - i)
-            
-            val successful = if (habit.isNegative) {
-                !loggedEpochDays.contains(currentEpoch)
-            } else {
-                completedEpochDays.contains(currentEpoch)
-            }
-            
-            val isPendingRealToday = (currentEpoch == realTodayEpoch) && !habit.isNegative && !loggedEpochDays.contains(currentEpoch)
-            if (isPendingRealToday) {
-                continue
-            }
-            
-            if (successful) {
-                weightedCompleted += dayWeight
-            }
-            totalPossibleWeight += dayWeight
-        }
-
-        val percentage = if (totalPossibleWeight > 0) {
-            (weightedCompleted.toFloat() / totalPossibleWeight.toFloat() * 100).toInt()
-        } else {
-            0
-        }
-        return percentage.coerceIn(0, 100)
+        return com.example.data.calculateHabitStrength(habit, logs)
     }
 
     fun calculateCompletionRate(habit: Habit, logs: List<HabitLog>): Int {

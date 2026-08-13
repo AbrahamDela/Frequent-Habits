@@ -43,8 +43,13 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.FileProvider
 import coil.compose.rememberAsyncImagePainter
+import com.example.tr
 import com.example.data.Habit
 import com.example.data.HabitLog
+import com.example.MonthlyReviewData
+import com.example.YearlyReviewData
+import com.example.ui.theme.PrimaryViolet
+import android.graphics.BitmapFactory
 import java.io.File
 import java.io.FileOutputStream
 import java.time.LocalDate
@@ -557,12 +562,11 @@ fun ProfileShareDialog(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
+    val accentColor = PrimaryViolet
 
-    // Calculate profile metrics
+    // Calculate metrics
     val totalCompletions = remember(logs) { logs.size }
     val activeHabitsCount = remember(habits) { habits.count { !it.isArchived } }
-    
-    // Top habit & longest streak
     val longestStreak = remember(habits, logs) {
         habits.maxOfOrNull { h ->
             val hLogs = logs.filter { it.habitId == h.id }.map { it.date }.toSet()
@@ -575,22 +579,22 @@ fun ProfileShareDialog(
             streak
         } ?: 0
     }
-
     val userLevel = remember(totalCompletions) { (totalCompletions / 15) + 1 }
 
-    // Option Toggles
-    var showAvatar by remember { mutableStateOf(true) }
-    var showLevelXp by remember { mutableStateOf(true) }
-    var showTotalCompletions by remember { mutableStateOf(true) }
-    var showActiveHabits by remember { mutableStateOf(true) }
-    var showLongestStreak by remember { mutableStateOf(true) }
-    var showCustomMotto by remember { mutableStateOf(true) }
-    var customMottoText by remember {
-        mutableStateOf(if (language == "de") "Tägliche Routine bringt beste Ergebnisse! 🚀" else "Daily routines yield the best results! 🚀")
+    // Render bitmap
+    val bitmap = remember(userName, profileImageUri, userLevel, totalCompletions, activeHabitsCount, longestStreak, accentColor, language) {
+        renderProfileShareBitmap(
+            context = context,
+            userName = userName,
+            profileImageUri = profileImageUri,
+            userLevel = userLevel,
+            totalCompletions = totalCompletions,
+            activeHabits = activeHabitsCount,
+            longestStreak = longestStreak,
+            accentColor = accentColor,
+            language = language
+        )
     }
-    var selectedThemeIndex by remember { mutableIntStateOf(0) }
-
-    val currentTheme = profileShareThemes[selectedThemeIndex % profileShareThemes.size]
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -599,16 +603,17 @@ fun ProfileShareDialog(
         Surface(
             modifier = Modifier
                 .fillMaxWidth(0.92f)
-                .fillMaxHeight(0.92f)
+                .wrapContentHeight()
                 .clip(RoundedCornerShape(24.dp)),
             color = Color(0xFF12121A)
         ) {
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(20.dp)
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Header
+                // Header Row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -616,9 +621,9 @@ fun ProfileShareDialog(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            imageVector = Icons.Default.Badge,
+                            imageVector = Icons.Default.Share,
                             contentDescription = null,
-                            tint = Color(0xFFA855F7),
+                            tint = accentColor,
                             modifier = Modifier.size(24.dp)
                         )
                         Spacer(modifier = Modifier.width(10.dp))
@@ -638,264 +643,277 @@ fun ProfileShareDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    // LIVE PREVIEW CARD
-                    Text(
-                        text = if (language == "de") "VORSCHAU" else "PREVIEW",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color.White.copy(alpha = 0.6f),
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(290.dp)
-                            .clip(RoundedCornerShape(22.dp))
-                            .background(
-                                Brush.verticalGradient(currentTheme.bgColors)
-                            )
-                            .border(1.5.dp, currentTheme.accentColor.copy(alpha = 0.5f), RoundedCornerShape(22.dp))
-                            .padding(20.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            // Avatar
-                            if (showAvatar) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(72.dp)
-                                        .clip(CircleShape)
-                                        .background(currentTheme.accentColor.copy(alpha = 0.2f))
-                                        .border(2.dp, currentTheme.accentColor, CircleShape),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    if (profileImageUri.isNotEmpty()) {
-                                        Image(
-                                            painter = rememberAsyncImagePainter(model = profileImageUri),
-                                            contentDescription = null,
-                                            modifier = Modifier.fillMaxSize(),
-                                            contentScale = ContentScale.Crop
-                                        )
-                                    } else {
-                                        Icon(
-                                            imageVector = Icons.Default.Person,
-                                            contentDescription = null,
-                                            tint = currentTheme.accentColor,
-                                            modifier = Modifier.size(36.dp)
-                                        )
-                                    }
-                                }
-                                Spacer(modifier = Modifier.height(10.dp))
-                            }
-
-                            // User Name
-                            Text(
-                                text = userName.ifBlank { if (language == "de") "Gewohnheiten Held" else "Habit Hero" },
-                                style = MaterialTheme.typography.titleLarge,
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold
-                            )
-
-                            // Level Badge
-                            if (showLevelXp) {
-                                Surface(
-                                    color = currentTheme.accentColor.copy(alpha = 0.25f),
-                                    shape = CircleShape,
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, currentTheme.accentColor.copy(alpha = 0.5f)),
-                                    modifier = Modifier.padding(top = 4.dp)
-                                ) {
-                                    Text(
-                                        text = "⚡ LEVEL $userLevel • $totalCompletions XP",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = currentTheme.accentColor,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
-                                    )
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(14.dp))
-
-                            // Stats Grid / Chips
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                if (showTotalCompletions) {
-                                    MetricChip(
-                                        icon = "🏆",
-                                        label = "$totalCompletions ${if (language == "de") "Abschlüsse" else "Done"}",
-                                        accent = currentTheme.accentColor
-                                    )
-                                }
-                                if (showActiveHabits) {
-                                    MetricChip(
-                                        icon = "📌",
-                                        label = "$activeHabitsCount ${if (language == "de") "Gewohnheiten" else "Habits"}",
-                                        accent = currentTheme.accentColor
-                                    )
-                                }
-                                if (showLongestStreak) {
-                                    MetricChip(
-                                        icon = "🔥",
-                                        label = "$longestStreak ${if (language == "de") "Tage Max" else "Max Streak"}",
-                                        accent = currentTheme.accentColor
-                                    )
-                                }
-                            }
-
-                            // Custom Motto
-                            if (showCustomMotto && customMottoText.isNotBlank()) {
-                                Spacer(modifier = Modifier.height(14.dp))
-                                Text(
-                                    text = "\"$customMottoText\"",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = Color.White.copy(alpha = 0.9f),
-                                    textAlign = TextAlign.Center,
-                                    fontWeight = FontWeight.Medium
-                                )
-                            }
-                        }
-                    }
-
-                    // Theme selector
-                    Text(
-                        text = if (language == "de") "DESIGNDICHTE & FARBE" else "THEME & DENSITY",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color.White.copy(alpha = 0.6f),
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        profileShareThemes.forEachIndexed { idx, theme ->
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(38.dp)
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(Brush.horizontalGradient(theme.bgColors))
-                                    .border(
-                                        width = if (selectedThemeIndex == idx) 2.dp else 1.dp,
-                                        color = if (selectedThemeIndex == idx) theme.accentColor else Color.White.copy(alpha = 0.2f),
-                                        shape = RoundedCornerShape(10.dp)
-                                    )
-                                    .clickable { selectedThemeIndex = idx },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = theme.name,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = Color.White,
-                                    fontWeight = if (selectedThemeIndex == idx) FontWeight.Bold else FontWeight.Normal
-                                )
-                            }
-                        }
-                    }
-
-                    // Density Toggles
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(Color(0xFF1E1E2A))
-                            .padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        DensityToggleRow(
-                            label = if (language == "de") "🖼️ Profilbild / Avatar anzeigen" else "🖼️ Show Avatar",
-                            checked = showAvatar,
-                            onCheckedChange = { showAvatar = it }
-                        )
-                        DensityToggleRow(
-                            label = if (language == "de") "⚡ Level & Rang anzeigen" else "⚡ Show Level & Rank",
-                            checked = showLevelXp,
-                            onCheckedChange = { showLevelXp = it }
-                        )
-                        DensityToggleRow(
-                            label = if (language == "de") "🏆 Gesamte Abschlüsse anzeigen" else "🏆 Show Total Completions",
-                            checked = showTotalCompletions,
-                            onCheckedChange = { showTotalCompletions = it }
-                        )
-                        DensityToggleRow(
-                            label = if (language == "de") "📌 Aktive Gewohnheiten anzeigen" else "📌 Show Active Habits",
-                            checked = showActiveHabits,
-                            onCheckedChange = { showActiveHabits = it }
-                        )
-                        DensityToggleRow(
-                            label = if (language == "de") "🔥 Längste Streak anzeigen" else "🔥 Show Longest Streak",
-                            checked = showLongestStreak,
-                            onCheckedChange = { showLongestStreak = it }
-                        )
-                        DensityToggleRow(
-                            label = if (language == "de") "🚀 Eigenes Motto anzeigen" else "🚀 Show Custom Motto",
-                            checked = showCustomMotto,
-                            onCheckedChange = { showCustomMotto = it }
-                        )
-                    }
-
-                    if (showCustomMotto) {
-                        OutlinedTextField(
-                            value = customMottoText,
-                            onValueChange = { customMottoText = it },
-                            label = { Text(if (language == "de") "Persönliches Motto" else "Personal Motto") },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = currentTheme.accentColor,
-                                unfocusedBorderColor = Color.White.copy(alpha = 0.2f),
-                                focusedTextColor = Color.White,
-                                unfocusedTextColor = Color.White
-                            ),
-                            singleLine = true,
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                    }
-                }
-
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // Card Preview (using the exact rendered Bitmap!)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.85f)
+                        .aspectRatio(1080f / 1350f)
+                        .clip(RoundedCornerShape(16.dp))
+                        .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
+                ) {
+                    Image(
+                        bitmap = bitmap.asImageBitmap(),
+                        contentDescription = "Profile Share Card Preview",
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // Action Button: Share
                 Button(
                     onClick = {
-                        val bitmap = renderProfileShareBitmap(
-                            userName = userName,
-                            userLevel = if (showLevelXp) userLevel else null,
-                            totalCompletions = if (showTotalCompletions) totalCompletions else null,
-                            activeHabits = if (showActiveHabits) activeHabitsCount else null,
-                            longestStreak = if (showLongestStreak) longestStreak else null,
-                            customMotto = if (showCustomMotto) customMottoText else null,
-                            theme = currentTheme,
-                            language = language
-                        )
-                        val summaryText = "👤 Profil von $userName • Level $userLevel\n🏆 $totalCompletions Gewohnheiten absolviert!\nShared via Everyday Habits App"
-                        shareBitmapImage(context, bitmap, "Profil $userName", summaryText)
+                        val title = if (language == "de") "Frequent Habits Profil" else "Frequent Habits Profile"
+                        val summaryText = getSocialShareText(language)
+                        shareBitmapImage(context, bitmap, title, summaryText)
                     },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp),
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = currentTheme.accentColor,
+                        containerColor = accentColor,
                         contentColor = Color.White
                     )
                 ) {
                     Icon(imageVector = Icons.Default.Share, contentDescription = null, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (language == "de") "Profilkarte jetzt teilen" else "Share Profile Card",
+                        text = if (language == "de") "Profilkarte teilen" else "Share Profile Card",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun MonthlyReviewShareDialog(
+    year: Int,
+    reviewData: MonthlyReviewData,
+    language: String,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    val accentColor = PrimaryViolet
+
+    // Render bitmap
+    val bitmap = remember(year, reviewData, accentColor, language) {
+        renderMonthlyReviewShareBitmap(
+            context = context,
+            year = year,
+            reviewData = reviewData,
+            language = language,
+            accentColor = accentColor
+        )
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth(0.92f)
+                .wrapContentHeight()
+                .clip(RoundedCornerShape(24.dp)),
+            color = Color(0xFF12121A)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Header Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = null,
+                            tint = accentColor,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = if (language == "de") "Monatsrückblick teilen" else "Share Monthly Review",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    IconButton(onClick = onDismiss) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = Color.White.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Card Preview (using the exact rendered Bitmap!)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.85f)
+                        .aspectRatio(1080f / 1350f)
+                        .clip(RoundedCornerShape(16.dp))
+                        .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
+                ) {
+                    Image(
+                        bitmap = bitmap.asImageBitmap(),
+                        contentDescription = "Monthly Review Card Preview",
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // Action Button: Share
+                Button(
+                    onClick = {
+                        val title = if (language == "de") "Monatsrückblick ${reviewData.monthName} $year" else "${reviewData.monthName} $year Review"
+                        val summaryText = getSocialShareText(language)
+                        shareBitmapImage(context, bitmap, title, summaryText)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = accentColor,
+                        contentColor = Color.White
+                    )
+                ) {
+                    Icon(imageVector = Icons.Default.Share, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = if (language == "de") "Rückblick jetzt teilen" else "Share Review Now",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun YearlyReviewShareDialog(
+    year: Int,
+    reviewData: YearlyReviewData,
+    language: String,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    val accentColor = PrimaryViolet
+
+    // Render bitmap
+    val bitmap = remember(year, reviewData, accentColor, language) {
+        renderYearlyReviewShareBitmap(
+            context = context,
+            year = year,
+            reviewData = reviewData,
+            language = language,
+            accentColor = accentColor
+        )
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth(0.92f)
+                .wrapContentHeight()
+                .clip(RoundedCornerShape(24.dp)),
+            color = Color(0xFF12121A)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Header Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = null,
+                            tint = accentColor,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = if (language == "de") "Jahresrückblick teilen" else "Share Yearly Review",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    IconButton(onClick = onDismiss) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = Color.White.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Card Preview (using the exact rendered Bitmap!)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.85f)
+                        .aspectRatio(1080f / 1350f)
+                        .clip(RoundedCornerShape(16.dp))
+                        .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
+                ) {
+                    Image(
+                        bitmap = bitmap.asImageBitmap(),
+                        contentDescription = "Yearly Review Card Preview",
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // Action Button: Share
+                Button(
+                    onClick = {
+                        val title = if (language == "de") "Jahresrückblick $year" else "$year Review"
+                        val summaryText = getSocialShareText(language)
+                        shareBitmapImage(context, bitmap, title, summaryText)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = accentColor,
+                        contentColor = Color.White
+                    )
+                ) {
+                    Icon(imageVector = Icons.Default.Share, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = if (language == "de") "Rückblick jetzt teilen" else "Share Review Now",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -1210,14 +1228,69 @@ fun renderHabitShareBitmap(
     return bitmap
 }
 
+fun getSocialShareText(language: String): String {
+    return if (language == "de") {
+        "Ich baue bessere Routinen auf und verfolge meine täglichen Ziele mit Frequent Habits! 🚀 Werde auch du produktiver und gestalte deine perfekte Routine. Lade die App hier herunter: https://ais-pre-lcaq5stuvgcre6e7salzdk-873513281263.europe-west2.run.app"
+    } else {
+        "I'm building better routines and tracking my daily goals with Frequent Habits! 🚀 Join me in shaping positive habits every day. Download the app here: https://ais-pre-lcaq5stuvgcre6e7salzdk-873513281263.europe-west2.run.app"
+    }
+}
+
+fun mixColorWithBlack(color: Int, ratio: Float): Int {
+    val a = android.graphics.Color.alpha(color)
+    val r = (android.graphics.Color.red(color) * ratio).toInt()
+    val g = (android.graphics.Color.green(color) * ratio).toInt()
+    val b = (android.graphics.Color.blue(color) * ratio).toInt()
+    return android.graphics.Color.argb(a, r, g, b)
+}
+
+fun loadBitmapFromUri(context: Context, uriString: String): Bitmap? {
+    if (uriString.isBlank()) return null
+    return try {
+        val uri = Uri.parse(uriString)
+        context.contentResolver.openInputStream(uri)?.use { inputStream ->
+            BitmapFactory.decodeStream(inputStream)
+        }
+    } catch (e: Exception) {
+        Log.e("ShareDialogs", "Error loading bitmap from URI: $uriString", e)
+        null
+    }
+}
+
+fun drawCircularAvatar(canvas: Canvas, bitmap: Bitmap, centerX: Float, centerY: Float, radius: Float, borderPaint: Paint?) {
+    try {
+        val size = (radius * 2).toInt()
+        val scaled = Bitmap.createScaledBitmap(bitmap, size, size, true)
+        val output = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val outputCanvas = Canvas(output)
+        val paint = Paint().apply {
+            isAntiAlias = true
+        }
+        outputCanvas.drawARGB(0, 0, 0, 0)
+        paint.color = 0xff424242.toInt()
+        outputCanvas.drawCircle(radius, radius, radius, paint)
+        paint.xfermode = android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.SRC_IN)
+        val rect = android.graphics.Rect(0, 0, size, size)
+        outputCanvas.drawBitmap(scaled, rect, rect, paint)
+        
+        canvas.drawBitmap(output, centerX - radius, centerY - radius, null)
+        if (borderPaint != null) {
+            canvas.drawCircle(centerX, centerY, radius, borderPaint)
+        }
+    } catch (e: Exception) {
+        Log.e("ShareDialogs", "Failed to draw circular avatar", e)
+    }
+}
+
 fun renderProfileShareBitmap(
+    context: Context,
     userName: String,
-    userLevel: Int?,
-    totalCompletions: Int?,
-    activeHabits: Int?,
-    longestStreak: Int?,
-    customMotto: String?,
-    theme: ShareThemePreset,
+    profileImageUri: String,
+    userLevel: Int,
+    totalCompletions: Int,
+    activeHabits: Int,
+    longestStreak: Int,
+    accentColor: Color,
     language: String
 ): Bitmap {
     val width = 1080
@@ -1225,54 +1298,115 @@ fun renderProfileShareBitmap(
     val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
 
+    val primaryInt = accentColor.toArgb()
+    val bgStart = mixColorWithBlack(primaryInt, 0.15f)
+    val bgEnd = mixColorWithBlack(primaryInt, 0.04f)
+
     val bgPaint = Paint().apply {
         isAntiAlias = true
         shader = android.graphics.LinearGradient(
             0f, 0f, 0f, height.toFloat(),
-            theme.bgColors.first().toArgb(),
-            theme.bgColors.last().toArgb(),
+            bgStart,
+            bgEnd,
             android.graphics.Shader.TileMode.CLAMP
         )
     }
     canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bgPaint)
 
-    val cardPaint = Paint().apply {
+    // Rounded card border
+    val borderPaint = Paint().apply {
         isAntiAlias = true
-        color = theme.accentColor.toArgb()
+        color = primaryInt
         style = Paint.Style.STROKE
         strokeWidth = 12f
     }
     val cardRect = RectF(60f, 60f, width - 60f, height - 60f)
-    canvas.drawRoundRect(cardRect, 48f, 48f, cardPaint)
+    canvas.drawRoundRect(cardRect, 48f, 48f, borderPaint)
 
-    var currentY = 240f
+    var currentY = 160f
 
-    // Name
-    val namePaint = Paint().apply {
+    // App Header Brand
+    val headerPaint = Paint().apply {
         isAntiAlias = true
-        color = android.graphics.Color.WHITE
-        textSize = 80f
+        color = primaryInt
+        textSize = 42f
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
         textAlign = Paint.Align.CENTER
+        letterSpacing = 0.15f
     }
-    val displayName = userName.ifBlank { if (language == "de") "Gewohnheiten Held" else "Habit Hero" }
-    canvas.drawText(displayName, width / 2f, currentY, namePaint)
-    currentY += 100f
+    canvas.drawText("FREQUENT HABITS", width / 2f, currentY, headerPaint)
+    currentY += 160f
 
-    // Level
-    if (userLevel != null) {
-        val levelPaint = Paint().apply {
+    // Profile Pic / Avatar
+    val displayName = userName.ifBlank { tr(language, "Gewohnheiten Held", "Habit Hero") }
+    val avatarRadius = 110f
+    val avatarPaint = Paint().apply {
+        isAntiAlias = true
+        color = primaryInt
+        style = Paint.Style.STROKE
+        strokeWidth = 6f
+    }
+    val avatarBitmap = loadBitmapFromUri(context, profileImageUri)
+    if (avatarBitmap != null) {
+        drawCircularAvatar(canvas, avatarBitmap, width / 2f, currentY, avatarRadius, avatarPaint)
+    } else {
+        // Placeholder
+        val placeholderPaint = Paint().apply {
             isAntiAlias = true
-            color = theme.accentColor.toArgb()
-            textSize = 46f
+            color = mixColorWithBlack(primaryInt, 0.35f)
+        }
+        canvas.drawCircle(width / 2f, currentY, avatarRadius, placeholderPaint)
+        canvas.drawCircle(width / 2f, currentY, avatarRadius, avatarPaint)
+
+        val textPaint = Paint().apply {
+            isAntiAlias = true
+            color = android.graphics.Color.WHITE
+            textSize = 100f
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
             textAlign = Paint.Align.CENTER
         }
-        canvas.drawText("⚡ LEVEL $userLevel", width / 2f, currentY, levelPaint)
-        currentY += 110f
+        val letter = if (displayName.isNotEmpty()) displayName.substring(0, 1).uppercase() else "H"
+        val textBounds = android.graphics.Rect()
+        textPaint.getTextBounds(letter, 0, 1, textBounds)
+        val yOffset = textBounds.height() / 2f - textBounds.bottom
+        canvas.drawText(letter, width / 2f, currentY + yOffset, textPaint)
     }
+    currentY += 190f
 
-    val metricPaint = Paint().apply {
+    // User Name
+    val namePaint = Paint().apply {
+        isAntiAlias = true
+        color = android.graphics.Color.WHITE
+        textSize = 72f
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        textAlign = Paint.Align.CENTER
+    }
+    canvas.drawText(displayName, width / 2f, currentY, namePaint)
+    currentY += 80f
+
+    // Level Badge
+    val levelText = "⚡ LEVEL $userLevel"
+    val levelPaint = Paint().apply {
+        isAntiAlias = true
+        color = primaryInt
+        textSize = 42f
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        textAlign = Paint.Align.CENTER
+    }
+    canvas.drawText(levelText, width / 2f, currentY, levelPaint)
+    currentY += 110f
+
+    // Horizontal Separator
+    val sepPaint = Paint().apply {
+        isAntiAlias = true
+        color = android.graphics.Color.argb(64, 255, 255, 255)
+        strokeWidth = 3f
+    }
+    canvas.drawLine(150f, currentY, width - 150f, currentY, sepPaint)
+    currentY += 110f
+
+    // Stats
+    val statPaint = Paint().apply {
         isAntiAlias = true
         color = android.graphics.Color.WHITE
         textSize = 46f
@@ -1280,43 +1414,246 @@ fun renderProfileShareBitmap(
         textAlign = Paint.Align.CENTER
     }
 
-    if (totalCompletions != null) {
-        val text = "🏆 $totalCompletions ${if (language == "de") "Abschlüsse insgesamt" else "Total Completions"}"
-        canvas.drawText(text, width / 2f, currentY, metricPaint)
-        currentY += 85f
-    }
+    val compText = "🏆  $totalCompletions  ${tr(language, "Abschlüsse insgesamt", "Total Completions")}"
+    canvas.drawText(compText, width / 2f, currentY, statPaint)
+    currentY += 85f
 
-    if (activeHabits != null) {
-        val text = "📌 $activeHabits ${if (language == "de") "aktive Gewohnheiten" else "active habits"}"
-        canvas.drawText(text, width / 2f, currentY, metricPaint)
-        currentY += 85f
-    }
+    val habitsText = "📌  $activeHabits  ${tr(language, "Aktive Gewohnheiten", "Active Habits")}"
+    canvas.drawText(habitsText, width / 2f, currentY, statPaint)
+    currentY += 85f
 
-    if (longestStreak != null) {
-        val text = "🔥 $longestStreak ${if (language == "de") "Tage beste Streak" else "Days Best Streak"}"
-        canvas.drawText(text, width / 2f, currentY, metricPaint)
-        currentY += 85f
-    }
+    val streakText = "🔥  $longestStreak  ${tr(language, "Tage beste Serie", "Days Longest Streak")}"
+    canvas.drawText(streakText, width / 2f, currentY, statPaint)
 
-    if (!customMotto.isNullOrBlank()) {
-        currentY += 40f
-        val mottoPaint = Paint().apply {
-            isAntiAlias = true
-            color = theme.accentColor.toArgb()
-            textSize = 44f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.ITALIC)
-            textAlign = Paint.Align.CENTER
-        }
-        canvas.drawText("\"$customMotto\"", width / 2f, currentY, mottoPaint)
-    }
-
+    // Footer Branding
     val footerPaint = Paint().apply {
         isAntiAlias = true
         color = android.graphics.Color.argb(160, 255, 255, 255)
         textSize = 34f
         textAlign = Paint.Align.CENTER
     }
-    canvas.drawText("Everyday Habits App", width / 2f, height - 90f, footerPaint)
+    canvas.drawText("Frequent Habits App", width / 2f, height - 100f, footerPaint)
+
+    return bitmap
+}
+
+fun renderMonthlyReviewShareBitmap(
+    context: Context,
+    year: Int,
+    reviewData: MonthlyReviewData,
+    language: String,
+    accentColor: Color
+): Bitmap {
+    val width = 1080
+    val height = 1350
+    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+
+    val primaryInt = accentColor.toArgb()
+    val bgStart = mixColorWithBlack(primaryInt, 0.15f)
+    val bgEnd = mixColorWithBlack(primaryInt, 0.04f)
+
+    val bgPaint = Paint().apply {
+        isAntiAlias = true
+        shader = android.graphics.LinearGradient(
+            0f, 0f, 0f, height.toFloat(),
+            bgStart,
+            bgEnd,
+            android.graphics.Shader.TileMode.CLAMP
+        )
+    }
+    canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bgPaint)
+
+    val borderPaint = Paint().apply {
+        isAntiAlias = true
+        color = primaryInt
+        style = Paint.Style.STROKE
+        strokeWidth = 12f
+    }
+    val cardRect = RectF(60f, 60f, width - 60f, height - 60f)
+    canvas.drawRoundRect(cardRect, 48f, 48f, borderPaint)
+
+    var currentY = 160f
+
+    // Header
+    val headerPaint = Paint().apply {
+        isAntiAlias = true
+        color = primaryInt
+        textSize = 42f
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        textAlign = Paint.Align.CENTER
+        letterSpacing = 0.15f
+    }
+    canvas.drawText(tr(language, "MONATSRÜCKBLICK", "MONTHLY REVIEW"), width / 2f, currentY, headerPaint)
+    currentY += 150f
+
+    // Giant Display Date
+    val datePaint = Paint().apply {
+        isAntiAlias = true
+        color = android.graphics.Color.WHITE
+        textSize = 80f
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        textAlign = Paint.Align.CENTER
+    }
+    canvas.drawText("✨ ${reviewData.monthName.uppercase()} $year ✨", width / 2f, currentY, datePaint)
+    currentY += 150f
+
+    // Stats Grid Divider
+    val sepPaint = Paint().apply {
+        isAntiAlias = true
+        color = android.graphics.Color.argb(64, 255, 255, 255)
+        strokeWidth = 3f
+    }
+    canvas.drawLine(150f, currentY, width - 150f, currentY, sepPaint)
+    currentY += 110f
+
+    // Stats rows
+    val statPaint = Paint().apply {
+        isAntiAlias = true
+        color = android.graphics.Color.WHITE
+        textSize = 46f
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        textAlign = Paint.Align.CENTER
+    }
+
+    val totalText = "🏆  ${reviewData.totalCompletions}  ${tr(language, "Check-ins insgesamt", "Total Check-ins")}"
+    canvas.drawText(totalText, width / 2f, currentY, statPaint)
+    currentY += 90f
+
+    val deltaSign = if (reviewData.scoreDelta >= 0) "+" else ""
+    val strengthText = "📈  Score: ${reviewData.endScore} ($deltaSign${reviewData.scoreDelta})  ${tr(language, "Routine-Stärke", "Routine Strength")}"
+    canvas.drawText(strengthText, width / 2f, currentY, statPaint)
+    currentY += 90f
+
+    if (reviewData.mvpHabit != null) {
+        val mvpText = "👑  ${reviewData.mvpHabit.icon} ${reviewData.mvpHabit.name}  ${tr(language, "Gewohnheits-MVP", "Habit MVP")}"
+        canvas.drawText(mvpText, width / 2f, currentY, statPaint)
+        currentY += 90f
+    }
+
+    val powerText = "⚡  ${reviewData.bestDayOfWeekName}  ${tr(language, "Power-Tag", "Power Day")}"
+    canvas.drawText(powerText, width / 2f, currentY, statPaint)
+
+    // Footer Branding
+    val footerPaint = Paint().apply {
+        isAntiAlias = true
+        color = android.graphics.Color.argb(160, 255, 255, 255)
+        textSize = 34f
+        textAlign = Paint.Align.CENTER
+    }
+    canvas.drawText("Frequent Habits App", width / 2f, height - 100f, footerPaint)
+
+    return bitmap
+}
+
+fun renderYearlyReviewShareBitmap(
+    context: Context,
+    year: Int,
+    reviewData: YearlyReviewData,
+    language: String,
+    accentColor: Color
+): Bitmap {
+    val width = 1080
+    val height = 1350
+    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+
+    val primaryInt = accentColor.toArgb()
+    val bgStart = mixColorWithBlack(primaryInt, 0.15f)
+    val bgEnd = mixColorWithBlack(primaryInt, 0.04f)
+
+    val bgPaint = Paint().apply {
+        isAntiAlias = true
+        shader = android.graphics.LinearGradient(
+            0f, 0f, 0f, height.toFloat(),
+            bgStart,
+            bgEnd,
+            android.graphics.Shader.TileMode.CLAMP
+        )
+    }
+    canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bgPaint)
+
+    val borderPaint = Paint().apply {
+        isAntiAlias = true
+        color = primaryInt
+        style = Paint.Style.STROKE
+        strokeWidth = 12f
+    }
+    val cardRect = RectF(60f, 60f, width - 60f, height - 60f)
+    canvas.drawRoundRect(cardRect, 48f, 48f, borderPaint)
+
+    var currentY = 160f
+
+    // Header
+    val headerPaint = Paint().apply {
+        isAntiAlias = true
+        color = primaryInt
+        textSize = 42f
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        textAlign = Paint.Align.CENTER
+        letterSpacing = 0.15f
+    }
+    canvas.drawText(tr(language, "JAHRESRÜCKBLICK", "YEAR IN REVIEW"), width / 2f, currentY, headerPaint)
+    currentY += 150f
+
+    // Giant Display Date
+    val datePaint = Paint().apply {
+        isAntiAlias = true
+        color = android.graphics.Color.WHITE
+        textSize = 80f
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        textAlign = Paint.Align.CENTER
+    }
+    canvas.drawText("✨ $year ✨", width / 2f, currentY, datePaint)
+    currentY += 150f
+
+    // Stats Grid Divider
+    val sepPaint = Paint().apply {
+        isAntiAlias = true
+        color = android.graphics.Color.argb(64, 255, 255, 255)
+        strokeWidth = 3f
+    }
+    canvas.drawLine(150f, currentY, width - 150f, currentY, sepPaint)
+    currentY += 110f
+
+    // Stats rows
+    val statPaint = Paint().apply {
+        isAntiAlias = true
+        color = android.graphics.Color.WHITE
+        textSize = 46f
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        textAlign = Paint.Align.CENTER
+    }
+
+    val totalText = "🏆  ${reviewData.totalCompletions}  ${tr(language, "Abschlüsse insgesamt", "Total Completions")}"
+    canvas.drawText(totalText, width / 2f, currentY, statPaint)
+    currentY += 90f
+
+    val activeText = "📅  ${reviewData.activeDaysCount} (${reviewData.activeDaysPercentage}%)  ${tr(language, "Aktive Tage", "Active Days")}"
+    canvas.drawText(activeText, width / 2f, currentY, statPaint)
+    currentY += 90f
+
+    if (reviewData.topHabit != null) {
+        val topText = "👑  ${reviewData.topHabit.icon} ${reviewData.topHabit.name}  ${tr(language, "Top Gewohnheit", "Top Habit")}"
+        canvas.drawText(topText, width / 2f, currentY, statPaint)
+        currentY += 90f
+    }
+
+    val monthText = "🗓️  ${reviewData.bestMonthName}  ${tr(language, "Bester Monat", "Best Month")}"
+    canvas.drawText(monthText, width / 2f, currentY, statPaint)
+    currentY += 90f
+
+    val streakText = "🔥  ${reviewData.longestStreak} ${tr(language, "Tage Serie", "Days Streak")}  ${tr(language, "Beste Serie", "Best Streak")}"
+    canvas.drawText(streakText, width / 2f, currentY, statPaint)
+
+    // Footer Branding
+    val footerPaint = Paint().apply {
+        isAntiAlias = true
+        color = android.graphics.Color.argb(160, 255, 255, 255)
+        textSize = 34f
+        textAlign = Paint.Align.CENTER
+    }
+    canvas.drawText("Frequent Habits App", width / 2f, height - 100f, footerPaint)
 
     return bitmap
 }
