@@ -566,7 +566,15 @@ fun ProfileShareDialog(
     val accentColor = PrimaryViolet
 
     // Calculate metrics
-    val totalCompletions = remember(logs) { logs.size }
+    val totalCompletions = remember(habits, logs) {
+        logs.count { log ->
+            val habit = habits.find { it.id == log.habitId }
+            habit != null && com.example.data.isLogCompleted(habit, log)
+        }
+    }
+    val totalCheckIns = remember(logs) {
+        logs.count { it.value != 0f }
+    }
     val activeHabitsCount = remember(habits) { habits.count { !it.isArchived } }
     val longestStreak = remember(habits, logs) {
         habits.maxOfOrNull { h ->
@@ -582,12 +590,13 @@ fun ProfileShareDialog(
     }
 
     // Render bitmap
-    val bitmap = remember(userName, profileImageUri, totalCompletions, activeHabitsCount, longestStreak, accentColor, language) {
+    val bitmap = remember(userName, profileImageUri, totalCompletions, totalCheckIns, activeHabitsCount, longestStreak, accentColor, language) {
         renderProfileShareBitmap(
             context = context,
             userName = userName,
             profileImageUri = profileImageUri,
             totalCompletions = totalCompletions,
+            totalCheckIns = totalCheckIns,
             activeHabits = activeHabitsCount,
             longestStreak = longestStreak,
             accentColor = accentColor,
@@ -1241,9 +1250,9 @@ fun drawFooterBranding(
         }
     } else null
 
-    val footerY = height - 120f
+    val footerY = height - 100f
     val logoSize = 72
-    val startX = 100f
+    val appTitle = "Frequent Habits"
 
     val footerPaint = Paint().apply {
         isAntiAlias = true
@@ -1259,16 +1268,22 @@ fun drawFooterBranding(
         logoDrawable.setBounds(0, 0, logoSize, logoSize)
         logoDrawable.draw(logoCanvas)
 
+        val gap = 20f
+        val textWidth = footerPaint.measureText(appTitle)
+        val totalWidth = logoSize + gap + textWidth
+        val startX = (width - totalWidth) / 2f
+
         val logoY = footerY - logoSize / 2f
         canvas.drawBitmap(logoBitmap, startX, logoY, null)
 
-        val textX = startX + logoSize + 20f
+        val textX = startX + logoSize + gap
         val textBounds = android.graphics.Rect()
-        footerPaint.getTextBounds("Frequent Habits", 0, 15, textBounds)
+        footerPaint.getTextBounds(appTitle, 0, appTitle.length, textBounds)
         val textY = footerY + (textBounds.height() / 2f) - textBounds.bottom
-        canvas.drawText("Frequent Habits", textX, textY, footerPaint)
+        canvas.drawText(appTitle, textX, textY, footerPaint)
     } else {
-        canvas.drawText("Frequent Habits", startX, footerY, footerPaint)
+        footerPaint.textAlign = Paint.Align.CENTER
+        canvas.drawText(appTitle, width / 2f, footerY, footerPaint)
     }
 }
 
@@ -1333,6 +1348,7 @@ fun renderProfileShareBitmap(
     userName: String,
     profileImageUri: String,
     totalCompletions: Int,
+    totalCheckIns: Int,
     activeHabits: Int,
     longestStreak: Int,
     accentColor: Color,
@@ -1449,11 +1465,15 @@ fun renderProfileShareBitmap(
 
     val compText = "🏆  $totalCompletions  ${tr(language, "Abschlüsse insgesamt", "Total Completions")}"
     canvas.drawText(compText, width / 2f, currentY, statPaint)
-    currentY += 85f
+    currentY += 75f
+
+    val checkInsText = "✅  $totalCheckIns  ${tr(language, "Check-ins insgesamt", "Total Check-ins")}"
+    canvas.drawText(checkInsText, width / 2f, currentY, statPaint)
+    currentY += 75f
 
     val habitsText = "📌  $activeHabits  ${tr(language, "Aktive Gewohnheiten", "Active Habits")}"
     canvas.drawText(habitsText, width / 2f, currentY, statPaint)
-    currentY += 85f
+    currentY += 75f
 
     val streakText = "🔥  $longestStreak  ${tr(language, "Tage beste Serie", "Days Longest Streak")}"
     canvas.drawText(streakText, width / 2f, currentY, statPaint)
@@ -1543,18 +1563,22 @@ fun renderMonthlyReviewShareBitmap(
         textAlign = Paint.Align.CENTER
     }
 
-    val totalText = "🏆  ${reviewData.totalCompletions}  ${tr(language, "Abschlüsse insgesamt", "Total Completions")}"
+    val totalText = "🏆  ${reviewData.totalCompletions}  ${tr(language, "Abschlüsse", "Completions")}"
     canvas.drawText(totalText, width / 2f, currentY, statPaint)
-    currentY += 90f
+    currentY += 80f
+
+    val checkInsText = "✅  ${reviewData.totalCheckIns}  ${tr(language, "Check-ins insgesamt", "Total Check-ins")}"
+    canvas.drawText(checkInsText, width / 2f, currentY, statPaint)
+    currentY += 80f
 
     val strengthText = "📈  Score: ${reviewData.endScore}"
     canvas.drawText(strengthText, width / 2f, currentY, statPaint)
-    currentY += 90f
+    currentY += 80f
 
     if (reviewData.mvpHabit != null) {
         val mvpText = "👑  Habit MVP: ${reviewData.mvpHabit.icon} ${reviewData.mvpHabit.name}"
         canvas.drawText(mvpText, width / 2f, currentY, statPaint)
-        currentY += 90f
+        currentY += 80f
     }
 
     val powerText = "⚡  Power day: ${reviewData.bestDayOfWeekName}"
@@ -1645,13 +1669,17 @@ fun renderYearlyReviewShareBitmap(
         textAlign = Paint.Align.CENTER
     }
 
-    val totalText = "🏆  ${reviewData.totalCompletions}  ${tr(language, "Abschlüsse insgesamt", "Total Completions")}"
+    val totalText = "🏆  ${reviewData.totalCompletions}  ${tr(language, "Abschlüsse", "Completions")}"
     canvas.drawText(totalText, width / 2f, currentY, statPaint)
-    currentY += 90f
+    currentY += 80f
+
+    val checkInsText = "✅  ${reviewData.totalCheckIns}  ${tr(language, "Check-ins insgesamt", "Total Check-ins")}"
+    canvas.drawText(checkInsText, width / 2f, currentY, statPaint)
+    currentY += 80f
 
     val activeText = "📅  ${reviewData.activeDaysCount} (${reviewData.activeDaysPercentage}%)  ${tr(language, "Aktive Tage", "Active Days")}"
     canvas.drawText(activeText, width / 2f, currentY, statPaint)
-    currentY += 90f
+    currentY += 80f
 
     if (reviewData.topHabit != null) {
         val topText = "👑  ${reviewData.topHabit.icon} ${reviewData.topHabit.name}  ${tr(language, "Top Gewohnheit", "Top Habit")}"

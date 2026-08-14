@@ -4,6 +4,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.vectorResource
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.*
+import androidx.compose.material.icons.filled.*
 import com.example.ui.theme.*
 import com.frequent.habits.R
 
@@ -128,8 +131,69 @@ object HabitIconMapping {
 
     @Composable
     fun getIcon(name: String): ImageVector {
-        val resId = getIconDrawableId(name)
-        return ImageVector.vectorResource(id = resId)
+        return when (name.lowercase()) {
+            "dumbbell" -> Icons.Rounded.FitnessCenter
+            "run" -> Icons.Rounded.DirectionsRun
+            "bicycle" -> Icons.Rounded.DirectionsBike
+            "pool" -> Icons.Rounded.Pool
+            "heart" -> Icons.Rounded.Favorite
+            "meditation" -> Icons.Rounded.SelfImprovement
+            "bed" -> Icons.Rounded.Bed
+            "spa" -> Icons.Rounded.Spa
+            "scale" -> Icons.Rounded.MonitorWeight
+            "fire" -> Icons.Rounded.LocalFireDepartment
+            "pill" -> Icons.Rounded.Medication
+            "sport" -> Icons.Rounded.SportsBasketball
+            "soccer" -> Icons.Rounded.SportsSoccer
+            "trophy" -> Icons.Rounded.EmojiEvents
+            "sparkle" -> Icons.Rounded.AutoAwesome
+            "sun" -> Icons.Rounded.WbSunny
+            "moon" -> Icons.Rounded.Nightlight
+            "water" -> Icons.Rounded.WaterDrop
+            "coffee" -> Icons.Rounded.Coffee
+            "tea" -> Icons.Rounded.EmojiFoodBeverage
+            "food" -> Icons.Rounded.Restaurant
+            "apple" -> Icons.Rounded.Fastfood
+            "smile" -> Icons.Rounded.SentimentSatisfied
+            "smoke_free" -> Icons.Rounded.SmokeFree
+            "no_cell" -> Icons.Rounded.NoCell
+            "plant" -> Icons.Rounded.Grass
+            "pet" -> Icons.Rounded.Pets
+            "leaf" -> Icons.Rounded.Eco
+            "drink" -> Icons.Rounded.LocalDrink
+            "cake" -> Icons.Rounded.Cake
+            "book" -> Icons.Rounded.MenuBook
+            "school" -> Icons.Rounded.School
+            "code" -> Icons.Rounded.Code
+            "work" -> Icons.Rounded.Work
+            "laptop" -> Icons.Rounded.Laptop
+            "pencil" -> Icons.Rounded.Edit
+            "brush" -> Icons.Rounded.Brush
+            "palette" -> Icons.Rounded.Palette
+            "brain" -> Icons.Rounded.Psychology
+            "language" -> Icons.Rounded.Language
+            "lightbulb" -> Icons.Rounded.Lightbulb
+            "camera" -> Icons.Rounded.PhotoCamera
+            "music" -> Icons.Rounded.MusicNote
+            "headphones" -> Icons.Rounded.Headphones
+            "clean" -> Icons.Rounded.CleaningServices
+            "home" -> Icons.Rounded.Home
+            "money" -> Icons.Rounded.AttachMoney
+            "piggy" -> Icons.Rounded.Savings
+            "shopping" -> Icons.Rounded.ShoppingCart
+            "clock" -> Icons.Rounded.Schedule
+            "timer" -> Icons.Rounded.Timer
+            "calendar" -> Icons.Rounded.CalendarToday
+            "task" -> Icons.Rounded.Task
+            "phone" -> Icons.Rounded.Smartphone
+            "car" -> Icons.Rounded.DirectionsCar
+            "travel" -> Icons.Rounded.Flight
+            "bell" -> Icons.Rounded.Notifications
+            "party" -> Icons.Rounded.Celebration
+            "star" -> Icons.Rounded.Star
+            "shield" -> Icons.Rounded.Security
+            else -> Icons.Rounded.AutoAwesome
+        }
     }
 
     fun getColor(name: String): Color {

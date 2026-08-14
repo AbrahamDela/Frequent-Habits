@@ -1269,7 +1269,9 @@ fun WidgetAddValueDialog(
         val currentValue = existingLog?.value ?: 0f
 
         val hasTimer = remember(habitToLog) {
-            habitToLog!!.unit.lowercase() in listOf("minuten", "minutes", "min", "minute")
+            val isMins = habitToLog!!.unit.lowercase() in listOf("minuten", "minutes", "min", "minute", "m")
+            val isNumerical = habitToLog!!.type == "NUMBER" || habitToLog!!.type == "NUMERICAL" || (habitToLog!!.targetValue > 1f && habitToLog!!.type != "BINARY")
+            isNumerical && isMins
         }
 
         var inputVal by remember(habitId, currentValue) {
@@ -3965,9 +3967,8 @@ fun TodayScreen(
 
                 val onToggleClick = remember(currentHabit.id, currentHabit.type, currentHabit.unit, onToggleRemembered) {
                     { habitId: Int, hasLog: Boolean ->
-                        val u = currentHabit.unit.lowercase().trim()
-                        val isMins = u in listOf("minuten", "minutes", "min", "minute", "m")
-                        if (currentHabit.type == "NUMBER" || isMins) {
+                        val isNumerical = currentHabit.type == "NUMBER" || currentHabit.type == "NUMERICAL" || (currentHabit.targetValue > 1f && currentHabit.type != "BINARY")
+                        if (isNumerical) {
                             manualAddValueHabitId = habitId
                         } else {
                             onToggleRemembered(habitId, hasLog)
@@ -6052,7 +6053,9 @@ fun HabitDetailScreen(
                         canNextMonth = state?.canNextMonth ?: true,
                         onPrevMonth = { viewModel.navigateCalendarMonth(-1) },
                         onNextMonth = { viewModel.navigateCalendarMonth(1) },
-                        onDayClick = null
+                        onDayClick = { dateStr ->
+                            viewModel.toggleBinaryHabit(habit.id, dateStr, false)
+                        }
                     )
                 }
             }
@@ -17600,6 +17603,7 @@ data class MonthlyReviewData(
     val month: Int,
     val monthName: String,
     val totalCompletions: Int,
+    val totalCheckIns: Int = 0,
     val prevMonthCompletions: Int,
     val growthPercentage: Int,
     val startScore: Int,
@@ -17732,10 +17736,12 @@ fun calculateMonthlyReviewData(
 ): MonthlyReviewData {
     val monthPrefix = String.format(java.util.Locale.US, "%04d-%02d-", year, month)
     
-    val validMonthLogs = allLogs.filter { log ->
-        log.date.startsWith(monthPrefix) && isLogCompleted(log, allHabits.find { it.id == log.habitId })
+    val monthLogs = allLogs.filter { it.date.startsWith(monthPrefix) }
+    val validMonthLogs = monthLogs.filter { log ->
+        isLogCompleted(log, allHabits.find { it.id == log.habitId })
     }
     val totalCompletions = validMonthLogs.size
+    val totalCheckIns = monthLogs.count { it.value != 0f && !it.isPaused }
     
     val prevYear = if (month == 1) year - 1 else year
     val prevMonth = if (month == 1) 12 else month - 1
@@ -17838,6 +17844,7 @@ fun calculateMonthlyReviewData(
         month = month,
         monthName = getMonthNameLocalized(month, language),
         totalCompletions = totalCompletions,
+        totalCheckIns = totalCheckIns,
         prevMonthCompletions = prevMonthCompletions,
         growthPercentage = growthPercentage,
         startScore = startScore,
@@ -17925,6 +17932,7 @@ fun calculateStreakFast(habit: Habit, logs: List<HabitLog>): Pair<Int, Int> {
 data class YearlyReviewData(
     val year: Int,
     val totalCompletions: Int,
+    val totalCheckIns: Int = 0,
     val activeDaysCount: Int,
     val activeDaysPercentage: Int,
     val topHabit: Habit?,
@@ -17952,10 +17960,12 @@ fun calculateYearlyReviewData(
 ): YearlyReviewData {
     val yearPrefix = "$year-"
     
-    val validYearLogs = allLogs.filter { log -> 
-        log.date.startsWith(yearPrefix) && isLogCompleted(log, allHabits.find { it.id == log.habitId })
+    val yearLogs = allLogs.filter { it.date.startsWith(yearPrefix) }
+    val validYearLogs = yearLogs.filter { log -> 
+        isLogCompleted(log, allHabits.find { it.id == log.habitId })
     }
     val totalCompletions = validYearLogs.size
+    val totalCheckIns = yearLogs.count { it.value != 0f && !it.isPaused }
 
     val activeDates = validYearLogs.map { it.date }.distinct()
     val totalActiveDays = activeDates.size
@@ -18060,6 +18070,7 @@ fun calculateYearlyReviewData(
     return YearlyReviewData(
         year = year,
         totalCompletions = totalCompletions,
+        totalCheckIns = totalCheckIns,
         activeDaysCount = totalActiveDays,
         activeDaysPercentage = activeDaysPercentage,
         topHabit = mvpHabit,
@@ -18604,12 +18615,12 @@ fun YearlyReviewVolumeSlide(year: Int, language: String, reviewData: YearlyRevie
             border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f))
         ) {
             Row(
-                modifier = Modifier.padding(20.dp),
+                modifier = Modifier.padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
                     modifier = Modifier
-                        .size(48.dp)
+                        .size(44.dp)
                         .background(Color(0xFF8B5CF6).copy(alpha = 0.3f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
@@ -18617,19 +18628,62 @@ fun YearlyReviewVolumeSlide(year: Int, language: String, reviewData: YearlyRevie
                         imageVector = Icons.Default.TaskAlt,
                         contentDescription = "Completions",
                         tint = Color(0xFFA78BFA),
-                        modifier = Modifier.size(26.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 }
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(14.dp))
                 Column {
                     Text(
-                        text = reviewData.totalCompletions.toString(),
-                        style = MaterialTheme.typography.headlineLarge,
+                        text = "${reviewData.totalCompletions} ${if (language == "de") "Abschlüsse" else if (language == "ka") "დასრულება" else "Completions"}",
+                        style = MaterialTheme.typography.titleLarge,
                         color = Color.White,
                         fontWeight = FontWeight.ExtraBold
                     )
                     Text(
                         text = if (language == "de") "Erfüllte Gewohnheiten insgesamt" else if (language == "ka") "სულ დასრულებული ჩვევები" else "Total habits completed",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.8f)
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // Card 2: Total Check-ins
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = Color.White.copy(alpha = 0.1f),
+            shape = RoundedCornerShape(20.dp),
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f))
+        ) {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .background(Color(0xFF3B82F6).copy(alpha = 0.3f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Analytics,
+                        contentDescription = "Checkins",
+                        tint = Color(0xFF60A5FA),
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(14.dp))
+                Column {
+                    Text(
+                        text = "${reviewData.totalCheckIns} ${if (language == "de") "Check-ins insgesamt" else if (language == "ka") "სულ ჩექინები" else "Total Check-ins"}",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = if (language == "de") "Erfasste Einträge & Fortschritte in diesem Jahr" else if (language == "ka") "ამ წელს ჩაწერილი ჩანაწერები და პროგრესი" else "Logged entries & progress this year",
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.White.copy(alpha = 0.8f)
                     )
@@ -19479,7 +19533,7 @@ fun MonthlyReviewVolumeSlide(year: Int, month: Int, language: String, reviewData
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Check-ins Card
+        // Completions Card
         Surface(
             modifier = Modifier.fillMaxWidth(),
             color = Color.White.copy(alpha = 0.1f),
@@ -19498,7 +19552,7 @@ fun MonthlyReviewVolumeSlide(year: Int, month: Int, language: String, reviewData
                 ) {
                     Icon(
                         imageVector = Icons.Default.Analytics,
-                        contentDescription = "Checkins",
+                        contentDescription = "Completions",
                         tint = Color(0xFFA78BFA),
                         modifier = Modifier.size(26.dp)
                     )
@@ -19522,6 +19576,49 @@ fun MonthlyReviewVolumeSlide(year: Int, month: Int, language: String, reviewData
                     }
                     Text(
                         text = compText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.8f)
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Check-ins Card
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = Color.White.copy(alpha = 0.1f),
+            shape = RoundedCornerShape(20.dp),
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f))
+        ) {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .background(Color(0xFF3B82F6).copy(alpha = 0.3f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.TaskAlt,
+                        contentDescription = "Checkins",
+                        tint = Color(0xFF60A5FA),
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(14.dp))
+                Column {
+                    Text(
+                        text = "${reviewData.totalCheckIns} ${if (language == "de") "Check-ins insgesamt" else if (language == "ka") "სულ ჩექინები" else "Total Check-ins"}",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = if (language == "de") "Erfasste Einträge & Fortschritte in diesem Monat" else if (language == "ka") "ამ თვეში ჩაწერილი ჩანაწერები და პროგრესი" else "Logged entries & progress this month",
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.White.copy(alpha = 0.8f)
                     )
