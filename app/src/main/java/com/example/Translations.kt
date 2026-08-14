@@ -314,5 +314,17 @@ val GEORGIAN_TRANSLATIONS: Map<String, String> = mapOf(
     "Support via Ko-fi" to "მხარდაჭერა Ko-fi-ს საშუალებით",
     "Unterstützen via Ko-fi" to "მხარდაჭერა Ko-fi-ს საშუალებით",
     "Recommendation: Frequent Habits" to "რეკომენდაცია: Frequent Habits",
-    "Empfehlung: Frequent Habits" to "რეკომენდაცია: Frequent Habits"
+    "Empfehlung: Frequent Habits" to "რეკომენდაცია: Frequent Habits",
+    "Reward (e.g., New Book)" to "ჯილდო (მაგ., ახალი წიგნი)",
+    "Tuesday" to "სამშაბათი",
+    "Daily Target" to "ყოველდღიური სამიზნე",
+    "Friday" to "პარასკევი",
+    "e.g. cups" to "მაგ. ჭიქები",
+    "Monday" to "ორშაბათი",
+    "Click Increment" to "დააჭირეთ გაზრდას",
+    "Thursday" to "ხუთშაბათი",
+    "Saturday" to "შაბათი",
+    "Wednesday" to "ოთხშაბათი",
+    "Custom Unit" to "საბაჟო ერთეული",
+    "Sunday" to "კვირა",
 )

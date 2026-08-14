@@ -1,9 +1,9 @@
 package com.example.ui
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.vectorResource
 import com.example.ui.theme.*
 import com.frequent.habits.R
 
@@ -50,73 +50,66 @@ object HabitIconMapping {
     )
 
     val iconList = listOf(
-        // Health & Sport
-        "dumbbell" to Icons.Default.FitnessCenter,
-        "run" to Icons.Default.DirectionsWalk,
-        "bicycle" to Icons.Default.DirectionsBike,
-        "pool" to Icons.Default.Pool,
-        "heart" to Icons.Default.Favorite,
-        "meditation" to Icons.Default.SelfImprovement,
-        "bed" to Icons.Default.Bed,
-        "spa" to Icons.Default.Spa,
-        "scale" to Icons.Default.MonitorWeight,
-        "fire" to Icons.Default.LocalFireDepartment,
-        "pill" to Icons.Default.Medication,
-        "sport" to Icons.Default.SportsEsports,
-        "soccer" to Icons.Default.SportsSoccer,
-        "trophy" to Icons.Default.EmojiEvents,
-
-        // Daily Life & Nature
-        "sparkle" to Icons.Default.AutoAwesome,
-        "sun" to Icons.Default.WbSunny,
-        "moon" to Icons.Default.NightsStay,
-        "water" to Icons.Default.WaterDrop,
-        "coffee" to Icons.Default.Coffee,
-        "tea" to Icons.Default.FreeBreakfast,
-        "food" to Icons.Default.Restaurant,
-        "apple" to Icons.Default.LocalDining,
-        "smile" to Icons.Default.SentimentSatisfiedAlt,
-        "smoke_free" to Icons.Default.SmokeFree,
-        "no_cell" to Icons.Default.PhonelinkErase,
-        "plant" to Icons.Default.LocalFlorist,
-        "pet" to Icons.Default.Pets,
-        "leaf" to Icons.Default.Eco,
-        "drink" to Icons.Default.LocalDrink,
-        "cake" to Icons.Default.Cake,
-
-        // Learning, Creative & Work
-        "book" to Icons.Default.MenuBook,
-        "school" to Icons.Default.School,
-        "code" to Icons.Default.Code,
-        "work" to Icons.Default.Work,
-        "laptop" to Icons.Default.Laptop,
-        "pencil" to Icons.Default.Edit,
-        "brush" to Icons.Default.Brush,
-        "palette" to Icons.Default.Palette,
-        "brain" to Icons.Default.Psychology,
-        "language" to Icons.Default.Language,
-        "lightbulb" to Icons.Default.Lightbulb,
-        "camera" to Icons.Default.PhotoCamera,
-        "music" to Icons.Default.MusicNote,
-        "headphones" to Icons.Default.Headphones,
-
-        // Organization, Money & Home
-        "clean" to Icons.Default.CleaningServices,
-        "home" to Icons.Default.Home,
-        "money" to Icons.Default.AttachMoney,
-        "piggy" to Icons.Default.Savings,
-        "shopping" to Icons.Default.ShoppingCart,
-        "clock" to Icons.Default.Alarm,
-        "timer" to Icons.Default.Timer,
-        "calendar" to Icons.Default.CalendarToday,
-        "task" to Icons.Default.CheckCircle,
-        "phone" to Icons.Default.Phone,
-        "car" to Icons.Default.DirectionsCar,
-        "travel" to Icons.Default.Flight,
-        "bell" to Icons.Default.Notifications,
-        "party" to Icons.Default.Celebration,
-        "star" to Icons.Default.Star,
-        "shield" to Icons.Default.Shield
+        "dumbbell" to R.drawable.ic_dumbbell,
+        "run" to R.drawable.ic_run,
+        "bicycle" to R.drawable.ic_bicycle,
+        "pool" to R.drawable.ic_pool,
+        "heart" to R.drawable.ic_heart,
+        "meditation" to R.drawable.ic_meditation,
+        "bed" to R.drawable.ic_bed,
+        "spa" to R.drawable.ic_spa,
+        "scale" to R.drawable.ic_scale,
+        "fire" to R.drawable.ic_fire,
+        "pill" to R.drawable.ic_pill,
+        "sport" to R.drawable.ic_sport,
+        "soccer" to R.drawable.ic_soccer,
+        "trophy" to R.drawable.ic_trophy,
+        "sparkle" to R.drawable.ic_sparkle,
+        "sun" to R.drawable.ic_sun,
+        "moon" to R.drawable.ic_moon,
+        "water" to R.drawable.ic_water,
+        "coffee" to R.drawable.ic_coffee,
+        "tea" to R.drawable.ic_tea,
+        "food" to R.drawable.ic_food,
+        "apple" to R.drawable.ic_apple,
+        "smile" to R.drawable.ic_smile,
+        "smoke_free" to R.drawable.ic_smoke_free,
+        "no_cell" to R.drawable.ic_no_cell,
+        "plant" to R.drawable.ic_plant,
+        "pet" to R.drawable.ic_pet,
+        "leaf" to R.drawable.ic_leaf,
+        "drink" to R.drawable.ic_drink,
+        "cake" to R.drawable.ic_cake,
+        "book" to R.drawable.ic_book,
+        "school" to R.drawable.ic_school,
+        "code" to R.drawable.ic_code,
+        "work" to R.drawable.ic_work,
+        "laptop" to R.drawable.ic_laptop,
+        "pencil" to R.drawable.ic_pencil,
+        "brush" to R.drawable.ic_brush,
+        "palette" to R.drawable.ic_palette,
+        "brain" to R.drawable.ic_brain,
+        "language" to R.drawable.ic_language,
+        "lightbulb" to R.drawable.ic_lightbulb,
+        "camera" to R.drawable.ic_camera,
+        "music" to R.drawable.ic_music,
+        "headphones" to R.drawable.ic_headphones,
+        "clean" to R.drawable.ic_clean,
+        "home" to R.drawable.ic_home,
+        "money" to R.drawable.ic_money,
+        "piggy" to R.drawable.ic_piggy,
+        "shopping" to R.drawable.ic_shopping,
+        "clock" to R.drawable.ic_clock,
+        "timer" to R.drawable.ic_timer,
+        "calendar" to R.drawable.ic_calendar,
+        "task" to R.drawable.ic_task,
+        "phone" to R.drawable.ic_phone,
+        "car" to R.drawable.ic_car,
+        "travel" to R.drawable.ic_travel,
+        "bell" to R.drawable.ic_bell,
+        "party" to R.drawable.ic_party,
+        "star" to R.drawable.ic_star,
+        "shield" to R.drawable.ic_shield
     )
 
     val colorList = listOf(
@@ -133,29 +126,10 @@ object HabitIconMapping {
         "indigo" to HabitIndigo
     )
 
+    @Composable
     fun getIcon(name: String): ImageVector {
-        val lower = name.lowercase()
-        return iconList.find { it.first == lower }?.second ?: when (lower) {
-            "sparkle" -> Icons.Default.AutoAwesome
-            "moon" -> Icons.Default.NightsStay
-            "sun" -> Icons.Default.WbSunny
-            "water" -> Icons.Default.WaterDrop
-            "heart" -> Icons.Default.Favorite
-            "dumbbell" -> Icons.Default.FitnessCenter
-            "book" -> Icons.Default.MenuBook
-            "coffee" -> Icons.Default.Coffee
-            "run" -> Icons.Default.DirectionsWalk
-            "code" -> Icons.Default.Code
-            "music" -> Icons.Default.MusicNote
-            "phone" -> Icons.Default.Phone
-            "meditation" -> Icons.Default.SelfImprovement
-            "clock" -> Icons.Default.Alarm
-            "food" -> Icons.Default.Restaurant
-            "money" -> Icons.Default.AttachMoney
-            "work" -> Icons.Default.Work
-            "clean" -> Icons.Default.CleaningServices
-            else -> Icons.Default.AutoAwesome
-        }
+        val resId = getIconDrawableId(name)
+        return ImageVector.vectorResource(id = resId)
     }
 
     fun getColor(name: String): Color {

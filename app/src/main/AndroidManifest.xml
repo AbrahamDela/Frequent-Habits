@@ -71,7 +71,7 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
-        <receiver android:name=".SmartInsightNotificationReceiver" android:exported="false" />
+        <receiver android:name="com.example.SmartInsightNotificationReceiver" android:exported="false" />
     </application>
 
 </manifest>

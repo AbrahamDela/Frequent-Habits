@@ -223,7 +223,7 @@ fun HabitShareDialog(
     var showUserName by remember { mutableStateOf(true) }
     var showCustomMotto by remember { mutableStateOf(true) }
     var customMottoText by remember {
-        mutableStateOf(if (language == "de") "Fokus & Disziplin jeden Tag! 💪" else "Focus & Consistency every day! 💪")
+        mutableStateOf(if (language == "de") "Fokus & Disziplin jeden Tag! 💪" else if (language == "ka") "ფოკუსირება და თანმიმდევრულობა ყოველდღე! 💪" else "Focus & Consistency every day! 💪")
     }
     var selectedThemeIndex by remember { mutableIntStateOf(0) }
 
@@ -260,7 +260,7 @@ fun HabitShareDialog(
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
-                            text = if (language == "de") "Gewohnheit teilen" else "Share Habit",
+                            text = if (language == "de") "Gewohnheit teilen" else if (language == "ka") "გაზიარება ჩვევა" else "Share Habit",
                             style = MaterialTheme.typography.titleLarge,
                             color = Color.White,
                             fontWeight = FontWeight.Bold
@@ -286,7 +286,7 @@ fun HabitShareDialog(
                 ) {
                     // LIVE PREVIEW CARD
                     Text(
-                        text = if (language == "de") "VORSCHAU" else "PREVIEW",
+                        text = if (language == "de") "VORSCHAU" else if (language == "ka") "გადახედვა" else "PREVIEW",
                         style = MaterialTheme.typography.labelSmall,
                         color = Color.White.copy(alpha = 0.6f),
                         fontWeight = FontWeight.Bold
@@ -340,7 +340,7 @@ fun HabitShareDialog(
                             // Target / Unit info
                             if (showTarget && habit.type == "NUMBER" && habit.unit.isNotEmpty()) {
                                 Text(
-                                    text = if (language == "de") "Ziel: ${habit.targetValue} ${habit.unit}" else "Target: ${habit.targetValue} ${habit.unit}",
+                                    text = if (language == "de") "Ziel: ${habit.targetValue} ${habit.unit}" else if (language == "ka") "სამიზნე: ${habit.targetValue} ${habit.unit}" else "Target: ${habit.targetValue} ${habit.unit}",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = Color.White.copy(alpha = 0.7f),
                                     modifier = Modifier.padding(top = 2.dp)
@@ -357,21 +357,21 @@ fun HabitShareDialog(
                                 if (showStreak) {
                                     MetricChip(
                                         icon = "🔥",
-                                        label = "$streakDays ${if (language == "de") "Tage Streak" else "Days Streak"}",
+                                        label = "$streakDays ${if (language == "de") "Tage Streak" else if (language == "ka") "დღეების სერია" else "Days Streak"}",
                                         accent = currentTheme.accentColor
                                     )
                                 }
                                 if (showCompletionRate) {
                                     MetricChip(
                                         icon = "📈",
-                                        label = "$last30DaysRate% ${if (language == "de") "30T Erfolge" else "30d Success"}",
+                                        label = "$last30DaysRate% ${if (language == "de") "30T Erfolge" else if (language == "ka") "30d წარმატება" else "30d Success"}",
                                         accent = currentTheme.accentColor
                                     )
                                 }
                                 if (showTotalCount) {
                                     MetricChip(
                                         icon = "✅",
-                                        label = "$totalCompletions ${if (language == "de") "mal absolviert" else "times done"}",
+                                        label = "$totalCompletions ${if (language == "de") "mal absolviert" else if (language == "ka") "ჯერ შესრულებული" else "times done"}",
                                         accent = currentTheme.accentColor
                                     )
                                 }
@@ -404,7 +404,7 @@ fun HabitShareDialog(
 
                     // INFORMATION DENSITY & CUSTOMIZATION CONTROLS
                     Text(
-                        text = if (language == "de") "INFORMATIONSDICHTE ANPASSEN" else "CUSTOMIZE INFORMATION DENSITY",
+                        text = if (language == "de") "INFORMATIONSDICHTE ANPASSEN" else if (language == "ka") "ინფორმაციის სიმკვრივის მორგება" else "CUSTOMIZE INFORMATION DENSITY",
                         style = MaterialTheme.typography.labelSmall,
                         color = Color.White.copy(alpha = 0.6f),
                         fontWeight = FontWeight.Bold
@@ -450,34 +450,34 @@ fun HabitShareDialog(
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         DensityToggleRow(
-                            label = if (language == "de") "🔥 Serie / Streak anzeigen" else "🔥 Show Streak",
+                            label = if (language == "de") "🔥 Serie / Streak anzeigen" else if (language == "ka") "🔥 შოუ სტრიქონი" else "🔥 Show Streak",
                             checked = showStreak,
                             onCheckedChange = { showStreak = it }
                         )
                         DensityToggleRow(
-                            label = if (language == "de") "📈 Erfolgsquote (30 Tage) anzeigen" else "📈 Show Success Rate",
+                            label = if (language == "de") "📈 Erfolgsquote (30 Tage) anzeigen" else if (language == "ka") "📈 აჩვენე წარმატების მაჩვენებელი" else "📈 Show Success Rate",
                             checked = showCompletionRate,
                             onCheckedChange = { showCompletionRate = it }
                         )
                         DensityToggleRow(
-                            label = if (language == "de") "✅ Gesamtzahl der Abschlüsse anzeigen" else "✅ Show Total Completions",
+                            label = if (language == "de") "✅ Gesamtzahl der Abschlüsse anzeigen" else if (language == "ka") "✅ აჩვენე მთლიანი დასრულებები" else "✅ Show Total Completions",
                             checked = showTotalCount,
                             onCheckedChange = { showTotalCount = it }
                         )
                         if (habit.type == "NUMBER" && habit.unit.isNotEmpty()) {
                             DensityToggleRow(
-                                label = if (language == "de") "🎯 Tagesziel & Einheit anzeigen" else "🎯 Show Target & Unit",
+                                label = if (language == "de") "🎯 Tagesziel & Einheit anzeigen" else if (language == "ka") "🎯 აჩვენე სამიზნე და ერთეული" else "🎯 Show Target & Unit",
                                 checked = showTarget,
                                 onCheckedChange = { showTarget = it }
                             )
                         }
                         DensityToggleRow(
-                            label = if (language == "de") "👤 Deinen Profilnamen anzeigen" else "👤 Show Profile Name",
+                            label = if (language == "de") "👤 Deinen Profilnamen anzeigen" else if (language == "ka") "👤 პროფილის სახელის ჩვენება" else "👤 Show Profile Name",
                             checked = showUserName,
                             onCheckedChange = { showUserName = it }
                         )
                         DensityToggleRow(
-                            label = if (language == "de") "💬 Eigenen Spruch / Motto anzeigen" else "💬 Show Custom Quote",
+                            label = if (language == "de") "💬 Eigenen Spruch / Motto anzeigen" else if (language == "ka") "💬 მორგებული ციტატის ჩვენება" else "💬 Show Custom Quote",
                             checked = showCustomMotto,
                             onCheckedChange = { showCustomMotto = it }
                         )
@@ -488,7 +488,7 @@ fun HabitShareDialog(
                         OutlinedTextField(
                             value = customMottoText,
                             onValueChange = { customMottoText = it },
-                            label = { Text(if (language == "de") "Persönliche Notiz / Motto" else "Personal Quote") },
+                            label = { Text(if (language == "de") "Persönliche Notiz / Motto" else if (language == "ka") "პირადი ციტატა" else "Personal Quote") },
                             modifier = Modifier.fillMaxWidth(),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = currentTheme.accentColor,
@@ -516,7 +516,8 @@ fun HabitShareDialog(
                             userName = if (showUserName) userName else null,
                             customMotto = if (showCustomMotto) customMottoText else null,
                             theme = currentTheme,
-                            language = language
+                            language = language,
+                            context = context
                         )
                         val textSummary = buildString {
                             append("🔥 ")
@@ -539,7 +540,7 @@ fun HabitShareDialog(
                     Icon(imageVector = Icons.Default.Share, contentDescription = null, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (language == "de") "Gewohnheitskarte teilen" else "Share Habit Card",
+                        text = if (language == "de") "Gewohnheitskarte teilen" else if (language == "ka") "გააზიარეთ ჩვევების ბარათი" else "Share Habit Card",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -626,7 +627,7 @@ fun ProfileShareDialog(
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
-                            text = if (language == "de") "Profilkarte teilen" else "Share Profile",
+                            text = if (language == "de") "Profilkarte teilen" else if (language == "ka") "პროფილის გაზიარება" else "Share Profile",
                             style = MaterialTheme.typography.titleLarge,
                             color = Color.White,
                             fontWeight = FontWeight.Bold
@@ -663,7 +664,7 @@ fun ProfileShareDialog(
                 // Action Button: Share
                 Button(
                     onClick = {
-                        val title = if (language == "de") "Frequent Habits Profil" else "Frequent Habits Profile"
+                        val title = if (language == "de") "Frequent Habits Profil" else if (language == "ka") "ხშირი ჩვევების პროფილი" else "Frequent Habits Profile"
                         val summaryText = getSocialShareText(language)
                         shareBitmapImage(context, bitmap, title, summaryText)
                     },
@@ -679,7 +680,7 @@ fun ProfileShareDialog(
                     Icon(imageVector = Icons.Default.Share, contentDescription = null, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (language == "de") "Profilkarte teilen" else "Share Profile Card",
+                        text = if (language == "de") "Profilkarte teilen" else if (language == "ka") "პროფილის ბარათის გაზიარება" else "Share Profile Card",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -742,7 +743,7 @@ fun MonthlyReviewShareDialog(
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
-                            text = if (language == "de") "Monatsrückblick teilen" else "Share Monthly Review",
+                            text = if (language == "de") "Monatsrückblick teilen" else if (language == "ka") "გააზიარეთ ყოველთვიური მიმოხილვა" else "Share Monthly Review",
                             style = MaterialTheme.typography.titleLarge,
                             color = Color.White,
                             fontWeight = FontWeight.Bold
@@ -779,7 +780,7 @@ fun MonthlyReviewShareDialog(
                 // Action Button: Share
                 Button(
                     onClick = {
-                        val title = if (language == "de") "Monatsrückblick ${reviewData.monthName} $year" else "${reviewData.monthName} $year Review"
+                        val title = if (language == "de") "Monatsrückblick ${reviewData.monthName} $year" else if (language == "ka") "${reviewData.monthName} $year მიმოხილვა" else "${reviewData.monthName} $year Review"
                         val summaryText = getSocialShareText(language)
                         shareBitmapImage(context, bitmap, title, summaryText)
                     },
@@ -795,7 +796,7 @@ fun MonthlyReviewShareDialog(
                     Icon(imageVector = Icons.Default.Share, contentDescription = null, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (language == "de") "Rückblick jetzt teilen" else "Share Review Now",
+                        text = if (language == "de") "Rückblick jetzt teilen" else if (language == "ka") "გააზიარეთ მიმოხილვა ახლა" else "Share Review Now",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -858,7 +859,7 @@ fun YearlyReviewShareDialog(
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
-                            text = if (language == "de") "Jahresrückblick teilen" else "Share Yearly Review",
+                            text = if (language == "de") "Jahresrückblick teilen" else if (language == "ka") "წლიური მიმოხილვის გაზიარება" else "Share Yearly Review",
                             style = MaterialTheme.typography.titleLarge,
                             color = Color.White,
                             fontWeight = FontWeight.Bold
@@ -895,7 +896,7 @@ fun YearlyReviewShareDialog(
                 // Action Button: Share
                 Button(
                     onClick = {
-                        val title = if (language == "de") "Jahresrückblick $year" else "$year Review"
+                        val title = if (language == "de") "Jahresrückblick $year" else if (language == "ka") "$year მიმოხილვა" else "$year Review"
                         val summaryText = getSocialShareText(language)
                         shareBitmapImage(context, bitmap, title, summaryText)
                     },
@@ -911,7 +912,7 @@ fun YearlyReviewShareDialog(
                     Icon(imageVector = Icons.Default.Share, contentDescription = null, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (language == "de") "Rückblick jetzt teilen" else "Share Review Now",
+                        text = if (language == "de") "Rückblick jetzt teilen" else if (language == "ka") "გააზიარეთ მიმოხილვა ახლა" else "Share Review Now",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -970,7 +971,7 @@ fun NewYearReviewPopupDialog(
 
                 // Title
                 Text(
-                    text = if (language == "de") "Dein $reviewYear Rückblick ist da! 🎉" else "Your $reviewYear Review is Ready! 🎉",
+                    text = if (language == "de") "Dein $reviewYear Rückblick ist da! 🎉" else if (language == "ka") "თქვენი $reviewYear მიმოხილვა მზად არის! 🎉" else "Your $reviewYear Review is Ready! 🎉",
                     style = MaterialTheme.typography.headlineSmall,
                     color = Color.White,
                     fontWeight = FontWeight.ExtraBold,
@@ -983,8 +984,7 @@ fun NewYearReviewPopupDialog(
                 Text(
                     text = if (language == "de")
                         "Entdecke deine beeindruckenden Erfolge, Strakes und Top-Gewohnheiten des vergangenen Jahres in deiner persönlichen Story!"
-                    else
-                        "Discover your highlights, streaks and top habits from the past year in your personal interactive story!",
+                    else if (language == "ka") "აღმოაჩინეთ გასული წლის თქვენი მაჩვენებლები, ზოლები და მთავარი ჩვევები თქვენს პირად ინტერაქტიულ ისტორიაში!" else "Discover your highlights, streaks and top habits from the past year in your personal interactive story!",
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.White.copy(alpha = 0.85f),
                     textAlign = TextAlign.Center
@@ -1010,7 +1010,7 @@ fun NewYearReviewPopupDialog(
                     Icon(imageVector = Icons.Default.AutoAwesome, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (language == "de") "Rückblick jetzt ansehen" else "View Story Now",
+                        text = if (language == "de") "Rückblick jetzt ansehen" else if (language == "ka") "იხილეთ ამბავი ახლა" else "View Story Now",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -1023,7 +1023,7 @@ fun NewYearReviewPopupDialog(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = if (language == "de") "Später" else "Later",
+                        text = if (language == "de") "Später" else if (language == "ka") "მოგვიანებით" else "Later",
                         color = Color.White.copy(alpha = 0.7f),
                         fontWeight = FontWeight.Medium
                     )
@@ -1096,7 +1096,8 @@ fun renderHabitShareBitmap(
     userName: String?,
     customMotto: String?,
     theme: ShareThemePreset,
-    language: String
+    language: String,
+    context: Context? = null
 ): Bitmap {
     val width = 1080
     val height = 1350
@@ -1156,7 +1157,7 @@ fun renderHabitShareBitmap(
             textSize = 40f
             textAlign = Paint.Align.CENTER
         }
-        val targetText = if (language == "de") "Ziel: ${habit.targetValue} ${habit.unit}" else "Target: ${habit.targetValue} ${habit.unit}"
+        val targetText = if (language == "de") "Ziel: ${habit.targetValue} ${habit.unit}" else if (language == "ka") "სამიზნე: ${habit.targetValue} ${habit.unit}" else "Target: ${habit.targetValue} ${habit.unit}"
         canvas.drawText(targetText, width / 2f, currentY, targetPaint)
         currentY += 80f
     }
@@ -1173,19 +1174,19 @@ fun renderHabitShareBitmap(
     }
 
     if (streakDays != null) {
-        val text = "🔥 $streakDays ${if (language == "de") "Tage Streak" else "Days Streak"}"
+        val text = "🔥 $streakDays ${if (language == "de") "Tage Streak" else if (language == "ka") "დღეების სერია" else "Days Streak"}"
         canvas.drawText(text, width / 2f, currentY, metricPaint)
         currentY += 80f
     }
 
     if (completionRate != null) {
-        val text = "📈 $completionRate% ${if (language == "de") "Erfolgsquote" else "Success Rate"}"
+        val text = "📈 $completionRate% ${if (language == "de") "Erfolgsquote" else if (language == "ka") "წარმატების მაჩვენებელი" else "Success Rate"}"
         canvas.drawText(text, width / 2f, currentY, metricPaint)
         currentY += 80f
     }
 
     if (totalCompletions != null) {
-        val text = "✅ $totalCompletions ${if (language == "de") "mal geschafft" else "times completed"}"
+        val text = "✅ $totalCompletions ${if (language == "de") "mal geschafft" else if (language == "ka") "ჯერ დასრულებული" else "times completed"}"
         canvas.drawText(text, width / 2f, currentY, metricPaint)
         currentY += 80f
     }
@@ -1215,23 +1216,70 @@ fun renderHabitShareBitmap(
     }
 
     // App Branding Footer
-    val footerPaint = Paint().apply {
-        isAntiAlias = true
-        color = android.graphics.Color.argb(160, 255, 255, 255)
-        textSize = 32f
-        textAlign = Paint.Align.CENTER
-    }
-    canvas.drawText("Everyday Habits App", width / 2f, height - 80f, footerPaint)
+    drawFooterBranding(canvas, context, width, height)
 
     return bitmap
+}
+
+fun drawFooterBranding(
+    canvas: Canvas,
+    context: Context?,
+    width: Int,
+    height: Int
+) {
+    val logoDrawable = if (context != null) {
+        try {
+            val resId = context.resources.getIdentifier("ic_launcher", "mipmap", context.packageName)
+            if (resId != 0) androidx.core.content.ContextCompat.getDrawable(context, resId) else null
+        } catch (e: Exception) {
+            null
+        } ?: try {
+            androidx.core.content.ContextCompat.getDrawable(context, com.frequent.habits.R.mipmap.ic_launcher)
+                ?: androidx.core.content.ContextCompat.getDrawable(context, com.frequent.habits.R.mipmap.ic_launcher_round)
+        } catch (e: Exception) {
+            null
+        }
+    } else null
+
+    val footerY = height - 120f
+    val logoSize = 72
+    val startX = 100f
+
+    val footerPaint = Paint().apply {
+        isAntiAlias = true
+        color = android.graphics.Color.argb(230, 255, 255, 255)
+        textSize = 38f
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        textAlign = Paint.Align.LEFT
+    }
+
+    if (logoDrawable != null) {
+        val logoBitmap = Bitmap.createBitmap(logoSize, logoSize, Bitmap.Config.ARGB_8888)
+        val logoCanvas = Canvas(logoBitmap)
+        logoDrawable.setBounds(0, 0, logoSize, logoSize)
+        logoDrawable.draw(logoCanvas)
+
+        val logoY = footerY - logoSize / 2f
+        canvas.drawBitmap(logoBitmap, startX, logoY, null)
+
+        val textX = startX + logoSize + 20f
+        val textBounds = android.graphics.Rect()
+        footerPaint.getTextBounds("Frequent Habits", 0, 15, textBounds)
+        val textY = footerY + (textBounds.height() / 2f) - textBounds.bottom
+        canvas.drawText("Frequent Habits", textX, textY, footerPaint)
+    } else {
+        canvas.drawText("Frequent Habits", startX, footerY, footerPaint)
+    }
 }
 
 fun getSocialShareText(language: String): String {
     return if (language == "de") {
         "Ich baue bessere Routinen auf und verfolge meine täglichen Ziele mit Frequent Habits! 🚀 Werde auch du produktiver und gestalte deine perfekte Routine. Lade die App hier herunter: https://ais-pre-lcaq5stuvgcre6e7salzdk-873513281263.europe-west2.run.app"
-    } else {
-        "I'm building better routines and tracking my daily goals with Frequent Habits! 🚀 Join me in shaping positive habits every day. Download the app here: https://ais-pre-lcaq5stuvgcre6e7salzdk-873513281263.europe-west2.run.app"
-    }
+    } else if (language == "ka") {
+                        "მე ვაშენებ უკეთეს რუტინას და თვალყურს ვადევნებ ჩემს ყოველდღიურ მიზნებს ხშირი ჩვევებით! 🚀 შემომიერთდით პოზიტიური ჩვევების ჩამოყალიბებაში ყოველდღე. ჩამოტვირთეთ აპლიკაცია აქ: https://ais-pre-lcaq5stuvgcre6e7salzdk-873513281263.europe-west2.run.app"
+                    } else {
+                        "I'm building better routines and tracking my daily goals with Frequent Habits! 🚀 Join me in shaping positive habits every day. Download the app here: https://ais-pre-lcaq5stuvgcre6e7salzdk-873513281263.europe-west2.run.app"
+                    }
 }
 
 fun mixColorWithBlack(color: Int, ratio: Float): Int {
@@ -1320,35 +1368,19 @@ fun renderProfileShareBitmap(
     val cardRect = RectF(60f, 60f, width - 60f, height - 60f)
     canvas.drawRoundRect(cardRect, 48f, 48f, borderPaint)
 
-    var currentY = 150f
+    var currentY = 160f
 
-    // Top App Logo
-    val logoDrawable = try {
-        androidx.core.content.ContextCompat.getDrawable(context, com.frequent.habits.R.mipmap.ic_launcher)
-            ?: androidx.core.content.ContextCompat.getDrawable(context, com.frequent.habits.R.mipmap.ic_launcher_round)
-    } catch (e: Exception) {
-        null
+    // Header Title (Top Logo removed, logo is at footer)
+    val headerPaint = Paint().apply {
+        isAntiAlias = true
+        color = primaryInt
+        textSize = 42f
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        textAlign = Paint.Align.CENTER
+        letterSpacing = 0.15f
     }
-
-    if (logoDrawable != null) {
-        val logoSize = 160
-        val logoBitmap = Bitmap.createBitmap(logoSize, logoSize, Bitmap.Config.ARGB_8888)
-        val logoCanvas = Canvas(logoBitmap)
-        logoDrawable.setBounds(0, 0, logoSize, logoSize)
-        logoDrawable.draw(logoCanvas)
-        canvas.drawBitmap(logoBitmap, (width - logoSize) / 2f, currentY - logoSize / 2f, null)
-    } else {
-        val headerPaint = Paint().apply {
-            isAntiAlias = true
-            color = primaryInt
-            textSize = 42f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            textAlign = Paint.Align.CENTER
-            letterSpacing = 0.15f
-        }
-        canvas.drawText("FREQUENT HABITS", width / 2f, currentY, headerPaint)
-    }
-    currentY += 160f
+    canvas.drawText(tr(language, "MEIN PROFIL", "MY PROFILE"), width / 2f, currentY, headerPaint)
+    currentY += 150f
 
     // Profile Pic / Avatar
     val displayName = userName.ifBlank { tr(language, "Gewohnheiten Held", "Habit Hero") }
@@ -1427,13 +1459,7 @@ fun renderProfileShareBitmap(
     canvas.drawText(streakText, width / 2f, currentY, statPaint)
 
     // Footer Branding
-    val footerPaint = Paint().apply {
-        isAntiAlias = true
-        color = android.graphics.Color.argb(160, 255, 255, 255)
-        textSize = 34f
-        textAlign = Paint.Align.CENTER
-    }
-    canvas.drawText("Frequent Habits App", width / 2f, height - 100f, footerPaint)
+    drawFooterBranding(canvas, context, width, height)
 
     return bitmap
 }
@@ -1517,7 +1543,7 @@ fun renderMonthlyReviewShareBitmap(
         textAlign = Paint.Align.CENTER
     }
 
-    val totalText = "🏆  Total check ins: ${reviewData.totalCompletions}"
+    val totalText = "🏆  ${reviewData.totalCompletions}  ${tr(language, "Abschlüsse insgesamt", "Total Completions")}"
     canvas.drawText(totalText, width / 2f, currentY, statPaint)
     currentY += 90f
 
@@ -1535,13 +1561,7 @@ fun renderMonthlyReviewShareBitmap(
     canvas.drawText(powerText, width / 2f, currentY, statPaint)
 
     // Footer Branding
-    val footerPaint = Paint().apply {
-        isAntiAlias = true
-        color = android.graphics.Color.argb(160, 255, 255, 255)
-        textSize = 34f
-        textAlign = Paint.Align.CENTER
-    }
-    canvas.drawText("Frequent Habits App", width / 2f, height - 100f, footerPaint)
+    drawFooterBranding(canvas, context, width, height)
 
     return bitmap
 }
@@ -1647,13 +1667,7 @@ fun renderYearlyReviewShareBitmap(
     canvas.drawText(streakText, width / 2f, currentY, statPaint)
 
     // Footer Branding
-    val footerPaint = Paint().apply {
-        isAntiAlias = true
-        color = android.graphics.Color.argb(160, 255, 255, 255)
-        textSize = 34f
-        textAlign = Paint.Align.CENTER
-    }
-    canvas.drawText("Frequent Habits App", width / 2f, height - 100f, footerPaint)
+    drawFooterBranding(canvas, context, width, height)
 
     return bitmap
 }

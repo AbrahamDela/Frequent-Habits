@@ -92,7 +92,7 @@ class HabitWidgetProvider : AppWidgetProvider() {
 
             if (itemAction == "TOGGLE" || itemAction == "DELTA") {
                 val now = System.currentTimeMillis()
-                if (habitId == lastClickedHabitId && (now - lastClickTime) < 50L) {
+                if (habitId == lastClickedHabitId && (now - lastClickTime) < 300L) {
                     return
                 }
                 lastClickedHabitId = habitId
@@ -129,7 +129,9 @@ class HabitWidgetProvider : AppWidgetProvider() {
                         val habit = db.habitDao().getHabitByIdSuspend(habitId)
                         if (habit != null) {
                             val openAppIntent = Intent(context, MainActivity::class.java).apply {
-                                if (habit.type == "NUMBER" || habit.type == "NUMERICAL") {
+                                val unitLower = habit.unit.lowercase().trim()
+                                val isMins = unitLower in listOf("minuten", "minutes", "min", "minute", "m")
+                                if (habit.type == "NUMBER" || habit.type == "NUMERICAL" || isMins) {
                                     setAction(ACTION_WIDGET_ADD_VALUE)
                                     putExtra(EXTRA_HABIT_ID, habitId)
                                 }
@@ -320,12 +322,10 @@ class HabitWidgetProvider : AppWidgetProvider() {
                     views.setViewVisibility(R.id.widget_progress_bar, android.view.View.GONE)
                     views.setViewVisibility(R.id.widget_progress_bar_completed, android.view.View.VISIBLE)
                     views.setProgressBar(R.id.widget_progress_bar_completed, 100, 100, false)
-                    views.setInt(R.id.widget_progress_bar_completed, "setProgress", 100)
                 } else {
                     views.setViewVisibility(R.id.widget_progress_bar_completed, android.view.View.GONE)
                     views.setViewVisibility(R.id.widget_progress_bar, android.view.View.VISIBLE)
                     views.setProgressBar(R.id.widget_progress_bar, 100, progressPercent, false)
-                    views.setInt(R.id.widget_progress_bar, "setProgress", progressPercent)
                 }
 
                 val perfectStats = com.example.data.StreakCalculator.calculate(allHabits, allLogs, targetDateStr = todayStr)
@@ -721,8 +721,15 @@ class HabitWidgetProvider : AppWidgetProvider() {
         private var lastClickTime = 0L
         @Volatile
         private var lastClickedHabitId = -1
+        @Volatile
+        private var lastUpdateTriggerTime = 0L
 
         fun triggerUpdate(context: Context) {
+            val now = System.currentTimeMillis()
+            if (now - lastUpdateTriggerTime < 300L) {
+                return
+            }
+            lastUpdateTriggerTime = now
             val intent = Intent(context, HabitWidgetProvider::class.java).apply {
                 action = ACTION_UPDATE_HABITS
             }

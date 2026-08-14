@@ -137,20 +137,25 @@ object CsvImporter {
     // ----------------------------------------------------------------------------------
     private fun parseZipFile(context: Context, uri: Uri): CsvImportPreview {
         var habitsCsvLines: List<List<String>>? = null
-        val checkmarkFiles = mutableMapOf<String, List<List<String>>>() // filename -> lines
+        val checkmarkFiles = mutableMapOf<String, List<List<String>>>() // filename or habitname -> lines
 
         context.contentResolver.openInputStream(uri)?.use { inputStream ->
             ZipInputStream(inputStream).use { zipStream ->
                 var entry = zipStream.nextEntry
                 while (entry != null) {
                     if (!entry.isDirectory && entry.name.lowercase(Locale.ROOT).endsWith(".csv")) {
-                        val simpleName = entry.name.substringAfterLast("/").substringAfterLast("\\")
+                        val pathParts = entry.name.split("/", "\\")
+                        val simpleName = pathParts.last()
+                        
                         val reader = BufferedReader(InputStreamReader(zipStream, Charsets.UTF_8))
                         val lines = readCsvLinesFromReader(reader)
 
                         if (simpleName.equals("Habits.csv", ignoreCase = true)) {
                             habitsCsvLines = lines
-                        } else {
+                        } else if (simpleName.equals("Checkmarks.csv", ignoreCase = true) && pathParts.size >= 2) {
+                            val habitName = pathParts[pathParts.size - 2]
+                            checkmarkFiles[habitName] = lines
+                        } else if (!simpleName.equals("Scores.csv", ignoreCase = true) && !simpleName.equals("History.csv", ignoreCase = true)) {
                             checkmarkFiles[simpleName] = lines
                         }
                     }
@@ -173,8 +178,11 @@ object CsvImporter {
                 val logs = mutableListOf<ImportedLogData>()
 
                 if (lines.isNotEmpty()) {
-                    val delimiter = detectDelimiter(lines.first().joinToString(","))
-                    for (i in 1 until lines.size) {
+                    val firstRow = lines[0]
+                    val hasHeader = firstRow.isNotEmpty() && normalizeDate(firstRow[0]) == null
+                    val startIndex = if (hasHeader) 1 else 0
+
+                    for (i in startIndex until lines.size) {
                         val row = lines[i]
                         if (row.size >= 2) {
                             val normDate = normalizeDate(row[0])
@@ -288,7 +296,11 @@ object CsvImporter {
                 }?.value
 
                 if (matchFile != null && matchFile.isNotEmpty()) {
-                    for (cRowIdx in 1 until matchFile.size) {
+                    val firstRow = matchFile[0]
+                    val hasHeader = firstRow.isNotEmpty() && normalizeDate(firstRow[0]) == null
+                    val startIndex = if (hasHeader) 1 else 0
+
+                    for (cRowIdx in startIndex until matchFile.size) {
                         val cRow = matchFile[cRowIdx]
                         if (cRow.size >= 2) {
                             val normDate = normalizeDate(cRow[0])

@@ -1154,17 +1154,15 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
 
     val activeHeatmapCell: StateFlow<CalendarGridCellData?> = combine(
         _selectedHeatmapCell,
-        _heatmapViewMode,
         heatmapMonthGridData,
         heatmapYearGridData
-    ) { selectedCell, viewMode, monthGrid, yearGrid ->
-        val activeGrid = if (viewMode == "month") {
-            monthGrid.flatten().filterNotNull()
+    ) { selectedCell, monthGrid, yearGrid ->
+        val activeGrid = yearGrid.flatten() + monthGrid.flatten().filterNotNull()
+        if (selectedCell != null) {
+            activeGrid.firstOrNull { it.dateStr == selectedCell.dateStr } ?: selectedCell
         } else {
-            yearGrid.flatten()
+            activeGrid.firstOrNull { it.isToday } ?: activeGrid.firstOrNull()
         }
-        val match = activeGrid.firstOrNull { it.dateStr == selectedCell?.dateStr }
-        match ?: activeGrid.firstOrNull { it.isToday } ?: activeGrid.firstOrNull()
     }.flowOn(kotlinx.coroutines.Dispatchers.Default)
      .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
@@ -1890,6 +1888,7 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
         reminderMinute: Int = 0,
         customReminders: String = "",
         description: String = "",
+        clickIncrement: Float = 1.0f,
         milestoneRewards: List<com.example.data.MilestoneReward> = emptyList()
     ) {
         viewModelScope.launch {
@@ -1910,7 +1909,8 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
                     reminderHour = reminderHour,
                     reminderMinute = reminderMinute,
                     customReminders = customReminders,
-                    description = description
+                    description = description,
+                    clickIncrement = clickIncrement
                 )
                 val insertedId = repository.insertHabit(habit).toInt()
                 val finalHabit = habit.copy(id = insertedId)
@@ -3099,7 +3099,6 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             perfectDaysStats.collect { stats ->
                 sharedPrefs.edit().putInt("current_perfect_streak", stats.currentStreak).apply()
-                com.example.HabitWidgetProvider.triggerUpdate(getApplication())
             }
         }
         viewModelScope.launch {

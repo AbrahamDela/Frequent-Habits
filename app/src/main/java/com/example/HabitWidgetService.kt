@@ -111,7 +111,11 @@ class HabitWidgetFactory(private val context: Context, intent: Intent) : RemoteV
                 isWeeklyTargetReached = weeklyCount >= weeklyTarget
             }
 
-            val nameText = if (habit.type == "NUMBER" || habit.type == "NUMERICAL") {
+            val isNumerical = (habit.type == "NUMBER" || habit.type == "NUMERICAL")
+            val unitLower = habit.unit.lowercase().trim()
+            val isMinutesUnit = unitLower in listOf("minuten", "minutes", "min", "minute", "m")
+
+            val nameText = if (isNumerical) {
                 val formattedCurrent = if (currentVal % 1f == 0f) currentVal.toInt().toString() else String.format(Locale.US, "%.1f", currentVal)
                 val formattedTarget = if (habit.targetValue % 1f == 0f) habit.targetValue.toInt().toString() else String.format(Locale.US, "%.1f", habit.targetValue)
                 "${habit.name} ($formattedCurrent/$formattedTarget)"
@@ -123,10 +127,11 @@ class HabitWidgetFactory(private val context: Context, intent: Intent) : RemoteV
             views.setTextViewText(R.id.widget_habit_name, nameText)
 
             val checkIcon = when {
-                status == "SUCCESS" -> R.drawable.ic_widget_circle_checked
+                status == "SUCCESS" || (isNumerical && currentVal >= habit.targetValue) -> R.drawable.ic_widget_circle_checked
                 status == "FAILED" -> R.drawable.ic_widget_failed_cross
                 status == "PAUSED" -> R.drawable.ic_widget_circle_paused
                 habit.frequency == "TIMES_WEEKLY" && isWeeklyTargetReached -> R.drawable.ic_widget_circle_weekly_done
+                isNumerical -> R.drawable.ic_widget_circle_plus
                 else -> R.drawable.ic_widget_circle_unchecked
             }
             views.setImageViewResource(R.id.widget_habit_check, checkIcon)
@@ -139,35 +144,36 @@ class HabitWidgetFactory(private val context: Context, intent: Intent) : RemoteV
                 putExtra("WIDGET_ACTION", "TOGGLE")
             }
 
-            if (habit.type == "NUMBER" || habit.type == "NUMERICAL") {
-                views.setViewVisibility(R.id.widget_habit_minus, android.view.View.VISIBLE)
-                views.setViewVisibility(R.id.widget_habit_plus, android.view.View.VISIBLE)
+            val openAppIntent = Intent().apply {
+                putExtra(HabitWidgetProvider.EXTRA_HABIT_ID, habit.id)
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+                putExtra("WIDGET_ACTION", "OPEN_APP")
+            }
 
-                val minusIntent = Intent().apply {
+            if (isNumerical) {
+                val step = if (habit.clickIncrement > 0f) habit.clickIncrement else 1f
+                val deltaIntent = Intent().apply {
                     putExtra(HabitWidgetProvider.EXTRA_HABIT_ID, habit.id)
                     putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
-                    putExtra(HabitWidgetProvider.EXTRA_DELTA, -1f)
-                    putExtra("WIDGET_ACTION", "DELTA")
-                }
-                val plusIntent = Intent().apply {
-                    putExtra(HabitWidgetProvider.EXTRA_HABIT_ID, habit.id)
-                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
-                    putExtra(HabitWidgetProvider.EXTRA_DELTA, 1f)
+                    putExtra(HabitWidgetProvider.EXTRA_DELTA, step)
                     putExtra("WIDGET_ACTION", "DELTA")
                 }
 
-                views.setOnClickFillInIntent(R.id.widget_habit_minus, minusIntent)
-                views.setOnClickFillInIntent(R.id.widget_habit_plus, plusIntent)
+                if (currentVal < habit.targetValue && status != "SUCCESS") {
+                    views.setOnClickFillInIntent(R.id.widget_habit_check, deltaIntent)
+                } else {
+                    views.setOnClickFillInIntent(R.id.widget_habit_check, toggleIntent)
+                }
+
+                views.setOnClickFillInIntent(R.id.widget_habit_icon, openAppIntent)
+                views.setOnClickFillInIntent(R.id.widget_habit_name, openAppIntent)
+                views.setOnClickFillInIntent(R.id.widget_habit_layout, openAppIntent)
+            } else if (isMinutesUnit) {
                 views.setOnClickFillInIntent(R.id.widget_habit_check, toggleIntent)
-                views.setOnClickFillInIntent(R.id.widget_habit_icon, toggleIntent)
-                views.setOnClickFillInIntent(R.id.widget_habit_name, toggleIntent)
-                views.setOnClickFillInIntent(R.id.widget_habit_layout, toggleIntent)
+                views.setOnClickFillInIntent(R.id.widget_habit_icon, openAppIntent)
+                views.setOnClickFillInIntent(R.id.widget_habit_name, openAppIntent)
+                views.setOnClickFillInIntent(R.id.widget_habit_layout, openAppIntent)
             } else {
-                views.setViewVisibility(R.id.widget_habit_minus, android.view.View.GONE)
-                views.setViewVisibility(R.id.widget_habit_plus, android.view.View.GONE)
-
-                views.setOnClickFillInIntent(R.id.widget_habit_minus, toggleIntent)
-                views.setOnClickFillInIntent(R.id.widget_habit_plus, toggleIntent)
                 views.setOnClickFillInIntent(R.id.widget_habit_check, toggleIntent)
                 views.setOnClickFillInIntent(R.id.widget_habit_icon, toggleIntent)
                 views.setOnClickFillInIntent(R.id.widget_habit_name, toggleIntent)
