@@ -3670,12 +3670,11 @@ fun TodayScreen(
 
             LaunchedEffect(fraction) {
                 if (!hasAnimatedTodayProgress) {
-                    animFraction.snapTo(0f)
+                    hasAnimatedTodayProgress = true
                     animFraction.animateTo(
                         targetValue = fraction,
                         animationSpec = tween(durationMillis = 750, easing = FastOutSlowInEasing)
                     )
-                    hasAnimatedTodayProgress = true
                 } else {
                     animFraction.animateTo(
                         targetValue = fraction,

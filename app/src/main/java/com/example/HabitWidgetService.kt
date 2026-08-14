@@ -120,8 +120,6 @@ class HabitWidgetFactory(private val context: Context, intent: Intent) : RemoteV
                 val formattedCurrent = if (currentVal % 1f == 0f) currentVal.toInt().toString() else String.format(Locale.US, "%.1f", currentVal)
                 val formattedTarget = if (habit.targetValue % 1f == 0f) habit.targetValue.toInt().toString() else String.format(Locale.US, "%.1f", habit.targetValue)
                 "${habit.name} ($formattedCurrent/$formattedTarget)"
-            } else if (habit.frequency == "TIMES_WEEKLY") {
-                "${habit.name} ($weeklyCount/$weeklyTarget)"
             } else {
                 habit.name
             }
@@ -165,21 +163,13 @@ class HabitWidgetFactory(private val context: Context, intent: Intent) : RemoteV
                 } else {
                     views.setOnClickFillInIntent(R.id.widget_habit_check, toggleIntent)
                 }
-
-                views.setOnClickFillInIntent(R.id.widget_habit_icon, openAppIntent)
-                views.setOnClickFillInIntent(R.id.widget_habit_name, openAppIntent)
-                views.setOnClickFillInIntent(R.id.widget_habit_layout, openAppIntent)
-            } else if (isMinutesUnit) {
-                views.setOnClickFillInIntent(R.id.widget_habit_check, toggleIntent)
-                views.setOnClickFillInIntent(R.id.widget_habit_icon, openAppIntent)
-                views.setOnClickFillInIntent(R.id.widget_habit_name, openAppIntent)
-                views.setOnClickFillInIntent(R.id.widget_habit_layout, openAppIntent)
             } else {
                 views.setOnClickFillInIntent(R.id.widget_habit_check, toggleIntent)
-                views.setOnClickFillInIntent(R.id.widget_habit_icon, toggleIntent)
-                views.setOnClickFillInIntent(R.id.widget_habit_name, toggleIntent)
-                views.setOnClickFillInIntent(R.id.widget_habit_layout, toggleIntent)
             }
+
+            views.setOnClickFillInIntent(R.id.widget_habit_icon, openAppIntent)
+            views.setOnClickFillInIntent(R.id.widget_habit_name, openAppIntent)
+            views.setOnClickFillInIntent(R.id.widget_habit_layout, openAppIntent)
 
             return views
         } catch (e: Exception) {

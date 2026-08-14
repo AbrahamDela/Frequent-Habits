@@ -131,7 +131,8 @@ class HabitWidgetProvider : AppWidgetProvider() {
                             val openAppIntent = Intent(context, MainActivity::class.java).apply {
                                 val unitLower = habit.unit.lowercase().trim()
                                 val isMins = unitLower in listOf("minuten", "minutes", "min", "minute", "m")
-                                if (habit.type == "NUMBER" || habit.type == "NUMERICAL" || isMins) {
+                                val isNumerical = habit.type == "NUMBER" || habit.type == "NUMERICAL"
+                                if (habit.type != "BINARY" && (isNumerical || isMins)) {
                                     setAction(ACTION_WIDGET_ADD_VALUE)
                                     putExtra(EXTRA_HABIT_ID, habitId)
                                 }
