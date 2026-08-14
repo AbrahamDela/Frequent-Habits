@@ -2514,7 +2514,20 @@ fun getHabitProgressForDate(dateStr: String, habits: List<Habit>, logs: List<Hab
         val isPaused = log != null && log.isPaused
         if (!isPaused) {
             nonPausedActiveCount++
-            if (isLogCompleted(habit, log)) {
+            var isCompleted = isLogCompleted(habit, log)
+            if (!isCompleted && habit.frequency == "TIMES_WEEKLY") {
+                val weeklyTargetCount = habit.specificDays.toIntOrNull() ?: 3
+                val curDate = try { java.time.LocalDate.parse(dateStr) } catch (e: Exception) { java.time.LocalDate.now() }
+                val startOf7Days = curDate.minusDays(6).toString()
+                val endOf7Days = curDate.toString()
+                val weeklyLoggedCount = logs.filter { l ->
+                    l.habitId == habit.id && l.date >= startOf7Days && l.date <= endOf7Days && isLogCompleted(habit, l)
+                }.size
+                if (weeklyLoggedCount >= weeklyTargetCount) {
+                    isCompleted = true
+                }
+            }
+            if (isCompleted) {
                 completedCount++
             }
         }
@@ -2538,7 +2551,18 @@ fun getDayCombinedStatus(dateStr: String, habits: List<Habit>, logs: List<HabitL
 
     activeHabits.forEach { habit ->
         val log = logsMap[habit.id]
-        val hStatus = getLogStatus(habit, log, dateStr, "1970-01-01", todayStr)
+        val isWeeklyTargetReached = if (habit.frequency == "TIMES_WEEKLY") {
+            val weeklyTargetCount = habit.specificDays.toIntOrNull() ?: 3
+            val curDate = try { java.time.LocalDate.parse(dateStr) } catch (e: Exception) { java.time.LocalDate.now() }
+            val startOf7Days = curDate.minusDays(6).toString()
+            val endOf7Days = curDate.toString()
+            val weeklyLoggedCount = logs.filter { l ->
+                l.habitId == habit.id && l.date >= startOf7Days && l.date <= endOf7Days && isLogCompleted(habit, l)
+            }.size
+            weeklyLoggedCount >= weeklyTargetCount
+        } else false
+
+        val hStatus = getLogStatus(habit, log, dateStr, "1970-01-01", todayStr, isWeeklyTargetReached)
 
         if (hStatus == "PENDING") anyPending = true
         if (hStatus == "FAILED") anyFailed = true
@@ -3283,6 +3307,19 @@ fun TodayScreen(
     val allLogs by viewModel.allLogs.collectAsStateWithLifecycle()
     val allHabits by viewModel.allHabits.collectAsStateWithLifecycle()
 
+    val earliestHabitDateStr = remember(allHabits) {
+        if (allHabits.isEmpty()) {
+            val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+            sdf.format(java.util.Date())
+        } else {
+            val minStartMs = allHabits.map { 
+                if (it.startDate > 946684800000L) it.startDate else it.createdAt 
+            }.minOrNull() ?: System.currentTimeMillis()
+            val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+            sdf.format(java.util.Date(minStartMs))
+        }
+    }
+
     val context = LocalContext.current
     val activity = context as? Activity
 
@@ -3567,7 +3604,7 @@ fun TodayScreen(
                         ) {
                             pageDays.forEach { (dayStr, dayNum, dayName) ->
                                 val isSelected = dayStr == selectedDate
-                                val isDayEnabled = dayStr >= minDateStr
+                                val isDayEnabled = dayStr >= minDateStr && dayStr >= earliestHabitDateStr
                                 key(dayStr) {
                                     CalendarDayItem(
                                         dayStr = dayStr,
@@ -4483,6 +4520,7 @@ fun HabitItemRow(
             isPaused -> PausedBg
             isCompleted -> SuccessBg
             isFailed -> FailedBg
+            habit.frequency == "TIMES_WEEKLY" && isWeeklyTargetReached -> SuccessBg
             else -> AppCard
         },
         animationSpec = tween(120),
@@ -4493,6 +4531,7 @@ fun HabitItemRow(
             isPaused -> HabitOrange
             isCompleted -> SuccessGreen
             isFailed -> FailedRed
+            habit.frequency == "TIMES_WEEKLY" && isWeeklyTargetReached -> SuccessGreen
             else -> AppBorder
         },
         animationSpec = tween(120),
@@ -4500,7 +4539,7 @@ fun HabitItemRow(
     )
 
     val checkboxScale by animateFloatAsState(
-        targetValue = if (isPaused || isCompleted || isFailed) 1.05f else 1.0f,
+        targetValue = if (isPaused || isCompleted || isFailed || (habit.frequency == "TIMES_WEEKLY" && isWeeklyTargetReached)) 1.05f else 1.0f,
         animationSpec = tween(100),
         label = "checkboxScale"
     )
@@ -6040,7 +6079,24 @@ fun HabitDetailScreen(
                             onClick = { t, e -> activeExplanation = t to e }
                         )
                         Spacer(modifier = Modifier.weight(1f))
-
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(end = 4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.TouchApp,
+                                contentDescription = null,
+                                tint = TextSecondary.copy(alpha = 0.7f),
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = if (language == "de") "Interaktiv" else if (language == "ka") "ინტერაქტიული" else "Interactive",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = TextSecondary.copy(alpha = 0.7f),
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                     }
 
                     val habitColor = HabitIconMapping.getColor(habit.color)

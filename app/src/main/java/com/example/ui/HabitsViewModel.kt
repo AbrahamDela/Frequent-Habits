@@ -608,7 +608,20 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
             val isPaused = log != null && log.isPaused
             if (!isPaused) {
                 nonPausedActiveCount++
-                if (isLogCompleted(habit, log)) {
+                var isCompleted = isLogCompleted(habit, log)
+                if (!isCompleted && habit.frequency == "TIMES_WEEKLY") {
+                    val weeklyTargetCount = habit.specificDays.toIntOrNull() ?: 3
+                    val curDate = try { java.time.LocalDate.parse(date) } catch (e: Exception) { java.time.LocalDate.now() }
+                    val startOf7Days = curDate.minusDays(6).toString()
+                    val endOf7Days = curDate.toString()
+                    val weeklyLoggedCount = logs.filter { l ->
+                        l.habitId == habit.id && l.date >= startOf7Days && l.date <= endOf7Days && isLogCompleted(habit, l)
+                    }.size
+                    if (weeklyLoggedCount >= weeklyTargetCount) {
+                        isCompleted = true
+                    }
+                }
+                if (isCompleted) {
                     completedCount++
                 }
             }
@@ -822,14 +835,26 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
                     activeHabits.forEach { habit ->
                         val log = logsMap[habit.id]
                         val isPaused = log != null && log.isPaused
+                        val isWeeklyTargetReached = if (habit.frequency == "TIMES_WEEKLY") {
+                            val weeklyTargetCount = habit.specificDays.toIntOrNull() ?: 3
+                            val curDate = try { java.time.LocalDate.parse(dateStr) } catch (e: Exception) { java.time.LocalDate.now() }
+                            val startOf7Days = curDate.minusDays(6).toString()
+                            val endOf7Days = curDate.toString()
+                            val weeklyLoggedCount = logs.filter { l ->
+                                l.habitId == habit.id && l.date >= startOf7Days && l.date <= endOf7Days && isLogCompleted(habit, l)
+                            }.size
+                            weeklyLoggedCount >= weeklyTargetCount
+                        } else false
+
                         if (!isPaused) {
                             nonPausedActiveCount++
-                            if (isLogCompleted(habit, log)) {
+                            val isCompleted = isLogCompleted(habit, log) || (habit.frequency == "TIMES_WEEKLY" && isWeeklyTargetReached)
+                            if (isCompleted) {
                                 completedCount++
                             }
                         }
                         
-                        val hStatus = getLogStatus(habit, log, dateStr, "1970-01-01", todayStr)
+                        val hStatus = getLogStatus(habit, log, dateStr, "1970-01-01", todayStr, isWeeklyTargetReached)
                         if (hStatus == "PENDING") anyPending = true
                         if (hStatus == "FAILED") anyFailed = true
                         if (hStatus == "SUCCESS") anySuccess = true

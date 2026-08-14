@@ -125,4 +125,108 @@ interface HabitDao {
 
     @Query("DELETE FROM milestone_rewards")
     suspend fun clearAllMilestoneRewards()
+
+    @Transaction
+    suspend fun logHabitTransaction(habitId: Int, date: String, value: Float) {
+        deleteLogsForHabitOnDate(habitId, date)
+        if (value != 0f) {
+            val log = HabitLog(habitId = habitId, date = date, value = value, isPaused = false, timestamp = System.currentTimeMillis())
+            insertLog(log)
+        }
+    }
+
+    @Transaction
+    suspend fun toggleHabitTransaction(habitId: Int, selectedDate: String, isNegative: Boolean, type: String, targetValue: Float) {
+        val logs = getLogsForHabitOnDate(habitId, selectedDate)
+        val currentLog = logs.firstOrNull()
+
+        val currentStatus = when {
+            currentLog == null -> if (isNegative) "SUCCESS" else "PENDING"
+            currentLog.value == -1f -> "FAILED"
+            currentLog.value == -2f -> "SUCCESS"
+            else -> {
+                if (type == "BINARY") {
+                    if (isNegative) "FAILED" else "SUCCESS"
+                } else {
+                    if (isNegative) {
+                        if (currentLog.value >= targetValue) "FAILED" else "PENDING"
+                    } else {
+                        if (currentLog.value >= targetValue) "SUCCESS" else "PENDING"
+                    }
+                }
+            }
+        }
+
+        val nextStatus = if (isNegative) {
+            if (currentStatus == "SUCCESS") "FAILED" else "SUCCESS"
+        } else {
+            when (currentStatus) {
+                "PENDING" -> "SUCCESS"
+                "SUCCESS" -> "FAILED"
+                else -> "PENDING"
+            }
+        }
+
+        deleteLogsForHabitOnDate(habitId, selectedDate)
+        if (nextStatus != "PENDING") {
+            val nextValue = if (nextStatus == "SUCCESS") {
+                if (type == "BINARY") -2f else targetValue
+            } else {
+                -1f
+            }
+            val newLog = HabitLog(
+                id = 0,
+                habitId = habitId,
+                date = selectedDate,
+                value = nextValue
+            )
+            insertLog(newLog)
+        }
+    }
+
+    @Transaction
+    suspend fun deltaHabitTransaction(habitId: Int, selectedDate: String, delta: Float, targetValue: Float) {
+        val logs = getLogsForHabitOnDate(habitId, selectedDate)
+        val currentLog = logs.firstOrNull()
+        val currentValue = when (currentLog?.value) {
+            null -> 0f
+            -1f -> 0f
+            -2f -> targetValue
+            else -> currentLog.value
+        }
+        val newValue = (currentValue + delta).coerceAtLeast(0f)
+
+        deleteLogsForHabitOnDate(habitId, selectedDate)
+        if (newValue > 0f) {
+            val newLog = HabitLog(
+                id = 0,
+                habitId = habitId,
+                date = selectedDate,
+                value = newValue
+            )
+            insertLog(newLog)
+        }
+    }
+
+    @Transaction
+    suspend fun togglePauseHabitTransaction(habitId: Int, date: String) {
+        val existing = getLogsForHabitOnDate(habitId, date)
+        if (existing.isNotEmpty()) {
+            val first = existing.first()
+            if (first.isPaused) {
+                if (first.value == 0f) {
+                    deleteLogsForHabitOnDate(habitId, date)
+                } else {
+                    val updated = first.copy(isPaused = false, timestamp = System.currentTimeMillis())
+                    insertLog(updated)
+                }
+            } else {
+                val updated = first.copy(isPaused = true, timestamp = System.currentTimeMillis())
+                insertLog(updated)
+            }
+        } else {
+            val log = HabitLog(habitId = habitId, date = date, value = 0f, isPaused = true)
+            insertLog(log)
+        }
+    }
 }

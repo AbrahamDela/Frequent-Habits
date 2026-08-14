@@ -72,10 +72,25 @@ class HabitWidgetFactory(private val context: Context, intent: Intent) : RemoteV
 
             val status = com.example.data.getLogStatus(habit, log, selectedDate, "1970-01-01", selectedDate)
 
-            val bgRes = when (status) {
-                "SUCCESS" -> R.drawable.widget_item_completed_bg
-                "FAILED" -> R.drawable.widget_item_failed_bg
-                "PAUSED" -> R.drawable.widget_item_paused_bg
+            var isWeeklyTargetReached = false
+            var weeklyCount = 0
+            var weeklyTarget = 0
+            if (habit.frequency == "TIMES_WEEKLY") {
+                weeklyTarget = habit.specificDays.toIntOrNull() ?: 3
+                val curDate = try { java.time.LocalDate.parse(selectedDate) } catch (e: Exception) { java.time.LocalDate.now() }
+                val startOf7Days = curDate.minusDays(6).toString()
+                val endOf7Days = curDate.toString()
+                weeklyCount = allLogsList.filter { l ->
+                    l.habitId == habit.id && l.date >= startOf7Days && l.date <= endOf7Days && com.example.data.isLogCompleted(habit, l)
+                }.size
+                isWeeklyTargetReached = weeklyCount >= weeklyTarget
+            }
+
+            val bgRes = when {
+                status == "SUCCESS" -> R.drawable.widget_item_completed_bg
+                status == "FAILED" -> R.drawable.widget_item_failed_bg
+                status == "PAUSED" -> R.drawable.widget_item_paused_bg
+                habit.frequency == "TIMES_WEEKLY" && isWeeklyTargetReached -> R.drawable.widget_item_completed_bg
                 else -> R.drawable.widget_item_normal_bg
             }
             views.setInt(R.id.widget_habit_layout, "setBackgroundResource", bgRes)
@@ -97,20 +112,6 @@ class HabitWidgetFactory(private val context: Context, intent: Intent) : RemoteV
                 else -> log.value
             }
 
-            var isWeeklyTargetReached = false
-            var weeklyCount = 0
-            var weeklyTarget = 0
-            if (habit.frequency == "TIMES_WEEKLY") {
-                weeklyTarget = habit.specificDays.toIntOrNull() ?: 3
-                val curDate = try { java.time.LocalDate.parse(selectedDate) } catch (e: Exception) { java.time.LocalDate.now() }
-                val startOf7Days = curDate.minusDays(6).toString()
-                val endOf7Days = curDate.toString()
-                weeklyCount = allLogsList.filter { l ->
-                    l.habitId == habit.id && l.date >= startOf7Days && l.date <= endOf7Days && com.example.data.isLogCompleted(habit, l)
-                }.size
-                isWeeklyTargetReached = weeklyCount >= weeklyTarget
-            }
-
             val isNumerical = (habit.type == "NUMBER" || habit.type == "NUMERICAL")
             val unitLower = habit.unit.lowercase().trim()
             val isMinutesUnit = unitLower in listOf("minuten", "minutes", "min", "minute", "m")
@@ -120,7 +121,7 @@ class HabitWidgetFactory(private val context: Context, intent: Intent) : RemoteV
                 val formattedTarget = if (habit.targetValue % 1f == 0f) habit.targetValue.toInt().toString() else String.format(Locale.US, "%.1f", habit.targetValue)
                 "${habit.name} ($formattedCurrent/$formattedTarget)"
             } else if (habit.frequency == "TIMES_WEEKLY") {
-                "${habit.name} ($weeklyCount/$weeklyTarget" + (if (isWeeklyTargetReached || status == "SUCCESS") " ✓" else "") + ")"
+                "${habit.name} ($weeklyCount/$weeklyTarget)"
             } else {
                 habit.name
             }

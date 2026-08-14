@@ -157,53 +157,13 @@ class HabitWidgetProvider : AppWidgetProvider() {
             val habit = db.habitDao().getHabitByIdSuspend(habitId) ?: return@withLock
             val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.US)
             val todayStr = sdf.format(Date())
-            val selectedDate = todayStr
-
-            val logs = db.habitDao().getLogsForHabitOnDate(habitId, selectedDate)
-            val currentLog = logs.firstOrNull()
-
-            val currentStatus = when {
-                currentLog == null -> if (habit.isNegative) "SUCCESS" else "PENDING"
-                currentLog.value == -1f -> "FAILED"
-                currentLog.value == -2f -> "SUCCESS"
-                else -> {
-                    if (habit.type == "BINARY") {
-                        if (habit.isNegative) "FAILED" else "SUCCESS"
-                    } else {
-                        if (habit.isNegative) {
-                            if (currentLog.value >= habit.targetValue) "FAILED" else "PENDING"
-                        } else {
-                            if (currentLog.value >= habit.targetValue) "SUCCESS" else "PENDING"
-                        }
-                    }
-                }
-            }
-
-            val nextStatus = if (habit.isNegative) {
-                if (currentStatus == "SUCCESS") "FAILED" else "SUCCESS"
-            } else {
-                when (currentStatus) {
-                    "PENDING" -> "SUCCESS"
-                    "SUCCESS" -> "FAILED"
-                    else -> "PENDING"
-                }
-            }
-
-            db.habitDao().deleteLogsForHabitOnDate(habitId, selectedDate)
-            if (nextStatus != "PENDING") {
-                val nextValue = if (nextStatus == "SUCCESS") {
-                    if (habit.type == "BINARY") -2f else habit.targetValue
-                } else {
-                    -1f
-                }
-                val newLog = com.example.data.HabitLog(
-                    id = 0,
-                    habitId = habitId,
-                    date = selectedDate,
-                    value = nextValue
-                )
-                db.habitDao().insertLog(newLog)
-            }
+            db.habitDao().toggleHabitTransaction(
+                habitId = habitId,
+                selectedDate = todayStr,
+                isNegative = habit.isNegative,
+                type = habit.type,
+                targetValue = habit.targetValue
+            )
         }
 
         val appWidgetManager = AppWidgetManager.getInstance(context)
@@ -218,28 +178,12 @@ class HabitWidgetProvider : AppWidgetProvider() {
             val habit = db.habitDao().getHabitByIdSuspend(habitId) ?: return@withLock
             val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.US)
             val todayStr = sdf.format(Date())
-            val selectedDate = todayStr
-
-            val logs = db.habitDao().getLogsForHabitOnDate(habitId, selectedDate)
-            val currentLog = logs.firstOrNull()
-            val currentValue = when (currentLog?.value) {
-                null -> 0f
-                -1f -> 0f
-                -2f -> habit.targetValue
-                else -> currentLog.value
-            }
-            val newValue = (currentValue + delta).coerceAtLeast(0f)
-
-            db.habitDao().deleteLogsForHabitOnDate(habitId, selectedDate)
-            if (newValue > 0f) {
-                val newLog = com.example.data.HabitLog(
-                    id = 0,
-                    habitId = habitId,
-                    date = selectedDate,
-                    value = newValue
-                )
-                db.habitDao().insertLog(newLog)
-            }
+            db.habitDao().deltaHabitTransaction(
+                habitId = habitId,
+                selectedDate = todayStr,
+                delta = delta,
+                targetValue = habit.targetValue
+            )
         }
 
         val appWidgetManager = AppWidgetManager.getInstance(context)
@@ -629,20 +573,20 @@ class HabitWidgetProvider : AppWidgetProvider() {
             }
             "meditation" -> {
                 paint.style = Paint.Style.FILL
-                canvas.drawCircle(half, 12f, 5f, paint)
+                canvas.drawCircle(half, 10f, 4f, paint)
                 paint.style = Paint.Style.STROKE
                 paint.strokeWidth = 4f
                 val body = Path().apply {
-                    moveTo(half, 17f)
+                    moveTo(half, 18f)
                     lineTo(half, size * 0.65f)
                     moveTo(half, size * 0.65f)
                     cubicTo(8f, size * 0.65f, 10f, size * 0.9f, half, size * 0.85f)
                     moveTo(half, size * 0.65f)
                     cubicTo(size - 8f, size * 0.65f, size - 10f, size * 0.9f, half, size * 0.85f)
-                    moveTo(half, 22f)
-                    cubicTo(8f, 22f, 8f, size * 0.6f, 12f, size * 0.65f)
-                    moveTo(half, 22f)
-                    cubicTo(size - 8f, 22f, size - 8f, size * 0.6f, size - 12f, size * 0.65f)
+                    moveTo(half, 23f)
+                    cubicTo(8f, 23f, 8f, size * 0.6f, 12f, size * 0.65f)
+                    moveTo(half, 23f)
+                    cubicTo(size - 8f, 23f, size - 8f, size * 0.6f, size - 12f, size * 0.65f)
                 }
                 canvas.drawPath(body, paint)
             }

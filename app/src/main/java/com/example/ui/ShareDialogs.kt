@@ -1250,7 +1250,7 @@ fun drawFooterBranding(
         }
     } else null
 
-    val footerY = height - 100f
+    val footerY = height - 130f
     val logoSize = 72
     val appTitle = "Frequent Habits"
 
@@ -1289,11 +1289,11 @@ fun drawFooterBranding(
 
 fun getSocialShareText(language: String): String {
     return if (language == "de") {
-        "Ich baue bessere Routinen auf und verfolge meine täglichen Ziele mit Frequent Habits! 🚀 Werde auch du produktiver und gestalte deine perfekte Routine. Lade die App hier herunter: https://ais-pre-lcaq5stuvgcre6e7salzdk-873513281263.europe-west2.run.app"
+        "Ich baue bessere Routinen auf und verfolge meine täglichen Ziele mit Frequent Habits! 🚀 Werde auch du produktiver und gestalte deine perfekte Routine. Lade die App hier herunter: https://github.com/FrequeNCy144/Frequent-Habits"
     } else if (language == "ka") {
-                        "მე ვაშენებ უკეთეს რუტინას და თვალყურს ვადევნებ ჩემს ყოველდღიურ მიზნებს ხშირი ჩვევებით! 🚀 შემომიერთდით პოზიტიური ჩვევების ჩამოყალიბებაში ყოველდღე. ჩამოტვირთეთ აპლიკაცია აქ: https://ais-pre-lcaq5stuvgcre6e7salzdk-873513281263.europe-west2.run.app"
+                        "მე ვაშენებ უკეთეს რუტინას და თვალყურს ვადევნებ ჩემს ყოველდღიურ მიზნებს ხშირი ჩვევებით! 🚀 შემომიერთდით პოზიტიური ჩვევების ჩამოყალიბებაში ყოველდღე. ჩამოტვირთეთ აპლიკაცია აქ: https://github.com/FrequeNCy144/Frequent-Habits"
                     } else {
-                        "I'm building better routines and tracking my daily goals with Frequent Habits! 🚀 Join me in shaping positive habits every day. Download the app here: https://ais-pre-lcaq5stuvgcre6e7salzdk-873513281263.europe-west2.run.app"
+                        "I'm building better routines and tracking my daily goals with Frequent Habits! 🚀 Join me in shaping positive habits every day. Download the app here: https://github.com/FrequeNCy144/Frequent-Habits"
                     }
 }
 

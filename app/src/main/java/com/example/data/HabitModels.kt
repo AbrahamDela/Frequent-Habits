@@ -349,14 +349,14 @@ fun isLogCompleted(habit: Habit, log: HabitLog?): Boolean {
     }
 }
 
-fun getLogStatus(habit: Habit, log: HabitLog?, dateStr: String, startSdfStr: String, todayStr: String): String {
+fun getLogStatus(habit: Habit, log: HabitLog?, dateStr: String, startSdfStr: String, todayStr: String, isWeeklyTargetReached: Boolean = false): String {
     if (dateStr < startSdfStr || dateStr > todayStr || !isHabitActiveOnDate(habit, dateStr)) {
         return "INACTIVE"
     }
     if (log != null && log.isPaused) {
         return "PAUSED"
     }
-    val isCompleted = isLogCompleted(habit, log)
+    val isCompleted = isLogCompleted(habit, log) || (habit.frequency == "TIMES_WEEKLY" && isWeeklyTargetReached)
     if (isCompleted) {
         return "SUCCESS"
     }
