@@ -168,7 +168,6 @@ class HabitWidgetProvider : AppWidgetProvider() {
         val appWidgetManager = AppWidgetManager.getInstance(context)
         val componentName = ComponentName(context, HabitWidgetProvider::class.java)
         val ids = appWidgetManager.getAppWidgetIds(componentName)
-        lastUpdateAllTime = System.currentTimeMillis()
         updateAllWidgetsSuspend(context, appWidgetManager, ids, isFullUpdate = false)
     }
 
@@ -189,7 +188,6 @@ class HabitWidgetProvider : AppWidgetProvider() {
         val appWidgetManager = AppWidgetManager.getInstance(context)
         val componentName = ComponentName(context, HabitWidgetProvider::class.java)
         val ids = appWidgetManager.getAppWidgetIds(componentName)
-        lastUpdateAllTime = System.currentTimeMillis()
         updateAllWidgetsSuspend(context, appWidgetManager, ids, isFullUpdate = false)
     }
 
@@ -200,12 +198,6 @@ class HabitWidgetProvider : AppWidgetProvider() {
         pendingResult: BroadcastReceiver.PendingResult? = null,
         isFullUpdate: Boolean = true
     ) {
-        val now = System.currentTimeMillis()
-        if (now - lastUpdateAllTime < 200L) {
-            pendingResult?.finish()
-            return
-        }
-        lastUpdateAllTime = now
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 updateAllWidgetsSuspend(context, appWidgetManager, appWidgetIds, isFullUpdate)
@@ -251,19 +243,14 @@ class HabitWidgetProvider : AppWidgetProvider() {
                     val isPaused = log != null && log.isPaused
                     if (!isPaused) {
                         nonPausedCount++
-                        val isExplicitlyFailed = log != null && log.value == -1f
-                        val isDone = if (isExplicitlyFailed) {
-                            false
-                        } else if (com.example.data.isLogCompleted(habit, log)) {
-                            true
-                        } else if (habit.frequency == "TIMES_WEEKLY") {
+                        val isDone = if (habit.frequency == "TIMES_WEEKLY") {
                             val weeklyTarget = habit.specificDays.toIntOrNull() ?: 3
                             val weeklyCount = allLogs.filter { l ->
                                 l.habitId == habit.id && l.date >= startOf7Days && l.date <= endOf7Days && com.example.data.isLogCompleted(habit, l)
                             }.size
-                            weeklyCount >= weeklyTarget
+                            weeklyCount >= weeklyTarget || com.example.data.isLogCompleted(habit, log)
                         } else {
-                            false
+                            com.example.data.isLogCompleted(habit, log)
                         }
                         if (isDone) {
                             completed++
@@ -278,12 +265,10 @@ class HabitWidgetProvider : AppWidgetProvider() {
                     views.setViewVisibility(R.id.widget_progress_bar, android.view.View.GONE)
                     views.setViewVisibility(R.id.widget_progress_bar_completed, android.view.View.VISIBLE)
                     views.setProgressBar(R.id.widget_progress_bar_completed, 100, 100, false)
-                    views.setProgressBar(R.id.widget_progress_bar, 100, 100, false)
                 } else {
                     views.setViewVisibility(R.id.widget_progress_bar_completed, android.view.View.GONE)
                     views.setViewVisibility(R.id.widget_progress_bar, android.view.View.VISIBLE)
                     views.setProgressBar(R.id.widget_progress_bar, 100, progressPercent, false)
-                    views.setProgressBar(R.id.widget_progress_bar_completed, 100, 0, false)
                 }
 
                 val perfectStats = com.example.data.StreakCalculator.calculate(allHabits, allLogs, targetDateStr = todayStr)
@@ -686,11 +671,6 @@ class HabitWidgetProvider : AppWidgetProvider() {
         private var lastUpdateTriggerTime = 0L
 
         fun triggerUpdate(context: Context) {
-            val now = System.currentTimeMillis()
-            if (now - lastUpdateTriggerTime < 200L) {
-                return
-            }
-            lastUpdateTriggerTime = now
             val intent = Intent(context, HabitWidgetProvider::class.java).apply {
                 action = ACTION_UPDATE_HABITS
             }

@@ -608,12 +608,8 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
             val isPaused = log != null && log.isPaused
             if (!isPaused) {
                 nonPausedActiveCount++
-                val isExplicitlyFailed = log != null && log.value == -1f
-                val isCompleted = if (isExplicitlyFailed) {
-                    false
-                } else if (isLogCompleted(habit, log)) {
-                    true
-                } else if (habit.frequency == "TIMES_WEEKLY") {
+                var isCompleted = isLogCompleted(habit, log)
+                if (!isCompleted && habit.frequency == "TIMES_WEEKLY") {
                     val weeklyTargetCount = habit.specificDays.toIntOrNull() ?: 3
                     val curDate = try { java.time.LocalDate.parse(date) } catch (e: Exception) { java.time.LocalDate.now() }
                     val startOf7Days = curDate.minusDays(6).toString()
@@ -621,9 +617,9 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
                     val weeklyLoggedCount = logs.filter { l ->
                         l.habitId == habit.id && l.date >= startOf7Days && l.date <= endOf7Days && isLogCompleted(habit, l)
                     }.size
-                    weeklyLoggedCount >= weeklyTargetCount
-                } else {
-                    false
+                    if (weeklyLoggedCount >= weeklyTargetCount) {
+                        isCompleted = true
+                    }
                 }
                 if (isCompleted) {
                     completedCount++
