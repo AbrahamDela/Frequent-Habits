@@ -7083,7 +7083,8 @@ fun TimeframeSelectorPills(
     onTimeframeSelected: (Int) -> Unit,
     language: String,
     modifier: Modifier = Modifier,
-    customLabels: List<String>? = null
+    customLabels: List<String>? = null,
+    accentColor: Color = PrimaryViolet
 ) {
     val labels = customLabels ?: if (language == "de") {
         listOf("Diese Woche", "Diesen Monat", "Dieses Jahr", "Gesamt")
@@ -7106,7 +7107,11 @@ fun TimeframeSelectorPills(
                 modifier = Modifier
                     .weight(1f)
                     .clip(RoundedCornerShape(10.dp))
-                    .background(if (isSelected) Color(0xFF3A3A44) else Color.Transparent)
+                    .background(if (isSelected) accentColor.copy(alpha = 0.22f) else Color.Transparent)
+                    .then(
+                        if (isSelected) Modifier.border(1.dp, accentColor.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
+                        else Modifier
+                    )
                     .clickable { onTimeframeSelected(index) }
                     .padding(vertical = 8.dp),
                 contentAlignment = Alignment.Center
@@ -7115,7 +7120,7 @@ fun TimeframeSelectorPills(
                     text = label,
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                    color = if (isSelected) TextPrimary else TextSecondary,
+                    color = if (isSelected) accentColor else TextSecondary,
                     fontSize = 10.5.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -7322,7 +7327,8 @@ fun HabitVolumeProgressionCard(
 @Composable
 fun ScoreTrendLineChart(
     points: List<TrendPoint>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    accentColor: Color = PrimaryViolet
 ) {
     if (points.isEmpty()) return
 
@@ -7412,8 +7418,8 @@ fun ScoreTrendLineChart(
                         path = fillPath,
                         brush = Brush.verticalGradient(
                             colors = listOf(
-                                PrimaryViolet.copy(alpha = 0.35f),
-                                PrimaryViolet.copy(alpha = 0.02f)
+                                accentColor.copy(alpha = 0.35f),
+                                accentColor.copy(alpha = 0.02f)
                             ),
                             startY = 0f,
                             endY = graphHeight
@@ -7422,7 +7428,7 @@ fun ScoreTrendLineChart(
 
                     drawPath(
                         path = linePath,
-                        color = PrimaryViolet,
+                        color = accentColor,
                         style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round)
                     )
                 }
@@ -7434,7 +7440,7 @@ fun ScoreTrendLineChart(
                         center = pt
                     )
                     drawCircle(
-                        color = PrimaryViolet,
+                        color = accentColor,
                         radius = 3.5.dp.toPx(),
                         center = pt
                     )
@@ -7687,12 +7693,13 @@ fun OverallScoreTrendCard(
                     listOf("Wöchentlich", "Monatlich", "Jährlich")
                 } else {
                     listOf("Weekly", "Monthly", "Yearly")
-                }
+                },
+                accentColor = accentColor
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            ScoreTrendLineChart(points = trendPoints)
+            ScoreTrendLineChart(points = trendPoints, accentColor = accentColor)
         }
     }
 }
@@ -7716,7 +7723,7 @@ fun OverallVolumeProgressionCard(
         shape = RoundedCornerShape(20.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
+            .border(1.dp, accentColor.copy(alpha = 0.35f), RoundedCornerShape(20.dp))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -7784,7 +7791,8 @@ fun OverallVolumeProgressionCard(
                     listOf("Wöchentlich", "Monatlich", "Jährlich")
                 } else {
                     listOf("Weekly", "Monthly", "Yearly")
-                }
+                },
+                accentColor = accentColor
             )
 
             Spacer(modifier = Modifier.height(16.dp))

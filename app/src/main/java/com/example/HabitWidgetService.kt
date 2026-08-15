@@ -70,8 +70,6 @@ class HabitWidgetFactory(private val context: Context, intent: Intent) : RemoteV
 
             val views = RemoteViews(context.packageName, R.layout.widget_habit_item)
 
-            val status = com.example.data.getLogStatus(habit, log, selectedDate, "1970-01-01", selectedDate)
-
             var isWeeklyTargetReached = false
             var weeklyCount = 0
             var weeklyTarget = 0
@@ -85,6 +83,8 @@ class HabitWidgetFactory(private val context: Context, intent: Intent) : RemoteV
                 }.size
                 isWeeklyTargetReached = weeklyCount >= weeklyTarget
             }
+
+            val status = com.example.data.getLogStatus(habit, log, selectedDate, "1970-01-01", selectedDate, isWeeklyTargetReached)
 
             val bgRes = when {
                 status == "SUCCESS" -> R.drawable.widget_item_completed_bg
