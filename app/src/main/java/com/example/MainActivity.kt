@@ -6163,10 +6163,13 @@ fun HabitDetailScreen(
         // 7. Completion Volume Progression Card (Bar Chart)
         item(key = "detail_volume_progression") {
             val allLogs by viewModel.allLogs.collectAsStateWithLifecycle()
+            val accentColorName by viewModel.accentColorName.collectAsStateWithLifecycle()
+            val accentColor = remember(accentColorName) { HabitIconMapping.getColor(accentColorName) }
             HabitVolumeProgressionCard(
                 habit = habit,
                 logs = allLogs,
                 language = language,
+                accentColor = accentColor,
                 onInfoClick = { t, e -> activeExplanation = t to e }
             )
         }
@@ -7231,6 +7234,7 @@ fun HabitVolumeProgressionCard(
     habit: Habit,
     logs: List<HabitLog>,
     language: String,
+    accentColor: Color = PrimaryViolet,
     onInfoClick: (String, String) -> Unit
 ) {
     var selectedTimeframeIndex by rememberSaveable(habit.id) { mutableIntStateOf(0) }
@@ -7238,8 +7242,6 @@ fun HabitVolumeProgressionCard(
     val volumePoints = remember(habit, logs, selectedTimeframeIndex) {
         calculateHabitVolumePoints(habit, logs, selectedTimeframeIndex)
     }
-
-    val habitColor = remember(habit.color) { HabitIconMapping.getColor(habit.color) }
 
     Card(
         colors = CardDefaults.cardColors(containerColor = AppCard),
@@ -7256,13 +7258,13 @@ fun HabitVolumeProgressionCard(
                 Box(
                     modifier = Modifier
                         .size(28.dp)
-                        .background(habitColor.copy(alpha = 0.18f), CircleShape),
+                        .background(accentColor.copy(alpha = 0.18f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.BarChart,
                         contentDescription = "Volume",
-                        tint = habitColor,
+                        tint = accentColor,
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -7314,12 +7316,13 @@ fun HabitVolumeProgressionCard(
                     listOf("Wöchentlich", "Monatlich", "Jährlich")
                 } else {
                     listOf("Weekly", "Monthly", "Yearly")
-                }
+                },
+                accentColor = accentColor
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            CompletionsBarChart(points = volumePoints, habitColor = habitColor)
+            CompletionsBarChart(points = volumePoints, habitColor = accentColor)
         }
     }
 }
@@ -7723,7 +7726,7 @@ fun OverallVolumeProgressionCard(
         shape = RoundedCornerShape(20.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, accentColor.copy(alpha = 0.35f), RoundedCornerShape(20.dp))
+            .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(

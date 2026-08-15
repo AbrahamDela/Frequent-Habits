@@ -125,13 +125,11 @@ class HabitWidgetFactory(private val context: Context, intent: Intent) : RemoteV
             views.setTextViewText(R.id.widget_habit_name, nameText)
 
             val checkIcon = when {
-                status == "SUCCESS" -> {
-                    if (habit.frequency == "TIMES_WEEKLY" && isWeeklyTargetReached) R.drawable.ic_widget_circle_weekly_done
-                    else R.drawable.ic_widget_circle_checked
-                }
+                status == "SUCCESS" -> R.drawable.ic_widget_circle_checked
                 (isNumerical && currentVal >= habit.targetValue) -> R.drawable.ic_widget_circle_checked
                 status == "FAILED" -> R.drawable.ic_widget_failed_cross
                 status == "PAUSED" -> R.drawable.ic_widget_circle_paused
+                habit.frequency == "TIMES_WEEKLY" && isWeeklyTargetReached -> R.drawable.ic_widget_circle_weekly_done
                 isNumerical -> R.drawable.ic_widget_circle_plus
                 else -> R.drawable.ic_widget_circle_unchecked
             }
