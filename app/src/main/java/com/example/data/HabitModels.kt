@@ -356,14 +356,13 @@ fun getLogStatus(habit: Habit, log: HabitLog?, dateStr: String, startSdfStr: Str
     if (log != null && log.isPaused) {
         return "PAUSED"
     }
-    val isCompleted = isLogCompleted(habit, log) || (habit.frequency == "TIMES_WEEKLY" && isWeeklyTargetReached)
-    if (isCompleted) {
+    if (log != null && log.value == -1f) {
+        return "FAILED"
+    }
+    if (isLogCompleted(habit, log)) {
         return "SUCCESS"
     }
     if (habit.isNegative) {
-        return "FAILED"
-    }
-    if (log != null && log.value == -1f) {
         return "FAILED"
     }
     return "PENDING"

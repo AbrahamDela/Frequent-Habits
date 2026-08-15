@@ -90,7 +90,6 @@ class HabitWidgetFactory(private val context: Context, intent: Intent) : RemoteV
                 status == "SUCCESS" -> R.drawable.widget_item_completed_bg
                 status == "FAILED" -> R.drawable.widget_item_failed_bg
                 status == "PAUSED" -> R.drawable.widget_item_paused_bg
-                habit.frequency == "TIMES_WEEKLY" && isWeeklyTargetReached -> R.drawable.widget_item_completed_bg
                 else -> R.drawable.widget_item_normal_bg
             }
             views.setInt(R.id.widget_habit_layout, "setBackgroundResource", bgRes)
@@ -126,10 +125,13 @@ class HabitWidgetFactory(private val context: Context, intent: Intent) : RemoteV
             views.setTextViewText(R.id.widget_habit_name, nameText)
 
             val checkIcon = when {
-                status == "SUCCESS" || (isNumerical && currentVal >= habit.targetValue) -> R.drawable.ic_widget_circle_checked
+                status == "SUCCESS" -> {
+                    if (habit.frequency == "TIMES_WEEKLY" && isWeeklyTargetReached) R.drawable.ic_widget_circle_weekly_done
+                    else R.drawable.ic_widget_circle_checked
+                }
+                (isNumerical && currentVal >= habit.targetValue) -> R.drawable.ic_widget_circle_checked
                 status == "FAILED" -> R.drawable.ic_widget_failed_cross
                 status == "PAUSED" -> R.drawable.ic_widget_circle_paused
-                habit.frequency == "TIMES_WEEKLY" && isWeeklyTargetReached -> R.drawable.ic_widget_circle_weekly_done
                 isNumerical -> R.drawable.ic_widget_circle_plus
                 else -> R.drawable.ic_widget_circle_unchecked
             }

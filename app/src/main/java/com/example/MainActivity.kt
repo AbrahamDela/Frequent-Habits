@@ -11339,7 +11339,7 @@ fun SettingsScreen(
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Text(
-                                    text = tr(language, "Habit-Tracker Import (CSV / ZIP)", "Habit Tracker Import (CSV / ZIP)"),
+                                    text = tr(language, "Loop Habit Tracker Import (ZIP / CSV)", "Loop Habit Tracker Import (ZIP / CSV)"),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = TextPrimary,
                                     fontWeight = FontWeight.Bold
@@ -11349,7 +11349,7 @@ fun SettingsScreen(
                                     shape = RoundedCornerShape(100.dp)
                                 ) {
                                     Text(
-                                        text = "LOOP / BULL / CSV",
+                                        text = "LOOP ZIP / CSV",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = PrimaryViolet,
                                         fontWeight = FontWeight.Bold,
@@ -11361,8 +11361,8 @@ fun SettingsScreen(
                             Text(
                                 text = tr(
                                     language,
-                                    "Importiere deine Historie direkt aus Loop Habit Tracker, Bull Habit Tracker (HabitBull) oder eigenen CSV/ZIP-Dateien.",
-                                    "Import habits and tracking history directly from Loop Habit Tracker, Bull Habit Tracker (HabitBull), or custom CSV/ZIP files."
+                                    "Importiere deine gesamte Historie (ZIP) direkt aus dem Loop Habit Tracker, oder lade einzelne CSV-Dateien (Loop, Bull, Custom) hoch.",
+                                    "Import your entire history (ZIP) directly from Loop Habit Tracker, or upload individual CSV files (Loop, Bull, Custom)."
                                 ),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = TextSecondary

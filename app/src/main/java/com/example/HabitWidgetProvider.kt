@@ -168,7 +168,8 @@ class HabitWidgetProvider : AppWidgetProvider() {
         val appWidgetManager = AppWidgetManager.getInstance(context)
         val componentName = ComponentName(context, HabitWidgetProvider::class.java)
         val ids = appWidgetManager.getAppWidgetIds(componentName)
-        updateAllWidgetsSuspend(context, appWidgetManager, ids, isFullUpdate = true)
+        lastUpdateAllTime = System.currentTimeMillis()
+        updateAllWidgetsSuspend(context, appWidgetManager, ids, isFullUpdate = false)
     }
 
     private suspend fun performDeltaHabit(context: Context, habitId: Int, delta: Float) {
@@ -188,7 +189,8 @@ class HabitWidgetProvider : AppWidgetProvider() {
         val appWidgetManager = AppWidgetManager.getInstance(context)
         val componentName = ComponentName(context, HabitWidgetProvider::class.java)
         val ids = appWidgetManager.getAppWidgetIds(componentName)
-        updateAllWidgetsSuspend(context, appWidgetManager, ids, isFullUpdate = true)
+        lastUpdateAllTime = System.currentTimeMillis()
+        updateAllWidgetsSuspend(context, appWidgetManager, ids, isFullUpdate = false)
     }
 
     private fun updateAllWidgets(
@@ -198,6 +200,12 @@ class HabitWidgetProvider : AppWidgetProvider() {
         pendingResult: BroadcastReceiver.PendingResult? = null,
         isFullUpdate: Boolean = true
     ) {
+        val now = System.currentTimeMillis()
+        if (now - lastUpdateAllTime < 600L) {
+            pendingResult?.finish()
+            return
+        }
+        lastUpdateAllTime = now
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 updateAllWidgetsSuspend(context, appWidgetManager, appWidgetIds, isFullUpdate)
@@ -662,6 +670,9 @@ class HabitWidgetProvider : AppWidgetProvider() {
 
         @Volatile
         private var lastClickTime = 0L
+        @Volatile
+        private var lastUpdateAllTime = 0L
+
         @Volatile
         private var lastClickedHabitId = -1
         @Volatile

@@ -152,9 +152,8 @@ object CsvImporter {
 
                         if (simpleName.equals("Habits.csv", ignoreCase = true)) {
                             habitsCsvLines = lines
-                        } else if (simpleName.equals("Checkmarks.csv", ignoreCase = true) && pathParts.size >= 2) {
-                            val habitName = pathParts[pathParts.size - 2]
-                            checkmarkFiles[habitName] = lines
+                        } else if (simpleName.equals("Checkmarks.csv", ignoreCase = true)) {
+                            checkmarkFiles["Checkmarks.csv"] = lines
                         } else if (!simpleName.equals("Scores.csv", ignoreCase = true) && !simpleName.equals("History.csv", ignoreCase = true)) {
                             checkmarkFiles[simpleName] = lines
                         }
@@ -229,7 +228,7 @@ object CsvImporter {
         }
 
         val header = habitsLines.first().map { it.trim().lowercase(Locale.ROOT) }
-        val nameIdx = header.indexOfFirst { it.contains("name") }.coerceAtLeast(1)
+        val nameIdx = header.indexOfFirst { it.contains("name") }.coerceAtLeast(0)
         val typeIdx = header.indexOfFirst { it.contains("type") }
         val descIdx = header.indexOfFirst { it.contains("description") || it.contains("question") }
         val colorIdx = header.indexOfFirst { it.contains("color") }
@@ -534,14 +533,22 @@ object CsvImporter {
     // ----------------------------------------------------------------------------------
 
     private fun readCsvLinesFromReader(reader: BufferedReader): List<List<String>> {
-        val rawLines = reader.readLines().filter { it.isNotBlank() }
+        val rawLines = mutableListOf<String>()
+        var line: String?
+        while (true) {
+            line = reader.readLine()
+            if (line == null) break
+            if (line.isNotBlank()) {
+                rawLines.add(line)
+            }
+        }
         if (rawLines.isEmpty()) return emptyList()
 
         val delimiter = detectDelimiter(rawLines.first())
         val parsedLines = mutableListOf<List<String>>()
 
-        for (line in rawLines) {
-            parsedLines.add(parseCsvRow(line, delimiter))
+        for (row in rawLines) {
+            parsedLines.add(parseCsvRow(row, delimiter))
         }
 
         return parsedLines
