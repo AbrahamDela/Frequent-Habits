@@ -2162,13 +2162,7 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
             if (value == 0f) {
                 repository.unlogHabit(habitId, date)
             } else {
-                val habit = repository.getHabitByIdSuspend(habitId)
-                val cappedValue = if (habit != null && habit.targetValue > 0f && value > 0f) {
-                    value.coerceAtMost(habit.targetValue)
-                } else {
-                    value
-                }
-                repository.logHabit(habitId, date, cappedValue)
+                repository.logHabit(habitId, date, value)
             }
             // Refresh widget state
             HabitWidgetProvider.triggerUpdate(getApplication())

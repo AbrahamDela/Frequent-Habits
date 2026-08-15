@@ -92,7 +92,7 @@ class HabitWidgetProvider : AppWidgetProvider() {
 
             if (itemAction == "TOGGLE" || itemAction == "DELTA") {
                 val now = System.currentTimeMillis()
-                if (habitId == lastClickedHabitId && (now - lastClickTime) < 300L) {
+                if (habitId == lastClickedHabitId && (now - lastClickTime) < 600L) {
                     return
                 }
                 lastClickedHabitId = habitId
@@ -147,8 +147,6 @@ class HabitWidgetProvider : AppWidgetProvider() {
                     }
                 }
             }
-        } else {
-            super.onReceive(context, intent)
         }
     }
 
@@ -671,7 +669,7 @@ class HabitWidgetProvider : AppWidgetProvider() {
 
         fun triggerUpdate(context: Context) {
             val now = System.currentTimeMillis()
-            if (now - lastUpdateTriggerTime < 300L) {
+            if (now - lastUpdateTriggerTime < 600L) {
                 return
             }
             lastUpdateTriggerTime = now

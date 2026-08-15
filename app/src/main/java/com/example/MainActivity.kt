@@ -4590,13 +4590,11 @@ fun HabitItemRow(
     }
 
     val handleUserAddQuantity = {
-        if (!isCompleted) {
-            val step = if (habit.clickIncrement > 0f) habit.clickIncrement else 1f
-            if (currentValue + step >= targetVal) {
-                triggerUserFeedback()
-            }
-            onAddQuantity(habit.id, currentValue, step)
+        val step = if (habit.clickIncrement > 0f) habit.clickIncrement else 1f
+        if (currentValue < targetVal && currentValue + step >= targetVal) {
+            triggerUserFeedback()
         }
+        onAddQuantity(habit.id, currentValue, step)
     }
 
     LaunchedEffect(isCompleted, selectedDate) {
@@ -7316,7 +7314,7 @@ fun HabitVolumeProgressionCard(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            CompletionsBarChart(points = volumePoints, habitColor = PrimaryViolet)
+            CompletionsBarChart(points = volumePoints, habitColor = habitColor)
         }
     }
 }
@@ -7607,6 +7605,7 @@ fun OverallScoreTrendCard(
     allHabits: List<Habit>,
     allLogs: List<HabitLog>,
     language: String,
+    accentColor: Color = PrimaryViolet,
     onInfoClick: (String, String) -> Unit
 ) {
     var selectedTimeframeIndex by rememberSaveable { mutableIntStateOf(0) }
@@ -7630,13 +7629,13 @@ fun OverallScoreTrendCard(
                 Box(
                     modifier = Modifier
                         .size(28.dp)
-                        .background(PrimaryViolet.copy(alpha = 0.18f), CircleShape),
+                        .background(accentColor.copy(alpha = 0.18f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.ShowChart,
                         contentDescription = "Score Trend",
-                        tint = PrimaryViolet,
+                        tint = accentColor,
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -7703,6 +7702,7 @@ fun OverallVolumeProgressionCard(
     allHabits: List<Habit>,
     allLogs: List<HabitLog>,
     language: String,
+    accentColor: Color = PrimaryViolet,
     onInfoClick: (String, String) -> Unit
 ) {
     var selectedTimeframeIndex by rememberSaveable { mutableIntStateOf(0) }
@@ -7726,13 +7726,13 @@ fun OverallVolumeProgressionCard(
                 Box(
                     modifier = Modifier
                         .size(28.dp)
-                        .background(PrimaryViolet.copy(alpha = 0.18f), CircleShape),
+                        .background(accentColor.copy(alpha = 0.18f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.BarChart,
                         contentDescription = "Volume",
-                        tint = PrimaryViolet,
+                        tint = accentColor,
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -7791,7 +7791,7 @@ fun OverallVolumeProgressionCard(
 
             CompletionsBarChart(
                 points = volumePoints,
-                habitColor = PrimaryViolet
+                habitColor = accentColor
             )
         }
     }
@@ -7813,6 +7813,8 @@ fun OverallStatsScreen(
     val allLogs by viewModel.allLogs.collectAsStateWithLifecycle()
     val overallCalData by viewModel.overallCalendarData.collectAsStateWithLifecycle()
     val allDailyNotes by viewModel.allDailyNotes.collectAsStateWithLifecycle()
+    val accentColorName by viewModel.accentColorName.collectAsStateWithLifecycle()
+    val accentColor = remember(accentColorName) { HabitIconMapping.getColor(accentColorName) }
 
     val heatmapMonthOffset by viewModel.heatmapMonthOffset.collectAsStateWithLifecycle()
     val heatmapCanPrevMonth by viewModel.heatmapCanPrevMonth.collectAsStateWithLifecycle()
@@ -8829,6 +8831,7 @@ fun OverallStatsScreen(
                     allHabits = allHabits,
                     allLogs = allLogs,
                     language = language,
+                    accentColor = accentColor,
                     onInfoClick = { t, e -> activeExplanation = t to e }
                 )
             }
@@ -8839,6 +8842,7 @@ fun OverallStatsScreen(
                     allHabits = allHabits,
                     allLogs = allLogs,
                     language = language,
+                    accentColor = accentColor,
                     onInfoClick = { t, e -> activeExplanation = t to e }
                 )
             }
@@ -16699,18 +16703,19 @@ private fun OnboardingStepPersonalize(language: String, viewModel: HabitsViewMod
         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)
     ) {
         Text(
-            text = if (language == "de") "Personalisiere deine Erfahrung!" else if (language == "ka") "მოახდინე შენი გამოცდილების პერსონალიზაცია!" else "Personalize your experience!",
-            style = MaterialTheme.typography.headlineLarge.copy(fontSize = 32.sp, lineHeight = 38.sp),
+            text = if (language == "de") "App personalisieren" else if (language == "ka") "პერსონალიზაცია" else "Personalize App",
+            style = MaterialTheme.typography.headlineLarge.copy(fontSize = 28.sp, lineHeight = 34.sp),
             color = MaterialTheme.colorScheme.onBackground,
             fontWeight = FontWeight.ExtraBold,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            maxLines = 1
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         // Language Picker
         Text(
-            text = if (language == "de") "SPRACHE / LANGUAGE" else if (language == "ka") "ენა" else "LANGUAGE",
+            text = if (language == "de") "SPRACHE" else if (language == "ka") "ენა" else "LANGUAGE",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = FontWeight.Bold,
@@ -16722,8 +16727,8 @@ private fun OnboardingStepPersonalize(language: String, viewModel: HabitsViewMod
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             listOf(
-                "de" to "Deutsch 🇩🇪",
                 "en" to "English 🇬🇧",
+                "de" to "Deutsch 🇩🇪",
                 "ka" to "ქართული 🇬🇪"
             ).forEach { (code, label) ->
                 val isSel = language == code
@@ -16747,11 +16752,11 @@ private fun OnboardingStepPersonalize(language: String, viewModel: HabitsViewMod
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(14.dp))
 
         // Design Mode
         Text(
-            text = if (language == "de") "DESIGN MODUS" else if (language == "ka") "დიზაინის თემა" else "DESIGN THEME",
+            text = if (language == "de") "DESIGN THEME" else if (language == "ka") "დიზაინის თემა" else "DESIGN THEME",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = FontWeight.Bold,
@@ -16831,21 +16836,25 @@ private fun OnboardingStepPersonalize(language: String, viewModel: HabitsViewMod
             language = language
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(14.dp))
 
-        // Notification Permission Section
+        // Notification Section Header
+        Text(
+            text = if (language == "de") "BENACHRICHTIGUNGEN" else if (language == "ka") "შეტყობინებები" else "NOTIFICATIONS",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.align(Alignment.Start)
+        )
+        Spacer(modifier = Modifier.height(6.dp))
         Surface(
             color = MaterialTheme.colorScheme.surfaceVariant,
             shape = RoundedCornerShape(14.dp),
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Row(
-                modifier = Modifier.padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         modifier = Modifier
                             .size(36.dp)
@@ -16860,23 +16869,24 @@ private fun OnboardingStepPersonalize(language: String, viewModel: HabitsViewMod
                         )
                     }
                     Spacer(modifier = Modifier.width(10.dp))
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = if (language == "de") "Benachrichtigungen" else if (language == "ka") "შეტყობინებები" else "Notifications",
+                            text = if (language == "de") "Tägliche Erinnerungen & Insights" else if (language == "ka") "ყოველდღიური შეხსენებები და ანალიზი" else "Daily Reminders & Insights",
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
                             text = if (hasNotificationPermission) {
-                                if (language == "de") "Erinnerungen & Smart Insights aktiv ✓" else if (language == "ka") "შეხსენებები და Smart Insights აქტიურია ✓" else "Reminders & Smart Insights active ✓"
+                                if (language == "de") "Erinnerungen sind aktiv ✓" else if (language == "ka") "შეხსენებები აქტიურია ✓" else "Reminders active ✓"
                             } else {
-                                if (language == "de") "Tägliche Erinnerungen & Insights" else if (language == "ka") "ყოველდღიური შეხსენებები და Smart Insights" else "Daily reminders & Smart Insights"
+                                if (language == "de") "Tägliche Benachrichtigungen aktivieren" else if (language == "ka") "ყოველდღიური შეტყობინებების ჩართვა" else "Enable daily notifications"
                             },
                             style = MaterialTheme.typography.bodySmall,
                             color = if (hasNotificationPermission) SuccessGreen else TextSecondary
                         )
                     }
                 }
+                Spacer(modifier = Modifier.height(8.dp))
                 if (!hasNotificationPermission) {
                     Button(
                         onClick = {
@@ -16888,32 +16898,63 @@ private fun OnboardingStepPersonalize(language: String, viewModel: HabitsViewMod
                                 hasNotificationPermission = true
                             }
                         },
-                        shape = RoundedCornerShape(8.dp),
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                        contentPadding = PaddingValues(vertical = 8.dp)
                     ) {
-                        Text(if (language == "de") "Aktivieren" else if (language == "ka") "ჩართვა" else "Enable", style = MaterialTheme.typography.labelSmall)
+                        Text(
+                            text = if (language == "de") "Benachrichtigungen aktivieren" else if (language == "ka") "შეტყობინებების ჩართვა" else "Enable Notifications",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
                     }
                 } else {
-                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = SuccessGreen, modifier = Modifier.size(22.dp))
+                    Surface(
+                        color = SuccessGreen.copy(alpha = 0.15f),
+                        shape = RoundedCornerShape(10.dp),
+                        border = BorderStroke(1.dp, SuccessGreen.copy(alpha = 0.3f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(vertical = 8.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.CheckCircle, contentDescription = null, tint = SuccessGreen, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = if (language == "de") "Aktiviert ✓" else if (language == "ka") "ჩართულია ✓" else "Enabled ✓",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = SuccessGreen
+                            )
+                        }
+                    }
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(14.dp))
 
-        // SAF Backup Folder Section
+        // SAF Backup Folder Section Header
+        Text(
+            text = if (language == "de") "AUTO-BACKUP ORDNER" else if (language == "ka") "სარეზერვო საქაღალდე" else "AUTO-BACKUP FOLDER",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.align(Alignment.Start)
+        )
+        Spacer(modifier = Modifier.height(6.dp))
         Surface(
             color = MaterialTheme.colorScheme.surfaceVariant,
             shape = RoundedCornerShape(14.dp),
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Row(
-                modifier = Modifier.padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         modifier = Modifier
                             .size(36.dp)
@@ -16928,35 +16969,38 @@ private fun OnboardingStepPersonalize(language: String, viewModel: HabitsViewMod
                         )
                     }
                     Spacer(modifier = Modifier.width(10.dp))
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = if (language == "de") "Auto-Backup Ordner" else if (language == "ka") "ავტომატური სარეზერვო საქაღალდე" else "Auto-Backup Folder",
+                            text = if (language == "de") "Lokales Auto-Backup" else if (language == "ka") "ადგილობრივი ავტო-სარეზერვო ასლი" else "Local Auto-Backup",
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
                             text = if (isFolderSet) {
-                                if (language == "de") "Speicherort festgelegt ✓" else if (language == "ka") "სარეზერვო საქაღალდის ნაკრები ✓" else "Backup folder set ✓"
+                                if (language == "de") "Speicherort festgelegt ✓" else if (language == "ka") "სარეზერვო საქაღალდე არჩეულია ✓" else "Backup folder set ✓"
                             } else {
-                                if (language == "de") "Lokalen Ordner für Backups wählen" else if (language == "ka") "აირჩიეთ ადგილობრივი საქაღალდე ავტომატური სარეზერვო ასლისთვის" else "Pick local folder for auto backups"
+                                if (language == "de") "Lokalen Ordner für Backups wählen" else if (language == "ka") "აირჩიეთ ადგილობრივი საქაღალდე" else "Pick local folder for auto backups"
                             },
                             style = MaterialTheme.typography.bodySmall,
                             color = if (isFolderSet) SuccessGreen else TextSecondary
                         )
                     }
                 }
+                Spacer(modifier = Modifier.height(8.dp))
                 Button(
                     onClick = { folderPickerLauncher.launch(null) },
-                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = if (isFolderSet) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.primary
                     ),
                     border = if (isFolderSet) BorderStroke(1.dp, MaterialTheme.colorScheme.outline) else null,
-                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                    contentPadding = PaddingValues(vertical = 8.dp)
                 ) {
                     Text(
-                        text = if (isFolderSet) (if (language == "de") "Ändern" else if (language == "ka") "შეცვლა" else "Change") else (if (language == "de") "Wählen" else if (language == "ka") "აირჩიეთ" else "Select"),
+                        text = if (isFolderSet) (if (language == "de") "Backup-Ordner ändern" else if (language == "ka") "საქაღალდის შეცვლა" else "Change Backup Folder") else (if (language == "de") "Backup-Ordner wählen" else if (language == "ka") "საქაღალდის არჩევა" else "Select Backup Folder"),
                         style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
                         color = if (isFolderSet) MaterialTheme.colorScheme.onSurface else Color.White
                     )
                 }
@@ -17056,11 +17100,12 @@ private fun OnboardingStepSmartInsights(language: String) {
             shape = RoundedCornerShape(28.dp),
             modifier = Modifier
                 .fillMaxWidth()
+                .height(140.dp)
                 .border(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f), RoundedCornerShape(28.dp))
         ) {
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+            Box(
+                modifier = Modifier.fillMaxSize().padding(16.dp),
+                contentAlignment = Alignment.Center
             ) {
                 Surface(
                     color = AppCard,
@@ -17068,7 +17113,7 @@ private fun OnboardingStepSmartInsights(language: String) {
                     border = BorderStroke(1.dp, PrimaryViolet.copy(alpha = 0.3f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+                    Column(modifier = Modifier.padding(14.dp)) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -17104,7 +17149,7 @@ private fun OnboardingStepSmartInsights(language: String) {
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
 
                         Text(
                             text = androidx.compose.ui.text.buildAnnotatedString {
@@ -17113,21 +17158,13 @@ private fun OnboardingStepSmartInsights(language: String) {
                                     withStyle(style = androidx.compose.ui.text.SpanStyle(fontWeight = FontWeight.Bold)) {
                                         append("18 Abschlüsse")
                                     }
-                                    append(" verzeichnet, verglichen mit ")
-                                    withStyle(style = androidx.compose.ui.text.SpanStyle(fontWeight = FontWeight.Bold)) {
-                                        append("12")
-                                    }
-                                    append(" in der Vorwoche. Klasse Steigerung! 🚀")
+                                    append(" verzeichnet. Klasse Steigerung! 🚀")
                                 } else {
                                     append("In the last 7 days you achieved ")
                                     withStyle(style = androidx.compose.ui.text.SpanStyle(fontWeight = FontWeight.Bold)) {
                                         append("18 completions")
                                     }
-                                    append(", compared to ")
-                                    withStyle(style = androidx.compose.ui.text.SpanStyle(fontWeight = FontWeight.Bold)) {
-                                        append("12")
-                                    }
-                                    append(" the previous week. Great increase! 🚀")
+                                    append(". Great increase! 🚀")
                                 }
                             },
                             style = MaterialTheme.typography.bodyMedium,
@@ -17138,14 +17175,15 @@ private fun OnboardingStepSmartInsights(language: String) {
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         Text(
             text = "Smart Insights",
-            style = MaterialTheme.typography.headlineLarge.copy(fontSize = 32.sp, lineHeight = 38.sp),
+            style = MaterialTheme.typography.headlineLarge.copy(fontSize = 28.sp, lineHeight = 34.sp),
             color = MaterialTheme.colorScheme.onBackground,
             fontWeight = FontWeight.ExtraBold,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            maxLines = 1
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
@@ -17177,11 +17215,12 @@ private fun OnboardingStepReviewTimeCapsule(language: String) {
             shape = RoundedCornerShape(28.dp),
             modifier = Modifier
                 .fillMaxWidth()
+                .height(140.dp)
                 .border(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f), RoundedCornerShape(28.dp))
         ) {
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+            Box(
+                modifier = Modifier.fillMaxSize().padding(16.dp),
+                contentAlignment = Alignment.Center
             ) {
                 // Monthly Review Cover Slide Preview
                 Surface(
@@ -17191,29 +17230,34 @@ private fun OnboardingStepReviewTimeCapsule(language: String) {
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
-                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        modifier = Modifier.fillMaxWidth().padding(12.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(44.dp)
-                                .background(Color.White.copy(alpha = 0.12f), CircleShape),
-                            contentAlignment = Alignment.Center
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.CalendarToday,
-                                contentDescription = null,
-                                tint = Color(0xFFA78BFA),
-                                modifier = Modifier.size(22.dp)
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .background(Color.White.copy(alpha = 0.12f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CalendarToday,
+                                    contentDescription = null,
+                                    tint = Color(0xFFA78BFA),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (language == "de") "Dein Monatsrückblick" else if (language == "ka") "თქვენი ყოველთვიური მიმოხილვა" else "Your Monthly Review",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold
                             )
                         }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = if (language == "de") "Dein Monatsrückblick" else if (language == "ka") "თქვენი ყოველთვიური მიმოხილვა" else "Your Monthly Review",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold
-                        )
                         Spacer(modifier = Modifier.height(8.dp))
                         Surface(
                             color = PrimaryViolet.copy(alpha = 0.3f),
@@ -17239,14 +17283,15 @@ private fun OnboardingStepReviewTimeCapsule(language: String) {
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         Text(
-            text = if (language == "de") "Rückblick & Zeitkapsel" else if (language == "ka") "მიმოხილვა და დროის კაფსულა" else "Review & Time Capsule",
-            style = MaterialTheme.typography.headlineLarge.copy(fontSize = 32.sp, lineHeight = 38.sp),
+            text = if (language == "de") "Rückblick & Zeitkapsel" else if (language == "ka") "მიმოხილვა და კაფსულა" else "Review & Time Capsule",
+            style = MaterialTheme.typography.headlineLarge.copy(fontSize = 28.sp, lineHeight = 34.sp),
             color = MaterialTheme.colorScheme.onBackground,
             fontWeight = FontWeight.ExtraBold,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            maxLines = 1
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
@@ -17278,11 +17323,12 @@ private fun OnboardingStepMilestoneRewards(language: String) {
             shape = RoundedCornerShape(28.dp),
             modifier = Modifier
                 .fillMaxWidth()
+                .height(140.dp)
                 .border(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f), RoundedCornerShape(28.dp))
         ) {
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+            Box(
+                modifier = Modifier.fillMaxSize().padding(16.dp),
+                contentAlignment = Alignment.Center
             ) {
                 Surface(
                     color = AppCard,
@@ -17290,48 +17336,89 @@ private fun OnboardingStepMilestoneRewards(language: String) {
                     border = BorderStroke(1.dp, AppBorder),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier.size(52.dp),
-                            contentAlignment = Alignment.Center
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            AchievementBadge(
-                                type = "STREAK",
-                                tier = "GOLD",
-                                isUnlocked = true,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(14.dp))
-                        Column(modifier = Modifier.weight(1f)) {
+                            Surface(
+                                color = PrimaryViolet.copy(alpha = 0.15f),
+                                shape = RoundedCornerShape(100.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.CardGiftcard,
+                                        contentDescription = null,
+                                        tint = PrimaryViolet,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = if (language == "de") "EIGENE BELOHNUNG" else if (language == "ka") "ჯილდო" else "CUSTOM REWARD",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = PrimaryViolet,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
                             Text(
-                                text = if (language == "de") "Kinobesuch 🎬" else if (language == "ka") "ფილმის ღამე 🎬" else "Movie Night 🎬",
-                                style = MaterialTheme.typography.titleSmall,
-                                color = TextPrimary,
+                                text = "🏆 Unlocked",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = SuccessGreen,
                                 fontWeight = FontWeight.Bold
                             )
-                            Text(
-                                text = if (language == "de") "Eigene Belohnung (30 Tage Streak)" else if (language == "ka") "მორგებული ჯილდო (30 დღიანი სერია)" else "Custom Reward (30 Day Streak)",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextSecondary
-                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier.size(36.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                AchievementBadge(
+                                    type = "STREAK",
+                                    tier = "GOLD",
+                                    isUnlocked = true,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = if (language == "de") "Kinobesuch 🎬" else if (language == "ka") "ფილმის ღამე 🎬" else "Movie Night 🎬",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = TextPrimary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = if (language == "de") "Belohnung für 30 Tage Streak" else if (language == "ka") "ჯილდო 30 დღიანი სერიისთვის" else "Reward for 30 Day Streak",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = TextSecondary
+                                )
+                            }
                         }
                     }
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         Text(
-            text = if (language == "de") "Eigene Meilenstein-Belohnungen" else if (language == "ka") "საკუთარი ჯილდოები" else "Custom Milestone Rewards",
-            style = MaterialTheme.typography.headlineLarge.copy(fontSize = 32.sp, lineHeight = 38.sp),
+            text = if (language == "de") "Custom Rewards" else if (language == "ka") "მორგებული ჯილდოები" else "Custom Rewards",
+            style = MaterialTheme.typography.headlineLarge.copy(fontSize = 28.sp, lineHeight = 34.sp),
             color = MaterialTheme.colorScheme.onBackground,
             fontWeight = FontWeight.ExtraBold,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            maxLines = 1
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(

@@ -158,11 +158,7 @@ class HabitWidgetFactory(private val context: Context, intent: Intent) : RemoteV
                     putExtra("WIDGET_ACTION", "DELTA")
                 }
 
-                if (currentVal < habit.targetValue && status != "SUCCESS") {
-                    views.setOnClickFillInIntent(R.id.widget_habit_check, deltaIntent)
-                } else {
-                    views.setOnClickFillInIntent(R.id.widget_habit_check, toggleIntent)
-                }
+                views.setOnClickFillInIntent(R.id.widget_habit_check, deltaIntent)
             } else {
                 views.setOnClickFillInIntent(R.id.widget_habit_check, toggleIntent)
             }
