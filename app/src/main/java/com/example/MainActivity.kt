@@ -2319,7 +2319,7 @@ fun WidgetAddValueDialog(
                         ) {
                             Text(
                                 text = if (language == "de") "Speichern" else if (language == "ka") "შენახვა" else "Save",
-                                color = TextPrimary,
+                                color = Color.White,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp,
                                 maxLines = 1,
@@ -2348,9 +2348,9 @@ fun HabitBottomNavigation(
     language: String
 ) {
     val items = listOf(
-        Triple("TODAY", if (language == "ka") "დღეს" else tr(language, "Heute", "Today"), Icons.Default.CalendarToday),
-        Triple("STATS", if (language == "ka") "სტატ." else tr(language, "Statistik", "Stats"), Icons.Default.BarChart),
-        Triple("PROFILE", if (language == "ka") "პროფ." else tr(language, "Profil", "Profile"), Icons.Default.Person)
+        Triple("TODAY", tr(language, "Heute", "Today"), Icons.Default.CalendarToday),
+        Triple("STATS", tr(language, "Statistik", "Stats"), Icons.Default.BarChart),
+        Triple("PROFILE", tr(language, "Profil", "Profile"), Icons.Default.Person)
     )
 
     Box(
@@ -2367,9 +2367,8 @@ fun HabitBottomNavigation(
             tonalElevation = 0.dp
         ) {
             Row(
-                modifier = Modifier
-                    .padding(horizontal = if (language == "ka") 6.dp else 10.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(if (language == "ka") 4.dp else 6.dp),
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 items.forEach { (tabKey, label, icon) ->
@@ -2380,12 +2379,10 @@ fun HabitBottomNavigation(
                         label = "navBg"
                     )
                     val navContentColor by animateColorAsState(
-                        targetValue = if (isSelected) TextPrimary else TextSecondary,
+                        targetValue = if (isSelected) Color.White else TextSecondary,
                         animationSpec = tween(220),
                         label = "navContent"
                     )
-
-                    val showLabel = isSelected || language != "ka"
 
                     Row(
                         modifier = Modifier
@@ -2393,12 +2390,9 @@ fun HabitBottomNavigation(
                             .clip(CircleShape)
                             .background(navBgColor)
                             .clickable { onTabSelected(tabKey) }
-                            .padding(
-                                horizontal = if (showLabel) (if (language == "ka") 10.dp else 12.dp) else 8.dp,
-                                vertical = 10.dp
-                            ),
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(if (showLabel) (if (language == "ka") 4.dp else 6.dp) else 0.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Icon(
                             imageVector = icon,
@@ -2406,18 +2400,16 @@ fun HabitBottomNavigation(
                             tint = navContentColor,
                             modifier = Modifier.size(20.dp)
                         )
-                        if (showLabel) {
-                            Text(
-                                text = label,
-                                color = navContentColor,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                style = MaterialTheme.typography.labelLarge.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = if (language == "ka") 11.sp else 13.sp
-                                )
+                        Text(
+                            text = label,
+                            color = navContentColor,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            style = MaterialTheme.typography.labelLarge.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
                             )
-                        }
+                        )
                     }
                 }
             }
@@ -3583,16 +3575,21 @@ fun TodayScreen(
                         key = { page -> page }
                     ) { page ->
                         val pageMonday = remember(page, minMonday) { minMonday.plusWeeks(page.toLong()) }
-                        val pageDays = remember(pageMonday) {
+                        val pageDays = remember(pageMonday, language) {
                             val dbFmt = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd", java.util.Locale.US)
-                            val numFmt = java.time.format.DateTimeFormatter.ofPattern("d", java.util.Locale.GERMANY)
-                            val nameFmt = java.time.format.DateTimeFormatter.ofPattern("E", java.util.Locale.GERMANY)
+                            val numFmt = java.time.format.DateTimeFormatter.ofPattern("d", java.util.Locale.US)
+                            val loc = when (language) {
+                                "de" -> java.util.Locale.GERMANY
+                                "ka" -> java.util.Locale.forLanguageTag("ka")
+                                else -> java.util.Locale.US
+                            }
+                            val nameFmt = java.time.format.DateTimeFormatter.ofPattern("E", loc)
                             (0..6).map { i ->
                                 val d = pageMonday.plusDays(i.toLong())
                                 Triple(
                                     d.format(dbFmt),
                                     d.format(numFmt),
-                                    d.format(nameFmt).uppercase(java.util.Locale.GERMANY).take(2)
+                                    if (language == "ka") d.format(nameFmt).take(3) else d.format(nameFmt).uppercase(loc).take(2)
                                 )
                             }
                         }
@@ -3756,7 +3753,7 @@ fun TodayScreen(
                                 modifier = Modifier
                                     .weight(1f)
                                     .height(36.dp),
-                                color = AppCard,
+                                color = ProgressTrack,
                                 shape = RoundedCornerShape(18.dp),
                                 border = BorderStroke(1.dp, AppBorder)
                             ) {
@@ -3770,6 +3767,8 @@ fun TodayScreen(
                                         )
                                     }
 
+                                    val progressTextColor = if (animatedFraction > 0.45f) Color.White else TextPrimary
+
                                     Row(
                                         modifier = Modifier
                                             .fillMaxSize()
@@ -3781,13 +3780,13 @@ fun TodayScreen(
                                             text = if (language == "de") "Tagesfortschritt" else if (language == "ka") "ყოველდღიური პროგრესი" else "Daily Progress",
                                             style = MaterialTheme.typography.labelLarge,
                                             fontWeight = FontWeight.Bold,
-                                            color = Color.White.copy(alpha = 0.85f)
+                                            color = progressTextColor.copy(alpha = 0.9f)
                                         )
                                         Text(
                                             text = progressText,
                                             style = MaterialTheme.typography.labelLarge,
                                             fontWeight = FontWeight.Bold,
-                                            color = Color.White
+                                            color = progressTextColor
                                         )
                                     }
                                 }
@@ -3925,7 +3924,7 @@ fun TodayScreen(
                                 onClick = { isReorderMode = false },
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = PrimaryViolet,
-                                    contentColor = TextPrimary
+                                    contentColor = Color.White
                                 ),
                                 shape = RoundedCornerShape(10.dp),
                                 contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
@@ -4110,7 +4109,7 @@ fun TodayScreen(
                         },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = if (isPausedOnSelectedDate) SuccessGreen else HabitOrange,
-                            contentColor = AppBg
+                            contentColor = Color.White
                         ),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth().height(48.dp)
@@ -4141,7 +4140,7 @@ fun TodayScreen(
                         },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = PrimaryViolet,
-                            contentColor = TextPrimary
+                            contentColor = Color.White
                         ),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth().height(48.dp)
@@ -4996,13 +4995,13 @@ fun HabitItemRow(
                 ) {
                     when {
                         isPaused -> {
-                            Icon(Icons.Default.Pause, contentDescription = "Paused", tint = TextPrimary, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.Pause, contentDescription = "Paused", tint = Color.White, modifier = Modifier.size(16.dp))
                         }
                         isCompleted -> {
-                            Icon(Icons.Default.Check, contentDescription = "Completed", tint = TextPrimary, modifier = Modifier.size(18.dp))
+                            Icon(Icons.Default.Check, contentDescription = "Completed", tint = Color.White, modifier = Modifier.size(18.dp))
                         }
                         isFailed -> {
-                            Icon(Icons.Default.Close, contentDescription = "Failed", tint = TextPrimary, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.Close, contentDescription = "Failed", tint = Color.White, modifier = Modifier.size(16.dp))
                         }
                         habit.frequency == "TIMES_WEEKLY" && isWeeklyTargetReached -> {
                             Icon(Icons.Default.Check, contentDescription = "Weekly Target Reached", tint = SuccessGreen, modifier = Modifier.size(18.dp))
@@ -7089,10 +7088,10 @@ fun TimeframeSelectorPills(
     customLabels: List<String>? = null,
     accentColor: Color = PrimaryViolet
 ) {
-    val labels = customLabels ?: if (language == "de") {
-        listOf("Diese Woche", "Diesen Monat", "Dieses Jahr", "Gesamt")
-    } else {
-        listOf("This Week", "This Month", "This Year", "Total")
+    val labels = customLabels ?: when (language) {
+        "de" -> listOf("Diese Woche", "Diesen Monat", "Dieses Jahr", "Gesamt")
+        "ka" -> listOf("ამ კვირაში", "ამ თვეში", "ამ წელს", "სულ")
+        else -> listOf("This Week", "This Month", "This Year", "Total")
     }
 
     Row(
@@ -8523,7 +8522,11 @@ fun OverallStatsScreen(
                                             if (language == "de") {
                                                 "${cell.completed} von ${cell.total} Gewohnheiten abgeschlossen ($pct%)"
                                             } else {
-                                                "${cell.completed} of ${cell.total} habits completed ($pct%)"
+                                                if (language == "ka") {
+                                                    "${cell.completed} / ${cell.total} ჩვევა შესრულებულია ($pct%)"
+                                                } else {
+                                                    "${cell.completed} of ${cell.total} habits completed ($pct%)"
+                                                }
                                             }
                                         }
                                     }
@@ -10673,7 +10676,8 @@ fun SettingsScreen(
                                 Button(
                                     onClick = { viewModel.setLanguage("de") },
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (language == "de") PrimaryViolet else ProgressTrack
+                                        containerColor = if (language == "de") PrimaryViolet else ProgressTrack,
+                                        contentColor = if (language == "de") Color.White else TextPrimary
                                     ),
                                     shape = RoundedCornerShape(12.dp),
                                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
@@ -10683,7 +10687,8 @@ fun SettingsScreen(
                                 Button(
                                     onClick = { viewModel.setLanguage("en") },
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (language == "en") PrimaryViolet else ProgressTrack
+                                        containerColor = if (language == "en") PrimaryViolet else ProgressTrack,
+                                        contentColor = if (language == "en") Color.White else TextPrimary
                                     ),
                                     shape = RoundedCornerShape(12.dp),
                                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
@@ -10693,7 +10698,8 @@ fun SettingsScreen(
                                 Button(
                                     onClick = { viewModel.setLanguage("ka") },
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (language == "ka") PrimaryViolet else ProgressTrack
+                                        containerColor = if (language == "ka") PrimaryViolet else ProgressTrack,
+                                        contentColor = if (language == "ka") Color.White else TextPrimary
                                     ),
                                     shape = RoundedCornerShape(12.dp),
                                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
@@ -11750,11 +11756,21 @@ fun CreateHabitScreen(
     var startDateMillis by remember(initialDateMillis) { mutableStateOf(initialDateMillis) }
     var showDatePicker by remember(editingHabit?.id) { mutableStateOf(false) }
 
-    val formattedStartDate = remember(startDateMillis) {
+    val formattedStartDate = remember(startDateMillis, language) {
         val localDate = java.time.Instant.ofEpochMilli(startDateMillis)
             .atZone(java.time.ZoneId.systemDefault())
             .toLocalDate()
-        val formatter = java.time.format.DateTimeFormatter.ofPattern("d. MMMM yyyy", java.util.Locale.GERMANY)
+        val loc = when (language) {
+            "de" -> java.util.Locale.GERMANY
+            "ka" -> java.util.Locale.forLanguageTag("ka")
+            else -> java.util.Locale.US
+        }
+        val pattern = when (language) {
+            "de" -> "d. MMMM yyyy"
+            "ka" -> "d MMMM yyyy"
+            else -> "MMMM d, yyyy"
+        }
+        val formatter = java.time.format.DateTimeFormatter.ofPattern(pattern, loc)
         localDate.format(formatter)
     }
 
@@ -11916,7 +11932,8 @@ fun CreateHabitScreen(
                         Button(
                             onClick = { isNegative = false },
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = if (!isNegative) PrimaryViolet else ProgressTrack
+                                containerColor = if (!isNegative) PrimaryViolet else ProgressTrack,
+                                contentColor = if (!isNegative) Color.White else TextPrimary
                             ),
                             modifier = Modifier.weight(1f).height(46.dp),
                             shape = RoundedCornerShape(12.dp),
@@ -11932,7 +11949,8 @@ fun CreateHabitScreen(
                         Button(
                             onClick = { isNegative = true },
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = if (isNegative) PrimaryViolet else ProgressTrack
+                                containerColor = if (isNegative) PrimaryViolet else ProgressTrack,
+                                contentColor = if (isNegative) Color.White else TextPrimary
                             ),
                             modifier = Modifier.weight(1f).height(46.dp),
                             shape = RoundedCornerShape(12.dp),
@@ -12163,7 +12181,8 @@ fun CreateHabitScreen(
                         Button(
                             onClick = { type = "BINARY" },
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = if (type == "BINARY") PrimaryViolet else ProgressTrack
+                                containerColor = if (type == "BINARY") PrimaryViolet else ProgressTrack,
+                                contentColor = if (type == "BINARY") Color.White else TextPrimary
                             ),
                             modifier = Modifier.weight(1f).height(46.dp),
                             shape = RoundedCornerShape(12.dp),
@@ -12175,7 +12194,8 @@ fun CreateHabitScreen(
                         Button(
                             onClick = { type = "NUMBER" },
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = if (type == "NUMBER") PrimaryViolet else ProgressTrack
+                                containerColor = if (type == "NUMBER") PrimaryViolet else ProgressTrack,
+                                contentColor = if (type == "NUMBER") Color.White else TextPrimary
                             ),
                             modifier = Modifier.weight(1f).height(46.dp),
                             shape = RoundedCornerShape(12.dp),
@@ -12228,7 +12248,7 @@ fun CreateHabitScreen(
                                         },
                                         colors = ButtonDefaults.buttonColors(
                                             containerColor = if (isSelected) PrimaryViolet else ProgressTrack,
-                                            contentColor = if (isSelected) TextPrimary else TextSecondary
+                                            contentColor = if (isSelected) Color.White else TextPrimary
                                         ),
                                         modifier = Modifier.weight(1f).height(44.dp),
                                         shape = RoundedCornerShape(12.dp),
@@ -12242,7 +12262,7 @@ fun CreateHabitScreen(
                                                 Icon(
                                                     imageVector = Icons.Default.Timer,
                                                     contentDescription = null,
-                                                    tint = if (isSelected) TextPrimary else TextSecondary,
+                                                    tint = if (isSelected) Color.White else TextSecondary,
                                                     modifier = Modifier.size(16.dp)
                                                 )
                                                 Spacer(modifier = Modifier.width(4.dp))
@@ -12275,7 +12295,7 @@ fun CreateHabitScreen(
                                         },
                                         colors = ButtonDefaults.buttonColors(
                                             containerColor = if (isSelected) PrimaryViolet else ProgressTrack,
-                                            contentColor = if (isSelected) TextPrimary else TextSecondary
+                                            contentColor = if (isSelected) Color.White else TextPrimary
                                         ),
                                         modifier = Modifier.weight(1f).height(44.dp),
                                         shape = RoundedCornerShape(12.dp),
@@ -12392,7 +12412,7 @@ fun CreateHabitScreen(
                                 },
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = if (isSelected) PrimaryViolet else ProgressTrack,
-                                    contentColor = if (isSelected) TextPrimary else TextSecondary
+                                    contentColor = if (isSelected) Color.White else TextPrimary
                                 ),
                                 modifier = Modifier.weight(1f).height(44.dp),
                                 shape = RoundedCornerShape(12.dp),
@@ -12427,7 +12447,7 @@ fun CreateHabitScreen(
                                         text = num.toString(),
                                         style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (isSelected) AppBg else TextPrimary
+                                        color = if (isSelected) Color.White else TextPrimary
                                     )
                                 }
                             }
@@ -12497,7 +12517,7 @@ fun CreateHabitScreen(
                                         text = dayName.take(2),
                                         style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (isSelected) AppBg else TextPrimary
+                                        color = if (isSelected) Color.White else TextPrimary
                                     )
                                 }
                             }
@@ -12958,7 +12978,7 @@ fun CreateHabitScreen(
                             text = buttonText,
                             fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.titleMedium,
-                            color = TextPrimary
+                            color = Color.White
                         )
                     }
                 }
@@ -13358,8 +13378,8 @@ fun AddCustomReminderDialog(
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = PrimaryViolet,
                             unfocusedBorderColor = AppBorder,
-                            focusedContainerColor = Color(0xFF3A3A44),
-                            unfocusedContainerColor = Color(0xFF3A3A44)
+                            focusedContainerColor = AppBg,
+                            unfocusedContainerColor = AppBg
                         ),
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.fillMaxWidth()
@@ -13409,8 +13429,8 @@ fun AddCustomReminderDialog(
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = PrimaryViolet,
                             unfocusedBorderColor = AppBorder,
-                            focusedContainerColor = Color(0xFF3A3A44),
-                            unfocusedContainerColor = Color(0xFF3A3A44)
+                            focusedContainerColor = AppBg,
+                            unfocusedContainerColor = AppBg
                         ),
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.fillMaxWidth()
@@ -13423,7 +13443,7 @@ fun AddCustomReminderDialog(
                 colors = ButtonDefaults.buttonColors(containerColor = PrimaryViolet),
                 onClick = { onConfirm(hour, minute) }
             ) {
-                Text(if (language == "de") "Hinzufügen" else if (language == "ka") "დამატება" else "Add", color = TextPrimary)
+                Text(if (language == "de") "Hinzufügen" else if (language == "ka") "დამატება" else "Add", color = Color.White)
             }
         },
         dismissButton = {
@@ -15031,7 +15051,7 @@ fun HabitAnalyticsSection(
                                 },
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = if (isSelected) PrimaryViolet else ProgressTrack,
-                                    contentColor = if (isSelected) TextPrimary else TextSecondary
+                                    contentColor = if (isSelected) Color.White else TextSecondary
                                 ),
                                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 2.dp),
                                 modifier = Modifier.height(32.dp),
@@ -15237,7 +15257,7 @@ fun DailyNoteDialog(
             ) {
                 Text(
                     text = if (language == "de") "Speichern" else if (language == "ka") "შენახვა" else "Save",
-                    color = TextPrimary,
+                    color = Color.White,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -20908,7 +20928,7 @@ private fun OnboardingStep2(language: String) {
                     ) {
                         Text(
                             text = if (language == "de") "Speichern" else if (language == "ka") "შენახვა" else "Save",
-                            color = TextPrimary,
+                            color = Color.White,
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.sp
                         )
@@ -21188,7 +21208,12 @@ fun TimeCapsuleSlide(
             val pastPeriodLabel = if (type == "MONTHLY") {
                 // Get month name of currentPeriod
                 val yearMonth = java.time.YearMonth.parse(currentPeriod)
-                val formatter = java.time.format.DateTimeFormatter.ofPattern("MMMM yyyy", if (language == "de") Locale.GERMAN else Locale.ENGLISH)
+                val loc = when (language) {
+                    "de" -> Locale.GERMAN
+                    "ka" -> Locale.forLanguageTag("ka")
+                    else -> Locale.ENGLISH
+                }
+                val formatter = java.time.format.DateTimeFormatter.ofPattern("MMMM yyyy", loc)
                 yearMonth.format(formatter)
             } else {
                 currentPeriod
@@ -21299,7 +21324,12 @@ fun TimeCapsuleSlide(
         item {
             val futurePeriodLabel = if (type == "MONTHLY") {
                 val yearMonth = java.time.YearMonth.parse(upcomingPeriod)
-                val formatter = java.time.format.DateTimeFormatter.ofPattern("MMMM yyyy", if (language == "de") Locale.GERMAN else Locale.ENGLISH)
+                val loc = when (language) {
+                    "de" -> Locale.GERMAN
+                    "ka" -> Locale.forLanguageTag("ka")
+                    else -> Locale.ENGLISH
+                }
+                val formatter = java.time.format.DateTimeFormatter.ofPattern("MMMM yyyy", loc)
                 yearMonth.format(formatter)
             } else {
                 upcomingPeriod
@@ -22083,7 +22113,10 @@ private fun CsvImportPreviewDialog(
                         if (preview.errorMessage == null && preview.habits.isNotEmpty()) {
                             Button(
                                 onClick = { onConfirm(replaceExisting) },
-                                colors = ButtonDefaults.buttonColors(containerColor = PrimaryViolet),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = PrimaryViolet,
+                                    contentColor = Color.White
+                                ),
                                 modifier = Modifier.weight(1.2f),
                                 shape = RoundedCornerShape(12.dp)
                             ) {

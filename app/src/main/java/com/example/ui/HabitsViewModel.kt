@@ -327,17 +327,21 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
     })
     val currentWeekStart: StateFlow<Calendar> = _currentWeekStart.asStateFlow()
 
-    val currentWeekDaysData: StateFlow<List<Triple<String, String, String>>> = _currentWeekStart
-        .map { calendar ->
+    val currentWeekDaysData: StateFlow<List<Triple<String, String, String>>> = combine(_currentWeekStart, language) { calendar, lang ->
             val startLocalDate = Instant.ofEpochMilli(calendar.timeInMillis).atZone(ZoneId.systemDefault()).toLocalDate()
             val dbFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.US)
-            val dayNumFormatter = DateTimeFormatter.ofPattern("d", Locale.GERMANY)
-            val dayNameFormatter = DateTimeFormatter.ofPattern("E", Locale.GERMANY)
+            val dayNumFormatter = DateTimeFormatter.ofPattern("d", Locale.US)
+            val loc = when (lang) {
+                "de" -> Locale.GERMANY
+                "ka" -> Locale.forLanguageTag("ka")
+                else -> Locale.US
+            }
+            val dayNameFormatter = DateTimeFormatter.ofPattern("E", loc)
             (0 until 7).map { i ->
                 val date = startLocalDate.plusDays(i.toLong())
                 val dayStr = date.format(dbFormatter)
                 val dayNum = date.format(dayNumFormatter)
-                val dayName = date.format(dayNameFormatter).uppercase(Locale.GERMANY).take(2)
+                val dayName = if (lang == "ka") date.format(dayNameFormatter).take(3) else date.format(dayNameFormatter).uppercase(loc).take(2)
                 Triple(dayStr, dayNum, dayName)
             }
         }
@@ -348,10 +352,24 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
         try {
             val todayStr = LocalDate.now().toString()
             if (dateStr == todayStr) {
-                if (lang == "de") "Heute" else "Today"
+                when (lang) {
+                    "de" -> "Heute"
+                    "ka" -> "დღეს"
+                    else -> "Today"
+                }
             } else {
                 val localDate = LocalDate.parse(dateStr)
-                val formatter = DateTimeFormatter.ofPattern("d. MMMM", if (lang == "de") Locale.GERMANY else Locale.US)
+                val loc = when (lang) {
+                    "de" -> Locale.GERMANY
+                    "ka" -> Locale.forLanguageTag("ka")
+                    else -> Locale.US
+                }
+                val pattern = when (lang) {
+                    "de" -> "d. MMMM"
+                    "ka" -> "d MMMM"
+                    else -> "MMMM d"
+                }
+                val formatter = DateTimeFormatter.ofPattern(pattern, loc)
                 localDate.format(formatter)
             }
         } catch (e: Exception) {
@@ -1198,10 +1216,17 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
         if (activeCell == null) return@combine ""
         try {
             val localDate = java.time.LocalDate.parse(activeCell.dateStr)
-            val formatter = java.time.format.DateTimeFormatter.ofPattern(
-                "EEEE, d. MMMM yyyy",
-                if (lang == "de") Locale.GERMANY else Locale.US
-            )
+            val loc = when (lang) {
+                "de" -> Locale.GERMANY
+                "ka" -> Locale.forLanguageTag("ka")
+                else -> Locale.US
+            }
+            val pattern = when (lang) {
+                "de" -> "EEEE, d. MMMM yyyy"
+                "ka" -> "EEEE, d MMMM, yyyy"
+                else -> "EEEE, MMMM d, yyyy"
+            }
+            val formatter = java.time.format.DateTimeFormatter.ofPattern(pattern, loc)
             localDate.format(formatter)
         } catch (e: Exception) {
             activeCell.dateStr
@@ -1830,6 +1855,10 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
     fun setAccentColorName(name: String) {
         _accentColorName.value = name
         sharedPrefs.edit().putString("accent_color_name", name).apply()
+        try {
+            getApplication<android.app.Application>().getSharedPreferences("habit_prefs", Context.MODE_PRIVATE)
+                .edit().putString("accent_color_name", name).apply()
+        } catch (e: Exception) {}
         com.example.ui.theme.updateAccentColors(name)
         HabitWidgetProvider.triggerUpdate(getApplication())
     }
@@ -1837,6 +1866,12 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
     fun setDarkModeEnabled(enabled: Boolean) {
         _darkModeEnabled.value = enabled
         sharedPrefs.edit().putBoolean("dark_mode_enabled", enabled).apply()
+        try {
+            getApplication<android.app.Application>().getSharedPreferences("habit_prefs", Context.MODE_PRIVATE)
+                .edit().putBoolean("dark_mode_enabled", enabled).apply()
+        } catch (e: Exception) {}
+        com.example.ui.theme.updateThemeColors(enabled)
+        HabitWidgetProvider.triggerUpdate(getApplication())
     }
 
     fun setVibrationEnabled(enabled: Boolean) {
@@ -3127,6 +3162,9 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
         }
         viewModelScope.launch {
             try {
+                com.example.NotificationHelper.scheduleSmartInsightNotifications(getApplication())
+                com.example.NotificationHelper.scheduleReviewNotifications(getApplication())
+                
                 val list = database.habitDao().getAllHabitsRaw()
                 list.forEach { habit ->
                     com.example.NotificationHelper.scheduleAllHabitReminders(

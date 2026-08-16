@@ -139,13 +139,13 @@ class SmartInsightNotificationReceiver : BroadcastReceiver() {
         }
         if (maxDayIndex != -1 && maxCount > 10) {
             val dayName = when (maxDayIndex) {
-                Calendar.MONDAY -> if (language == "de") "Montag" else "Monday"
-                Calendar.TUESDAY -> if (language == "de") "Dienstag" else "Tuesday"
-                Calendar.WEDNESDAY -> if (language == "de") "Mittwoch" else "Wednesday"
-                Calendar.THURSDAY -> if (language == "de") "Donnerstag" else "Thursday"
-                Calendar.FRIDAY -> if (language == "de") "Freitag" else "Friday"
-                Calendar.SATURDAY -> if (language == "de") "Samstag" else "Saturday"
-                Calendar.SUNDAY -> if (language == "de") "Sonntag" else "Sunday"
+                Calendar.MONDAY -> if (language == "de") "Montag" else if (language == "ka") "ორშაბათი" else "Monday"
+                Calendar.TUESDAY -> if (language == "de") "Dienstag" else if (language == "ka") "სამშაბათი" else "Tuesday"
+                Calendar.WEDNESDAY -> if (language == "de") "Mittwoch" else if (language == "ka") "ოთხშაბათი" else "Wednesday"
+                Calendar.THURSDAY -> if (language == "de") "Donnerstag" else if (language == "ka") "ხუთშაბათი" else "Thursday"
+                Calendar.FRIDAY -> if (language == "de") "Freitag" else if (language == "ka") "პარასკევი" else "Friday"
+                Calendar.SATURDAY -> if (language == "de") "Samstag" else if (language == "ka") "შაბათი" else "Saturday"
+                Calendar.SUNDAY -> if (language == "de") "Sonntag" else if (language == "ka") "კვირა" else "Sunday"
                 else -> ""
             }
             val text = if (language == "de") {

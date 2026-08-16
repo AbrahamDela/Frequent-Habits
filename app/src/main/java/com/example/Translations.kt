@@ -25,6 +25,11 @@ private fun translateDynamicGeorgian(en: String, de: String): String {
     str = str.replace("Today", "დღეს")
     str = str.replace("Yesterday", "გუშინ")
     str = str.replace("Tomorrow", "ხვალ")
+    str = str.replace("Total Completions", "სულ დასრულებები")
+    str = str.replace("Total Check-ins", "სულ ჩექინები")
+    str = str.replace("Total Check-Ins", "სულ ჩექინები")
+    str = str.replace("Active Habits", "აქტიური ჩვევები")
+    str = str.replace("Days Longest Streak", "დღეების ყველაზე გრძელი სერია")
     str = str.replace("Streak", "სერია")
     str = str.replace("Progress", "პროგრესი")
     str = str.replace("Language", "ენა")
@@ -42,10 +47,47 @@ private fun translateDynamicGeorgian(en: String, de: String): String {
 
 val GEORGIAN_TRANSLATIONS: Map<String, String> = mapOf(
     // Bottom Navigation & Core terms
+    "Heute" to "დღეს",
+    "Today" to "დღეს",
     "Profile" to "პროფილი",
     "Profil" to "პროფილი",
     "Stats" to "სტატისტიკა",
     "Statistik" to "სტატისტიკა",
+    "Statistiken" to "სტატისტიკა",
+
+    // Share & Profile Card
+    "MEIN PROFIL" to "ჩემი პროფილი",
+    "MY PROFILE" to "ჩემი პროფილი",
+    "Gewohnheiten Held" to "ჩვევების გმირი",
+    "Habit Hero" to "ჩვევების გმირი",
+    "Abschlüsse insgesamt" to "სულ დასრულებები",
+    "Total Completions" to "სულ დასრულებები",
+    "Check-ins insgesamt" to "სულ ჩექინები",
+    "Total Check-ins" to "სულ ჩექინები",
+    "Total Check-Ins" to "სულ ჩექინები",
+    "Aktive Gewohnheiten" to "აქტიური ჩვევები",
+    "Active Habits" to "აქტიური ჩვევები",
+    "Tage beste Serie" to "დღეების ყველაზე გრძელი სერია",
+    "Days Longest Streak" to "დღეების ყველაზე გრძელი სერია",
+    "MONATSRÜCKBLICK" to "ყოველთვიური მიმოხილვა",
+    "MONTHLY REVIEW" to "ყოველთვიური მიმოხილვა",
+    "JAHRESRÜCKBLICK" to "ყოველწლიური მიმოხილვა",
+    "YEAR IN REVIEW" to "ყოველწლიური მიმოხილვა",
+    "Abschlüsse" to "დასრულებები",
+    "Completions" to "დასრულებები",
+    "Aktive Tage" to "აქტიური დღეები",
+    "Active Days" to "აქტიური დღეები",
+    "Top Gewohnheit" to "საუკეთესო ჩვევა",
+    "Top Habit" to "საუკეთესო ჩვევა",
+    "Top-Gewohnheit" to "საუკეთესო ჩვევა",
+    "Bester Monat" to "საუკეთესო თვე",
+    "Best Month" to "საუკეთესო თვე",
+    "Tage Serie" to "დღეების სერია",
+    "Days Streak" to "დღეების სერია",
+    "Beste Serie" to "საუკეთესო სერია",
+    "Best Streak" to "საუკეთესო სერია",
+    "Power Day" to "საუკეთესო დღე",
+    "Bester Tag" to "საუკეთესო დღე",
     // Settings Categories & Items
     "Edit profile picture & name" to "პროფილის სურათის და სახელის რედაქტირება",
     "Profilbild & Nutzername bearbeiten" to "პროფილის სურათის და სახელის რედაქტირება",

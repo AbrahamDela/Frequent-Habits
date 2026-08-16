@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/widget_bg"
@@ -20,26 +21,11 @@
             android:layout_weight="1"
             android:layout_marginEnd="10dp">
 
-            <ProgressBar
+            <ImageView
                 android:id="@+id/widget_progress_bar"
-                style="?android:attr/progressBarStyleHorizontal"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:indeterminate="false"
-                android:max="100"
-                android:progress="0"
-                android:progressDrawable="@drawable/widget_progress_bar_custom" />
-
-            <ProgressBar
-                android:id="@+id/widget_progress_bar_completed"
-                style="?android:attr/progressBarStyleHorizontal"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:indeterminate="false"
-                android:max="100"
-                android:progress="0"
-                android:visibility="gone"
-                android:progressDrawable="@drawable/widget_progress_bar_completed" />
+                android:scaleType="fitXY" />
         </FrameLayout>
 
         <LinearLayout

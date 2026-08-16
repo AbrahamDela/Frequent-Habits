@@ -450,23 +450,23 @@ fun HabitShareDialog(
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         DensityToggleRow(
-                            label = if (language == "de") "🔥 Serie / Streak anzeigen" else if (language == "ka") "🔥 შოუ სტრიქონი" else "🔥 Show Streak",
+                            label = if (language == "de") "🔥 Serie / Streak anzeigen" else if (language == "ka") "🔥 სერიის ჩვენება" else "🔥 Show Streak",
                             checked = showStreak,
                             onCheckedChange = { showStreak = it }
                         )
                         DensityToggleRow(
-                            label = if (language == "de") "📈 Erfolgsquote (30 Tage) anzeigen" else if (language == "ka") "📈 აჩვენე წარმატების მაჩვენებელი" else "📈 Show Success Rate",
+                            label = if (language == "de") "📈 Erfolgsquote (30 Tage) anzeigen" else if (language == "ka") "📈 წარმატების მაჩვენებლის ჩვენება" else "📈 Show Success Rate",
                             checked = showCompletionRate,
                             onCheckedChange = { showCompletionRate = it }
                         )
                         DensityToggleRow(
-                            label = if (language == "de") "✅ Gesamtzahl der Abschlüsse anzeigen" else if (language == "ka") "✅ აჩვენე მთლიანი დასრულებები" else "✅ Show Total Completions",
+                            label = if (language == "de") "✅ Gesamtzahl der Abschlüsse anzeigen" else if (language == "ka") "✅ სრული დასრულებების ჩვენება" else "✅ Show Total Completions",
                             checked = showTotalCount,
                             onCheckedChange = { showTotalCount = it }
                         )
                         if (habit.type == "NUMBER" && habit.unit.isNotEmpty()) {
                             DensityToggleRow(
-                                label = if (language == "de") "🎯 Tagesziel & Einheit anzeigen" else if (language == "ka") "🎯 აჩვენე სამიზნე და ერთეული" else "🎯 Show Target & Unit",
+                                label = if (language == "de") "🎯 Tagesziel & Einheit anzeigen" else if (language == "ka") "🎯 სამიზნისა და ერთეულის ჩვენება" else "🎯 Show Target & Unit",
                                 checked = showTarget,
                                 onCheckedChange = { showTarget = it }
                             )
@@ -1576,12 +1576,12 @@ fun renderMonthlyReviewShareBitmap(
     currentY += 80f
 
     if (reviewData.mvpHabit != null) {
-        val mvpText = "👑  Habit MVP: ${reviewData.mvpHabit.icon} ${reviewData.mvpHabit.name}"
+        val mvpText = "👑  ${tr(language, "Top-Gewohnheit", "Top Habit")}: ${reviewData.mvpHabit.icon} ${reviewData.mvpHabit.name}"
         canvas.drawText(mvpText, width / 2f, currentY, statPaint)
         currentY += 80f
     }
 
-    val powerText = "⚡  Power day: ${reviewData.bestDayOfWeekName}"
+    val powerText = "⚡  ${tr(language, "Bester Tag", "Power Day")}: ${reviewData.bestDayOfWeekName}"
     canvas.drawText(powerText, width / 2f, currentY, statPaint)
 
     // Footer Branding

@@ -22,6 +22,9 @@ fun updateThemeColors(isDark: Boolean) {
         TextSecondary = Color(0xFF9E9EA8)
         ProgressTrack = Color(0xFF2A2A32)
         ProgressEndText = Color(0xFFDDD6FE)
+        SuccessBg = Color(0xFF133227)
+        FailedBg = Color(0xFF311721)
+        PausedBg = Color(0xFF321E18)
     } else {
         AppBg = Color(0xFFF9F9FB)
         AppCard = Color(0xFFFFFFFF)
@@ -30,6 +33,9 @@ fun updateThemeColors(isDark: Boolean) {
         TextSecondary = Color(0xFF6B6B76)
         ProgressTrack = Color(0xFFF1F1F5)
         ProgressEndText = Color(0xFF6366F1)
+        SuccessBg = Color(0xFFD1FAE5)
+        FailedBg = Color(0xFFFEE2E2)
+        PausedBg = Color(0xFFFEF3C7)
     }
 }
 
@@ -81,11 +87,11 @@ var ProgressEndText by mutableStateOf(Color(0xFFDDD6FE))  // Soft light purple
 
 // Feedback colors
 val SuccessGreen = Color(0xFF10B981)
-val SuccessBg = Color(0xFF133227)
+var SuccessBg by mutableStateOf(Color(0xFF133227))
 val ErrorRed = Color(0xFFEF4444)
 val FailedRed = Color(0xFFEF4444)
-val FailedBg = Color(0xFF311721)
-val PausedBg = Color(0xFF321E18)
+var FailedBg by mutableStateOf(Color(0xFF311721))
+var PausedBg by mutableStateOf(Color(0xFF321E18))
 
 // Habit customized dot colors
 val HabitBlue = Color(0xFF3B82F6)

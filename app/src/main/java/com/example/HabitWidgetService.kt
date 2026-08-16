@@ -86,11 +86,18 @@ class HabitWidgetFactory(private val context: Context, intent: Intent) : RemoteV
 
             val status = com.example.data.getLogStatus(habit, log, selectedDate, "1970-01-01", selectedDate, isWeeklyTargetReached)
 
+            val sharedPrefs = context.getSharedPreferences("habits_settings", Context.MODE_PRIVATE)
+            val isDark = sharedPrefs.getBoolean("dark_mode_enabled", true)
+            val accentColorName = sharedPrefs.getString("accent_color_name", null)
+                ?: context.getSharedPreferences("habit_prefs", Context.MODE_PRIVATE).getString("accent_color_name", "PURPLE")
+                ?: "PURPLE"
+
             val bgRes = when {
-                status == "SUCCESS" -> R.drawable.widget_item_completed_bg
-                status == "FAILED" -> R.drawable.widget_item_failed_bg
-                status == "PAUSED" -> R.drawable.widget_item_paused_bg
-                else -> R.drawable.widget_item_normal_bg
+                status == "PAUSED" -> if (isDark) R.drawable.widget_item_paused_bg else R.drawable.widget_item_paused_bg_light
+                status == "SUCCESS" -> if (isDark) R.drawable.widget_item_completed_bg else R.drawable.widget_item_completed_bg_light
+                status == "FAILED" -> if (isDark) R.drawable.widget_item_failed_bg else R.drawable.widget_item_failed_bg_light
+                habit.frequency == "TIMES_WEEKLY" && isWeeklyTargetReached -> if (isDark) R.drawable.widget_item_completed_bg else R.drawable.widget_item_completed_bg_light
+                else -> if (isDark) R.drawable.widget_item_normal_bg else R.drawable.widget_item_normal_bg_light
             }
             views.setInt(R.id.widget_habit_layout, "setBackgroundResource", bgRes)
 
@@ -123,6 +130,7 @@ class HabitWidgetFactory(private val context: Context, intent: Intent) : RemoteV
                 habit.name
             }
             views.setTextViewText(R.id.widget_habit_name, nameText)
+            views.setTextColor(R.id.widget_habit_name, if (isDark) 0xFFE4E3EC.toInt() else 0xFF111115.toInt())
 
             val checkIcon = when {
                 status == "SUCCESS" -> R.drawable.ic_widget_circle_checked

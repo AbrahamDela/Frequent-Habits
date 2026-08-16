@@ -94,6 +94,25 @@ object CsvImporter {
                 if (existing != null && !replaceExisting) {
                     habitId = existing.id
                 } else {
+                    var earliestDateMillis = System.currentTimeMillis()
+                    if (importedHabit.logs.isNotEmpty()) {
+                        try {
+                            val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+                            var oldestDateStr = importedHabit.logs.first().date
+                            for (log in importedHabit.logs) {
+                                if (log.date < oldestDateStr) {
+                                    oldestDateStr = log.date
+                                }
+                            }
+                            val d = sdf.parse(oldestDateStr)
+                            if (d != null && d.time < earliestDateMillis) {
+                                earliestDateMillis = d.time
+                            }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }
+
                     val habit = Habit(
                         name = importedHabit.name.trim(),
                         description = importedHabit.description,
@@ -105,7 +124,8 @@ object CsvImporter {
                         targetValue = if (importedHabit.targetValue > 0) importedHabit.targetValue else 1.0f,
                         frequency = importedHabit.frequency.ifBlank { "DAILY" },
                         sortOrder = idx,
-                        startDate = System.currentTimeMillis()
+                        startDate = earliestDateMillis,
+                        createdAt = earliestDateMillis
                     )
                     habitId = db.habitDao().insertHabit(habit).toInt()
                 }
@@ -152,10 +172,12 @@ object CsvImporter {
 
                         if (simpleName.equals("Habits.csv", ignoreCase = true)) {
                             habitsCsvLines = lines
-                        } else if (simpleName.equals("Checkmarks.csv", ignoreCase = true)) {
-                            checkmarkFiles["Checkmarks.csv"] = lines
                         } else if (!simpleName.equals("Scores.csv", ignoreCase = true) && !simpleName.equals("History.csv", ignoreCase = true)) {
-                            checkmarkFiles[simpleName] = lines
+                            if (simpleName.equals("Checkmarks.csv", ignoreCase = true) && pathParts.size == 1) {
+                                checkmarkFiles["Checkmarks.csv"] = lines
+                            } else {
+                                checkmarkFiles[entry.name] = lines
+                            }
                         }
                     }
                     zipStream.closeEntry()
@@ -173,7 +195,13 @@ object CsvImporter {
             val datesFound = mutableSetOf<String>()
 
             checkmarkFiles.forEach { (filename, lines) ->
-                val habitName = filename.removeSuffix(".csv").removeSuffix(".CSV").replace("_", " ")
+                val pathParts = filename.split("/", "\\")
+                val habitNameRaw = if (pathParts.size > 1 && pathParts.last().equals("Checkmarks.csv", ignoreCase = true)) {
+                    pathParts[pathParts.size - 2]
+                } else {
+                    pathParts.last().removeSuffix(".csv").removeSuffix(".CSV")
+                }
+                val habitName = habitNameRaw.replace("_", " ")
                 val logs = mutableListOf<ImportedLogData>()
 
                 if (lines.isNotEmpty()) {
@@ -288,10 +316,11 @@ object CsvImporter {
                     }
                 }
             } else {
-                // Check for individual file <Name>.csv or Habit_<Idx>.csv
+                // Check for individual file <Name>.csv or Habit_<Idx>.csv or Folder
+                val safeName = name.lowercase(Locale.ROOT).replace(" ", "").replace("_", "")
                 val matchFile = checkmarkFiles.entries.find { (k, _) ->
-                    k.lowercase(Locale.ROOT).contains(name.lowercase(Locale.ROOT)) ||
-                    k.lowercase(Locale.ROOT).contains("habit_${rowIdx}")
+                    val cleanK = k.lowercase(Locale.ROOT).replace(" ", "").replace("_", "")
+                    cleanK.contains(safeName) || cleanK.contains("habit${rowIdx}")
                 }?.value
 
                 if (matchFile != null && matchFile.isNotEmpty()) {

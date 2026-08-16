@@ -51,6 +51,19 @@ class HabitWidgetProvider : AppWidgetProvider() {
             action == "android.intent.action.TIME_SET") {
             
             scheduleNextMidnightAlarm(context)
+            if (action == Intent.ACTION_BOOT_COMPLETED || action == "android.intent.action.MY_PACKAGE_REPLACED") {
+                com.example.NotificationHelper.scheduleSmartInsightNotifications(context)
+                com.example.NotificationHelper.scheduleReviewNotifications(context)
+                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                    try {
+                        val db = com.example.data.AppDatabase.getDatabase(context).habitDao()
+                        val habits = db.getAllHabitsRaw()
+                        habits.forEach { habit ->
+                            com.example.NotificationHelper.scheduleAllHabitReminders(context, habit)
+                        }
+                    } catch (e: Exception) { e.printStackTrace() }
+                }
+            }
             val pendingResult = goAsync()
             val appWidgetManager = AppWidgetManager.getInstance(context)
             val componentName = ComponentName(context, HabitWidgetProvider::class.java)
@@ -258,25 +271,29 @@ class HabitWidgetProvider : AppWidgetProvider() {
                     }
                 }
 
+                val sharedPrefs = context.getSharedPreferences("habits_settings", Context.MODE_PRIVATE)
+                val isDark = sharedPrefs.getBoolean("dark_mode_enabled", true)
+                val accentColorName = sharedPrefs.getString("accent_color_name", null)
+                    ?: context.getSharedPreferences("habit_prefs", Context.MODE_PRIVATE).getString("accent_color_name", "PURPLE")
+                    ?: "PURPLE"
+                val accentColorInt = com.example.ui.HabitIconMapping.getColor(accentColorName).toArgb()
+
                 val progressPercent = if (nonPausedCount > 0) (completed.toFloat() / nonPausedCount * 100).toInt() else 0
+                val isCompleted = progressPercent >= 100 && nonPausedCount > 0
 
                 val views = RemoteViews(context.packageName, R.layout.habit_widget)
-                if (progressPercent >= 100 && nonPausedCount > 0) {
-                    views.setViewVisibility(R.id.widget_progress_bar, android.view.View.GONE)
-                    views.setViewVisibility(R.id.widget_progress_bar_completed, android.view.View.VISIBLE)
-                    views.setProgressBar(R.id.widget_progress_bar_completed, 100, 100, false)
-                } else {
-                    views.setViewVisibility(R.id.widget_progress_bar_completed, android.view.View.GONE)
-                    views.setViewVisibility(R.id.widget_progress_bar, android.view.View.VISIBLE)
-                    views.setProgressBar(R.id.widget_progress_bar, 100, progressPercent, false)
-                }
+                views.setInt(R.id.widget_root_layout, "setBackgroundResource", if (isDark) R.drawable.widget_bg else R.drawable.widget_bg_light)
+                views.setInt(R.id.widget_streak_container, "setBackgroundResource", if (isDark) R.drawable.widget_streak_bg else R.drawable.widget_streak_bg_light)
+
+                val progressBitmap = drawProgressBarBitmap(progressPercent, isCompleted, accentColorInt, isDark)
+                views.setImageViewBitmap(R.id.widget_progress_bar, progressBitmap)
 
                 val perfectStats = com.example.data.StreakCalculator.calculate(allHabits, allLogs, targetDateStr = todayStr)
                 val currentStreak = perfectStats.currentStreak
 
-                val sharedPrefs = context.getSharedPreferences("habit_prefs", Context.MODE_PRIVATE)
                 sharedPrefs.edit().putInt("current_perfect_streak", currentStreak).apply()
                 views.setTextViewText(R.id.widget_streak_text, currentStreak.toString())
+                views.setTextColor(R.id.widget_streak_text, if (isDark) Color.parseColor("#FF9800") else Color.parseColor("#EA580C"))
 
                 val openAppInt = Intent(context, MainActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -288,7 +305,6 @@ class HabitWidgetProvider : AppWidgetProvider() {
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                 )
                 views.setOnClickPendingIntent(R.id.widget_progress_bar, pendingInt)
-                views.setOnClickPendingIntent(R.id.widget_progress_bar_completed, pendingInt)
                 views.setOnClickPendingIntent(R.id.widget_streak_container, pendingInt)
 
                 val serviceIntent = Intent(context, HabitWidgetService::class.java).apply {
@@ -360,6 +376,44 @@ class HabitWidgetProvider : AppWidgetProvider() {
                 dateStr
             }
         }
+    }
+
+    private fun drawProgressBarBitmap(progressPercent: Int, isCompleted: Boolean, accentColorInt: Int, isDark: Boolean): Bitmap {
+        val width = 600
+        val height = 24
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        val cornerRadius = 12f
+        val rect = android.graphics.RectF(0f, 0f, width.toFloat(), height.toFloat())
+
+        // 1. Background Track
+        val trackPaint = Paint().apply {
+            isAntiAlias = true
+            style = Paint.Style.FILL
+            color = if (isDark) Color.parseColor("#242432") else Color.parseColor("#E5E5ED")
+        }
+        canvas.drawRoundRect(rect, cornerRadius, cornerRadius, trackPaint)
+
+        // 2. Progress Fill
+        if (progressPercent > 0) {
+            val fillColor = if (isCompleted) Color.parseColor("#10B981") else accentColorInt
+            val fillPaint = Paint().apply {
+                isAntiAlias = true
+                style = Paint.Style.FILL
+                color = fillColor
+            }
+            val fillWidth = width.toFloat() * (progressPercent.coerceIn(0, 100) / 100f)
+
+            val clipPath = Path().apply {
+                addRoundRect(rect, cornerRadius, cornerRadius, Path.Direction.CW)
+            }
+            canvas.save()
+            canvas.clipPath(clipPath)
+            canvas.drawRect(0f, 0f, fillWidth, height.toFloat(), fillPaint)
+            canvas.restore()
+        }
+
+        return bitmap
     }
 
     private fun getColorInt(colorName: String): Int {
