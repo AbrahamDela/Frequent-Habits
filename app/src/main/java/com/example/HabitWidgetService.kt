@@ -68,7 +68,9 @@ class HabitWidgetFactory(private val context: Context, intent: Intent) : RemoteV
             val habit = activeHabits[position]
             val log = logsMap[habit.id]
 
-            val views = RemoteViews(context.packageName, R.layout.widget_habit_item)
+            val sharedPrefs1 = context.getSharedPreferences("habits_settings", Context.MODE_PRIVATE)
+            val isDark1 = sharedPrefs1.getBoolean("dark_mode_enabled", true)
+            val views = RemoteViews(context.packageName, if (isDark1) R.layout.widget_habit_item else R.layout.widget_habit_item_light)
 
             var isWeeklyTargetReached = false
             var weeklyCount = 0
@@ -184,7 +186,7 @@ class HabitWidgetFactory(private val context: Context, intent: Intent) : RemoteV
 
     override fun getLoadingView(): RemoteViews? = null
 
-    override fun getViewTypeCount(): Int = 1
+    override fun getViewTypeCount(): Int = 2
 
     override fun getItemId(position: Int): Long {
         return if (position < activeHabits.size) activeHabits[position].id.toLong() else position.toLong()

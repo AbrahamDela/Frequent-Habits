@@ -281,7 +281,8 @@ class HabitWidgetProvider : AppWidgetProvider() {
                 val progressPercent = if (nonPausedCount > 0) (completed.toFloat() / nonPausedCount * 100).toInt() else 0
                 val isCompleted = progressPercent >= 100 && nonPausedCount > 0
 
-                val views = RemoteViews(context.packageName, R.layout.habit_widget)
+                val layoutId = if (isDark) R.layout.habit_widget else R.layout.habit_widget_light
+                val views = RemoteViews(context.packageName, layoutId)
                 views.setInt(R.id.widget_root_layout, "setBackgroundResource", if (isDark) R.drawable.widget_bg else R.drawable.widget_bg_light)
                 views.setInt(R.id.widget_streak_container, "setBackgroundResource", if (isDark) R.drawable.widget_streak_bg else R.drawable.widget_streak_bg_light)
 
@@ -324,7 +325,6 @@ class HabitWidgetProvider : AppWidgetProvider() {
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
                 )
                 views.setPendingIntentTemplate(R.id.widget_habits_list, clickPIntent)
-
                 appWidgetManager.updateAppWidget(widgetId, views)
                 appWidgetManager.notifyAppWidgetViewDataChanged(widgetId, R.id.widget_habits_list)
             }
@@ -379,18 +379,18 @@ class HabitWidgetProvider : AppWidgetProvider() {
     }
 
     private fun drawProgressBarBitmap(progressPercent: Int, isCompleted: Boolean, accentColorInt: Int, isDark: Boolean): Bitmap {
-        val width = 600
-        val height = 24
+        val width = 800
+        val height = 40
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
-        val cornerRadius = 12f
+        val cornerRadius = 20f
         val rect = android.graphics.RectF(0f, 0f, width.toFloat(), height.toFloat())
 
         // 1. Background Track
         val trackPaint = Paint().apply {
             isAntiAlias = true
             style = Paint.Style.FILL
-            color = if (isDark) Color.parseColor("#242432") else Color.parseColor("#E5E5ED")
+            color = if (isDark) Color.parseColor("#20FFFFFF") else Color.parseColor("#FFFFFF")
         }
         canvas.drawRoundRect(rect, cornerRadius, cornerRadius, trackPaint)
 
@@ -412,6 +412,15 @@ class HabitWidgetProvider : AppWidgetProvider() {
             canvas.drawRect(0f, 0f, fillWidth, height.toFloat(), fillPaint)
             canvas.restore()
         }
+
+        // 3. Subtle Border - matches widget_streak_bg and widget_streak_bg_light
+        val borderPaint = Paint().apply {
+            isAntiAlias = true
+            style = Paint.Style.STROKE
+            strokeWidth = 2f
+            color = if (isDark) Color.parseColor("#40FF9800") else Color.parseColor("#E5E5ED")
+        }
+        canvas.drawRoundRect(rect, cornerRadius, cornerRadius, borderPaint)
 
         return bitmap
     }

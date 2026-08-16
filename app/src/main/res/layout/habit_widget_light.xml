@@ -3,7 +3,7 @@
     android:id="@+id/widget_root_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/widget_bg"
+    android:background="@drawable/widget_bg_light"
     android:orientation="vertical"
     android:padding="12dp">
 
@@ -32,7 +32,7 @@
             android:id="@+id/widget_streak_container"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:background="@drawable/widget_streak_bg"
+            android:background="@drawable/widget_streak_bg_light"
             android:paddingHorizontal="8dp"
             android:paddingVertical="4dp"
             android:gravity="center_vertical"
@@ -49,7 +49,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="0"
-                android:textColor="#FF9800"
+                android:textColor="#EA580C"
                 android:textStyle="bold"
                 android:textSize="13sp"
                 android:layout_marginStart="4dp" />
@@ -63,6 +63,7 @@
         android:layout_height="0dp"
         android:layout_weight="1"
         android:divider="@android:color/transparent"
-        android:dividerHeight="6dp"
-        android:scrollbars="none" />
+        android:dividerHeight="8dp"
+        android:choiceMode="none" />
+
 </LinearLayout>
