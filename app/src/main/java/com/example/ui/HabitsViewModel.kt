@@ -1865,10 +1865,10 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
 
     fun setDarkModeEnabled(enabled: Boolean) {
         _darkModeEnabled.value = enabled
-        sharedPrefs.edit().putBoolean("dark_mode_enabled", enabled).apply()
+        sharedPrefs.edit().putBoolean("dark_mode_enabled", enabled).commit()
         try {
             getApplication<android.app.Application>().getSharedPreferences("habit_prefs", Context.MODE_PRIVATE)
-                .edit().putBoolean("dark_mode_enabled", enabled).apply()
+                .edit().putBoolean("dark_mode_enabled", enabled).commit()
         } catch (e: Exception) {}
         com.example.ui.theme.updateThemeColors(enabled)
         HabitWidgetProvider.triggerUpdate(getApplication())

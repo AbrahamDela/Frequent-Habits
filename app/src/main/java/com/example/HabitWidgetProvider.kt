@@ -164,6 +164,10 @@ class HabitWidgetProvider : AppWidgetProvider() {
     }
 
     private suspend fun performToggleHabit(context: Context, habitId: Int) {
+        val appWidgetManager = AppWidgetManager.getInstance(context)
+        val componentName = ComponentName(context, HabitWidgetProvider::class.java)
+        val ids = appWidgetManager.getAppWidgetIds(componentName)
+
         updateMutex.withLock {
             val db = AppDatabase.getDatabase(context)
             val habit = db.habitDao().getHabitByIdSuspend(habitId) ?: return@withLock
@@ -176,15 +180,15 @@ class HabitWidgetProvider : AppWidgetProvider() {
                 type = habit.type,
                 targetValue = habit.targetValue
             )
+            updateAllWidgetsSuspendInternal(context, appWidgetManager, ids, isFullUpdate = false)
         }
-
-        val appWidgetManager = AppWidgetManager.getInstance(context)
-        val componentName = ComponentName(context, HabitWidgetProvider::class.java)
-        val ids = appWidgetManager.getAppWidgetIds(componentName)
-        updateAllWidgetsSuspend(context, appWidgetManager, ids, isFullUpdate = false)
     }
 
     private suspend fun performDeltaHabit(context: Context, habitId: Int, delta: Float) {
+        val appWidgetManager = AppWidgetManager.getInstance(context)
+        val componentName = ComponentName(context, HabitWidgetProvider::class.java)
+        val ids = appWidgetManager.getAppWidgetIds(componentName)
+
         updateMutex.withLock {
             val db = AppDatabase.getDatabase(context)
             val habit = db.habitDao().getHabitByIdSuspend(habitId) ?: return@withLock
@@ -196,12 +200,8 @@ class HabitWidgetProvider : AppWidgetProvider() {
                 delta = delta,
                 targetValue = habit.targetValue
             )
+            updateAllWidgetsSuspendInternal(context, appWidgetManager, ids, isFullUpdate = false)
         }
-
-        val appWidgetManager = AppWidgetManager.getInstance(context)
-        val componentName = ComponentName(context, HabitWidgetProvider::class.java)
-        val ids = appWidgetManager.getAppWidgetIds(componentName)
-        updateAllWidgetsSuspend(context, appWidgetManager, ids, isFullUpdate = false)
     }
 
     private fun updateAllWidgets(
@@ -229,85 +229,99 @@ class HabitWidgetProvider : AppWidgetProvider() {
         isFullUpdate: Boolean = true
     ) {
         updateMutex.withLock {
-            val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-            val todayStr = sdf.format(Date())
-            val db = AppDatabase.getDatabase(context)
-            val allHabits = db.habitDao().getAllHabitsRaw()
+            updateAllWidgetsSuspendInternal(context, appWidgetManager, appWidgetIds, isFullUpdate)
+        }
+    }
 
-            appWidgetIds.forEach { widgetId ->
-                val selectedDate = todayStr
-                val widgetLogs = db.habitDao().getLogsForDateRaw(selectedDate)
-                val logsMap = widgetLogs.associateBy { it.habitId }
-                val allLogs = db.habitDao().getAllLogsRaw()
+    private suspend fun updateAllWidgetsSuspendInternal(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetIds: IntArray,
+        isFullUpdate: Boolean
+    ) {
+        val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+        val todayStr = sdf.format(Date())
+        val db = AppDatabase.getDatabase(context)
+        val allHabits = db.habitDao().getAllHabitsRaw()
 
-                val activeHabits = allHabits
-                    .filter { !it.isArchived && com.example.data.isHabitActiveOnDate(it, todayStr) }
-                    .sortedWith(compareBy<com.example.data.Habit> { it.sortOrder }.thenByDescending { it.id })
+        appWidgetIds.forEach { widgetId ->
+            val selectedDate = todayStr
+            val widgetLogs = db.habitDao().getLogsForDateRaw(selectedDate)
+            val logsMap = widgetLogs.associateBy { it.habitId }
+            val allLogs = db.habitDao().getAllLogsRaw()
 
-                var completed = 0
-                var nonPausedCount = 0
+            val activeHabits = allHabits
+                .filter { !it.isArchived && com.example.data.isHabitActiveOnDate(it, todayStr) }
+                .sortedWith(compareBy<com.example.data.Habit> { it.sortOrder }.thenByDescending { it.id })
 
-                val curDate = try { java.time.LocalDate.parse(todayStr) } catch (e: Exception) { java.time.LocalDate.now() }
-                val startOf7Days = curDate.minusDays(6).toString()
-                val endOf7Days = curDate.toString()
+            var completed = 0
+            var nonPausedCount = 0
 
-                activeHabits.forEach { habit ->
-                    val log = logsMap[habit.id]
-                    val isPaused = log != null && log.isPaused
-                    if (!isPaused) {
-                        nonPausedCount++
-                        val isDone = if (habit.frequency == "TIMES_WEEKLY") {
-                            val weeklyTarget = habit.specificDays.toIntOrNull() ?: 3
-                            val weeklyCount = allLogs.filter { l ->
-                                l.habitId == habit.id && l.date >= startOf7Days && l.date <= endOf7Days && com.example.data.isLogCompleted(habit, l)
-                            }.size
-                            weeklyCount >= weeklyTarget || com.example.data.isLogCompleted(habit, log)
-                        } else {
-                            com.example.data.isLogCompleted(habit, log)
-                        }
-                        if (isDone) {
-                            completed++
-                        }
+            val curDate = try { java.time.LocalDate.parse(todayStr) } catch (e: Exception) { java.time.LocalDate.now() }
+            val startOf7Days = curDate.minusDays(6).toString()
+            val endOf7Days = curDate.toString()
+
+            activeHabits.forEach { habit ->
+                val log = logsMap[habit.id]
+                val isPaused = log != null && log.isPaused
+                if (!isPaused) {
+                    nonPausedCount++
+                    val isDone = if (habit.frequency == "TIMES_WEEKLY") {
+                        val weeklyTarget = habit.specificDays.toIntOrNull() ?: 3
+                        val weeklyCount = allLogs.filter { l ->
+                            l.habitId == habit.id && l.date >= startOf7Days && l.date <= endOf7Days && com.example.data.isLogCompleted(habit, l)
+                        }.size
+                        weeklyCount >= weeklyTarget || com.example.data.isLogCompleted(habit, log)
+                    } else {
+                        com.example.data.isLogCompleted(habit, log)
+                    }
+                    if (isDone) {
+                        completed++
                     }
                 }
+            }
 
-                val sharedPrefs = context.getSharedPreferences("habits_settings", Context.MODE_PRIVATE)
-                val isDark = sharedPrefs.getBoolean("dark_mode_enabled", true)
-                val accentColorName = sharedPrefs.getString("accent_color_name", null)
-                    ?: context.getSharedPreferences("habit_prefs", Context.MODE_PRIVATE).getString("accent_color_name", "PURPLE")
-                    ?: "PURPLE"
-                val accentColorInt = com.example.ui.HabitIconMapping.getColor(accentColorName).toArgb()
+            val sharedPrefs = context.getSharedPreferences("habits_settings", Context.MODE_PRIVATE)
+            val habitPrefs = context.getSharedPreferences("habit_prefs", Context.MODE_PRIVATE)
+            val isDark = sharedPrefs.getBoolean("dark_mode_enabled", habitPrefs.getBoolean("dark_mode_enabled", true))
 
-                val progressPercent = if (nonPausedCount > 0) (completed.toFloat() / nonPausedCount * 100).toInt() else 0
-                val isCompleted = progressPercent >= 100 && nonPausedCount > 0
+            val accentColorName = sharedPrefs.getString("accent_color_name", null)
+                ?: habitPrefs.getString("accent_color_name", "PURPLE")
+                ?: "PURPLE"
+            val accentColorInt = com.example.ui.HabitIconMapping.getColor(accentColorName).toArgb()
 
-                val layoutId = if (isDark) R.layout.habit_widget else R.layout.habit_widget_light
-                val views = RemoteViews(context.packageName, layoutId)
-                views.setInt(R.id.widget_root_layout, "setBackgroundResource", if (isDark) R.drawable.widget_bg else R.drawable.widget_bg_light)
-                views.setInt(R.id.widget_streak_container, "setBackgroundResource", if (isDark) R.drawable.widget_streak_bg else R.drawable.widget_streak_bg_light)
+            val progressPercent = if (nonPausedCount > 0) (completed.toFloat() / nonPausedCount * 100).toInt() else 0
+            val isCompleted = progressPercent >= 100 && nonPausedCount > 0
 
-                val progressBitmap = drawProgressBarBitmap(progressPercent, isCompleted, accentColorInt, isDark)
-                views.setImageViewBitmap(R.id.widget_progress_bar, progressBitmap)
+            val layoutId = if (isDark) R.layout.habit_widget else R.layout.habit_widget_light
+            val views = RemoteViews(context.packageName, layoutId)
 
-                val perfectStats = com.example.data.StreakCalculator.calculate(allHabits, allLogs, targetDateStr = todayStr)
-                val currentStreak = perfectStats.currentStreak
+            views.setInt(R.id.widget_root_layout, "setBackgroundResource", if (isDark) R.drawable.widget_bg else R.drawable.widget_bg_light)
+            views.setInt(R.id.widget_streak_container, "setBackgroundResource", if (isDark) R.drawable.widget_streak_bg else R.drawable.widget_streak_bg_light)
 
-                sharedPrefs.edit().putInt("current_perfect_streak", currentStreak).apply()
-                views.setTextViewText(R.id.widget_streak_text, currentStreak.toString())
-                views.setTextColor(R.id.widget_streak_text, if (isDark) Color.parseColor("#FF9800") else Color.parseColor("#EA580C"))
+            val progressBitmap = drawProgressBarBitmap(progressPercent, isCompleted, accentColorInt, isDark)
+            views.setImageViewBitmap(R.id.widget_progress_bar, progressBitmap)
 
-                val openAppInt = Intent(context, MainActivity::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                }
-                val pendingInt = PendingIntent.getActivity(
-                    context,
-                    widgetId * 5000,
-                    openAppInt,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-                views.setOnClickPendingIntent(R.id.widget_progress_bar, pendingInt)
-                views.setOnClickPendingIntent(R.id.widget_streak_container, pendingInt)
+            val perfectStats = com.example.data.StreakCalculator.calculate(allHabits, allLogs, targetDateStr = todayStr)
+            val currentStreak = perfectStats.currentStreak
 
+            sharedPrefs.edit().putInt("current_perfect_streak", currentStreak).apply()
+            views.setTextViewText(R.id.widget_streak_text, currentStreak.toString())
+            views.setTextColor(R.id.widget_streak_text, if (isDark) Color.parseColor("#FF9800") else Color.parseColor("#EA580C"))
+
+            val openAppInt = Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
+            val pendingInt = PendingIntent.getActivity(
+                context,
+                widgetId * 5000,
+                openAppInt,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            views.setOnClickPendingIntent(R.id.widget_progress_bar, pendingInt)
+            views.setOnClickPendingIntent(R.id.widget_streak_container, pendingInt)
+
+            if (isFullUpdate) {
                 val serviceIntent = Intent(context, HabitWidgetService::class.java).apply {
                     putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
                     data = android.net.Uri.parse("custom://widget/habits_list/$widgetId")
@@ -325,9 +339,13 @@ class HabitWidgetProvider : AppWidgetProvider() {
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
                 )
                 views.setPendingIntentTemplate(R.id.widget_habits_list, clickPIntent)
+
                 appWidgetManager.updateAppWidget(widgetId, views)
-                appWidgetManager.notifyAppWidgetViewDataChanged(widgetId, R.id.widget_habits_list)
+            } else {
+                appWidgetManager.partiallyUpdateAppWidget(widgetId, views)
             }
+
+            appWidgetManager.notifyAppWidgetViewDataChanged(widgetId, R.id.widget_habits_list)
         }
     }
 
@@ -390,7 +408,7 @@ class HabitWidgetProvider : AppWidgetProvider() {
         val trackPaint = Paint().apply {
             isAntiAlias = true
             style = Paint.Style.FILL
-            color = if (isDark) Color.parseColor("#20FFFFFF") else Color.parseColor("#FFFFFF")
+            color = if (isDark) Color.parseColor("#20FFFFFF") else Color.parseColor("#EAEAEF")
         }
         canvas.drawRoundRect(rect, cornerRadius, cornerRadius, trackPaint)
 

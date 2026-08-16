@@ -68,9 +68,10 @@ class HabitWidgetFactory(private val context: Context, intent: Intent) : RemoteV
             val habit = activeHabits[position]
             val log = logsMap[habit.id]
 
-            val sharedPrefs1 = context.getSharedPreferences("habits_settings", Context.MODE_PRIVATE)
-            val isDark1 = sharedPrefs1.getBoolean("dark_mode_enabled", true)
-            val views = RemoteViews(context.packageName, if (isDark1) R.layout.widget_habit_item else R.layout.widget_habit_item_light)
+            val sharedPrefs = context.getSharedPreferences("habits_settings", Context.MODE_PRIVATE)
+            val habitPrefs = context.getSharedPreferences("habit_prefs", Context.MODE_PRIVATE)
+            val isDark = sharedPrefs.getBoolean("dark_mode_enabled", habitPrefs.getBoolean("dark_mode_enabled", true))
+            val views = RemoteViews(context.packageName, if (isDark) R.layout.widget_habit_item else R.layout.widget_habit_item_light)
 
             var isWeeklyTargetReached = false
             var weeklyCount = 0
@@ -88,10 +89,8 @@ class HabitWidgetFactory(private val context: Context, intent: Intent) : RemoteV
 
             val status = com.example.data.getLogStatus(habit, log, selectedDate, "1970-01-01", selectedDate, isWeeklyTargetReached)
 
-            val sharedPrefs = context.getSharedPreferences("habits_settings", Context.MODE_PRIVATE)
-            val isDark = sharedPrefs.getBoolean("dark_mode_enabled", true)
             val accentColorName = sharedPrefs.getString("accent_color_name", null)
-                ?: context.getSharedPreferences("habit_prefs", Context.MODE_PRIVATE).getString("accent_color_name", "PURPLE")
+                ?: habitPrefs.getString("accent_color_name", "PURPLE")
                 ?: "PURPLE"
 
             val bgRes = when {
