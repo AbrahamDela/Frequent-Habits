@@ -436,7 +436,7 @@ class HabitWidgetProvider : AppWidgetProvider() {
             isAntiAlias = true
             style = Paint.Style.STROKE
             strokeWidth = 2f
-            color = if (isDark) Color.parseColor("#40FF9800") else Color.parseColor("#E5E5ED")
+            color = if (isDark) Color.parseColor("#2C2C38") else Color.parseColor("#E5E5ED")
         }
         canvas.drawRoundRect(rect, cornerRadius, cornerRadius, borderPaint)
 

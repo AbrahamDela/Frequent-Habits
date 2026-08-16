@@ -3753,7 +3753,7 @@ fun TodayScreen(
                                 modifier = Modifier
                                     .weight(1f)
                                     .height(36.dp),
-                                color = ProgressTrack,
+                                color = AppCard,
                                 shape = RoundedCornerShape(18.dp),
                                 border = BorderStroke(1.dp, AppBorder)
                             ) {
@@ -3780,7 +3780,7 @@ fun TodayScreen(
                                             text = if (language == "de") "Tagesfortschritt" else if (language == "ka") "ყოველდღიური პროგრესი" else "Daily Progress",
                                             style = MaterialTheme.typography.labelLarge,
                                             fontWeight = FontWeight.Bold,
-                                            color = progressTextColor.copy(alpha = 0.9f)
+                                            color = progressTextColor
                                         )
                                         Text(
                                             text = progressText,
