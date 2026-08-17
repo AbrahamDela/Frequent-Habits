@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
+import com.frequent.habits.R
 import com.example.data.AppDatabase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -222,7 +223,7 @@ class SmartInsightNotificationReceiver : BroadcastReceiver() {
         
         val title = if (language == "de") "Neuer Smart Insight 💡" else "New Smart Insight 💡"
         val notification = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
             .setContentText(cleanText)
             .setStyle(NotificationCompat.BigTextStyle().bigText(cleanText))

@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
+import com.frequent.habits.R
 import com.example.data.AppDatabase
 import com.example.data.isHabitActiveOnDate
 import kotlinx.coroutines.CoroutineScope
@@ -118,7 +119,7 @@ class HabitReminderReceiver : BroadcastReceiver() {
         val text = "Hast du '$habitName' heute schon erledigt? Bleib dran!"
 
         val notification = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
             .setContentText(text)
             .setAutoCancel(true)
@@ -158,7 +159,7 @@ class HabitReminderReceiver : BroadcastReceiver() {
         val text = "Du hast heute noch $pendingCount Gewohnheit(en) offen. Bleib dran!"
 
         val notification = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
             .setContentText(text)
             .setAutoCancel(true)

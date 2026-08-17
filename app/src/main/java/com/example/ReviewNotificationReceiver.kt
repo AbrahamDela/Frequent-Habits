@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
+import com.frequent.habits.R
 import java.util.Calendar
 
 class ReviewNotificationReceiver : BroadcastReceiver() {
@@ -55,7 +56,7 @@ class ReviewNotificationReceiver : BroadcastReceiver() {
             val text = "Schau nach, was dein vergangenes Ich dir in der Zeitkapsel hinterlassen hat."
 
             val notification = NotificationCompat.Builder(context, channelId)
-                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle(title)
                 .setContentText(text)
                 .setAutoCancel(true)
@@ -93,7 +94,7 @@ class ReviewNotificationReceiver : BroadcastReceiver() {
             val text = "Schau nach, was dein vergangenes Ich dir in der Zeitkapsel hinterlassen hat."
 
             val notification = NotificationCompat.Builder(context, channelId)
-                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle(title)
                 .setContentText(text)
                 .setAutoCancel(true)

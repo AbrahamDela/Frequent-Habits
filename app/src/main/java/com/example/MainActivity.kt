@@ -307,6 +307,25 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
     }
     var popupReviewYearState by remember { mutableStateOf<Int?>(null) }
 
+    val deepLinkReviewMonth by viewModel.deepLinkReviewMonth.collectAsStateWithLifecycle()
+    val deepLinkReviewYear by viewModel.deepLinkReviewYear.collectAsStateWithLifecycle()
+
+    var activeMonthlyReviewState by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+
+    LaunchedEffect(deepLinkReviewMonth) {
+        deepLinkReviewMonth?.let {
+            activeMonthlyReviewState = it
+            viewModel.setDeepLinkReviewMonth(null)
+        }
+    }
+
+    LaunchedEffect(deepLinkReviewYear) {
+        deepLinkReviewYear?.let {
+            popupReviewYearState = it
+            viewModel.setDeepLinkReviewYear(null)
+        }
+    }
+
     if (showNewYearPopup) {
         NewYearReviewPopupDialog(
             reviewYear = reviewYearVal,
@@ -320,6 +339,18 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
                 showNewYearPopup = false
                 nyPrefs.edit().putBoolean(nyPopupKey, true).apply()
             }
+        )
+    }
+
+    if (activeMonthlyReviewState != null) {
+        MonthlyReviewDialog(
+            year = activeMonthlyReviewState!!.first,
+            month = activeMonthlyReviewState!!.second,
+            allHabits = allHabitsForPopup,
+            allLogs = allLogsForPopup,
+            language = language,
+            viewModel = viewModel,
+            onDismiss = { activeMonthlyReviewState = null }
         )
     }
 
@@ -504,6 +535,14 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
                     )
                 }
                 composable("CREATE") {
+                    val allMilestoneRewards by viewModel.allMilestoneRewards.collectAsStateWithLifecycle(initialValue = emptyList())
+                    val habitMilestones = remember(editingHabit?.id, allMilestoneRewards) {
+                        if (editingHabit != null) {
+                            allMilestoneRewards.filter { it.habitId == editingHabit!!.id }
+                        } else {
+                            emptyList()
+                        }
+                    }
                     DisposableEffect(Unit) {
                         onDispose {
                             editingHabit = null
@@ -512,6 +551,7 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
                     CreateHabitScreen(
                         language = language,
                         editingHabit = editingHabit,
+                        initialMilestoneRewards = habitMilestones,
                         onDismiss = {
                             editingHabit = null
                             navController.navigate("TODAY") {
@@ -541,11 +581,7 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
                                     customReminders = customReminders,
                                     description = description
                                 )
-                                viewModel.updateHabit(updated)
-                                if (milestoneRewards.isNotEmpty()) {
-                                    milestoneRewards.forEach { reward ->
-                                    }
-                                }
+                                viewModel.updateHabit(updated, milestoneRewards)
                                 editingHabit = null
                                 Toast.makeText(
                                     context,
@@ -2777,13 +2813,21 @@ fun SmartInsightCard(
 
         // 3. Weekly volume
         if (!isInsightTypeInCooldown(context, "WEEKLY_VOLUME", todayDateString)) {
-            val calendar = Calendar.getInstance()
-            calendar.set(Calendar.DAY_OF_WEEK, calendar.firstDayOfWeek)
-            val startOfWeekTime = calendar.timeInMillis
-            val weeklyCompletions = allLogs.count { log ->
-                log.value > 0f && !log.isPaused && log.timestamp >= startOfWeekTime
-            }
-            if (weeklyCompletions > 0) {
+            val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+            val todayDate = try { sdf.parse(todayDateString) } catch (e: Exception) { null }
+            val weeklyCompletions = if (todayDate != null) {
+                allLogs.count { log ->
+                    if (log.value > 0f && !log.isPaused) {
+                        val d = try { sdf.parse(log.date) } catch (e: Exception) { null }
+                        if (d != null) {
+                            val diffDays = ((todayDate.time - d.time) / (1000L * 60 * 60 * 24)).toInt()
+                            diffDays in 0..6
+                        } else false
+                    } else false
+                }
+            } else 0
+
+            if (weeklyCompletions >= 3) {
                 list.add(InsightOption(
                     type = "WEEKLY_VOLUME",
                     text = if (language == "de") {
@@ -3083,12 +3127,24 @@ fun SmartInsightCard(
 
         // 12. Week-over-Week comparison
         if (!isInsightTypeInCooldown(context, "WEEK_OVER_WEEK", todayDateString)) {
-            val nowTime = System.currentTimeMillis()
-            val oneWeekMillis = 7 * 24 * 60 * 60 * 1000L
-            val twoWeeksMillis = 14 * 24 * 60 * 60 * 1000L
+            val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+            val todayDate = try { sdf.parse(todayDateString) } catch (e: Exception) { null }
             
-            val thisWeekCount = allLogs.count { log -> log.value > 0f && !log.isPaused && (nowTime - log.timestamp) <= oneWeekMillis }
-            val prevWeekCount = allLogs.count { log -> log.value > 0f && !log.isPaused && (nowTime - log.timestamp) in (oneWeekMillis + 1)..twoWeeksMillis }
+            val (thisWeekCount, prevWeekCount) = if (todayDate != null) {
+                var tw = 0
+                var pw = 0
+                allLogs.forEach { log ->
+                    if (log.value > 0f && !log.isPaused) {
+                        val d = try { sdf.parse(log.date) } catch (e: Exception) { null }
+                        if (d != null) {
+                            val diffDays = ((todayDate.time - d.time) / (1000L * 60 * 60 * 24)).toInt()
+                            if (diffDays in 0..6) tw++
+                            else if (diffDays in 7..13) pw++
+                        }
+                    }
+                }
+                Pair(tw, pw)
+            } else Pair(0, 0)
             
             if (thisWeekCount > 0 || prevWeekCount > 0) {
                 list.add(InsightOption(
@@ -3108,24 +3164,35 @@ fun SmartInsightCard(
 
         // 13. Habit-specific improvement
         if (!isInsightTypeInCooldown(context, "HABIT_IMPROVEMENT", todayDateString)) {
-            val nowTime = System.currentTimeMillis()
-            val oneWeekMillis = 7 * 24 * 60 * 60 * 1000L
-            val twoWeeksMillis = 14 * 24 * 60 * 60 * 1000L
+            val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+            val todayDate = try { sdf.parse(todayDateString) } catch (e: Exception) { null }
             
             var bestHabit: com.example.data.Habit? = null
             var maxDiff = 0
             var bestThisWeek = 0
             var bestLastWeek = 0
             
-            allHabits.filter { !it.isArchived }.forEach { habit ->
-                val thisWeek = allLogs.count { it.habitId == habit.id && it.value > 0f && !it.isPaused && (nowTime - it.timestamp) <= oneWeekMillis }
-                val lastWeek = allLogs.count { it.habitId == habit.id && it.value > 0f && !it.isPaused && (nowTime - it.timestamp) in (oneWeekMillis + 1)..twoWeeksMillis }
-                val diff = thisWeek - lastWeek
-                if (diff > maxDiff && thisWeek >= 2) {
-                    maxDiff = diff
-                    bestHabit = habit
-                    bestThisWeek = thisWeek
-                    bestLastWeek = lastWeek
+            if (todayDate != null) {
+                allHabits.filter { !it.isArchived }.forEach { habit ->
+                    var thisWeek = 0
+                    var lastWeek = 0
+                    allLogs.forEach { log ->
+                        if (log.habitId == habit.id && log.value > 0f && !log.isPaused) {
+                            val d = try { sdf.parse(log.date) } catch (e: Exception) { null }
+                            if (d != null) {
+                                val diffDays = ((todayDate.time - d.time) / (1000L * 60 * 60 * 24)).toInt()
+                                if (diffDays in 0..6) thisWeek++
+                                else if (diffDays in 7..13) lastWeek++
+                            }
+                        }
+                    }
+                    val diff = thisWeek - lastWeek
+                    if (diff > maxDiff && thisWeek >= 2) {
+                        maxDiff = diff
+                        bestHabit = habit
+                        bestThisWeek = thisWeek
+                        bestLastWeek = lastWeek
+                    }
                 }
             }
             
@@ -5875,6 +5942,48 @@ fun HabitDetailScreen(
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 // Current streak card
+                val isWeeklyHabit = habit.frequency == "TIMES_WEEKLY"
+                val currentStreakText = if (language == "de") "$currentStreak ${if (currentStreak == 1) "Tag" else "Tage"}"
+                    else if (language == "ka") "$currentStreak დღე"
+                    else "$currentStreak ${if (currentStreak == 1) "Day" else "Days"}"
+                val longestStreakText = if (language == "de") "$longestStreak ${if (longestStreak == 1) "Tag" else "Tage"}"
+                    else if (language == "ka") "$longestStreak დღე"
+                    else "$longestStreak ${if (longestStreak == 1) "Day" else "Days"}"
+                val currentStreakExplanation = if (isWeeklyHabit) {
+                    if (language == "de") {
+                        "Die Anzahl der aufeinanderfolgenden Tage, an denen dein 7-Tage-Ziel (${habit.specificDays}x in den vorangegangenen 7 Tagen) erreicht war."
+                    } else if (language == "ka") {
+                        "ზედიზედ რამდენი დღე იყო თქვენი 7-დღიანი მიზანი (${habit.specificDays}x ბოლო 7 დღეში) მიღწეული."
+                    } else {
+                        "The number of consecutive days your 7-day rolling goal (${habit.specificDays}x in the previous 7 days) was maintained."
+                    }
+                } else {
+                    if (language == "de") {
+                        "Die Anzahl der aufeinanderfolgenden Tage, an denen du diese Gewohnheit bis heute erfolgreich abgeschlossen hast."
+                    } else if (language == "ka") {
+                        "ზედიზედ რამდენი დღე დაასრულეთ ეს ჩვევა დღემდე."
+                    } else {
+                        "The number of consecutive days you have completed this habit up to today."
+                    }
+                }
+                val longestStreakExplanation = if (isWeeklyHabit) {
+                    if (language == "de") {
+                        "Deine historische Bestleistung an aufeinanderfolgenden Tagen, an denen dein 7-Tage-Ziel (${habit.specificDays}x in den vorangegangenen 7 Tagen) erreicht war."
+                    } else if (language == "ka") {
+                        "თქვენი ისტორიული რეკორდი ზედიზედ დღეებში 7-დღიანი მიზნისთვის (${habit.specificDays}x ბოლო 7 დღეში)."
+                    } else {
+                        "Your highest historical record of consecutive days maintaining your 7-day rolling goal (${habit.specificDays}x in the previous 7 days)."
+                    }
+                } else {
+                    if (language == "de") {
+                        "Deine historische Bestleistung an aufeinanderfolgenden Tagen, an denen du diese Gewohnheit abgeschlossen hast."
+                    } else if (language == "ka") {
+                        "თქვენი უმაღლესი ისტორიული ჩანაწერი ზედიზედ დღეებში ამ ჩვევის დასრულების შესახებ."
+                    } else {
+                        "Your highest historical record of consecutive days completing this habit."
+                    }
+                }
+
                 Card(
                     colors = CardDefaults.cardColors(containerColor = AppCard),
                     shape = RoundedCornerShape(20.dp),
@@ -5891,13 +6000,7 @@ fun HabitDetailScreen(
                         Box(modifier = Modifier.align(Alignment.TopEnd)) {
                             InfoIconButton(
                                 title = if (language == "de") "Aktueller Streak" else if (language == "ka") "მიმდინარე სტრიქონი" else "Current Streak",
-                                explanation = if (language == "de") {
-                                    "Die Anzahl der aufeinanderfolgenden Tage, an denen du diese Gewohnheit bis heute erfolgreich abgeschlossen hast."
-                                } else if (language == "ka") {
-                        "ზედიზედ რამდენი დღე დაასრულეთ ეს ჩვევა დღემდე."
-                    } else {
-                        "The number of consecutive days you have completed this habit up to today."
-                    },
+                                explanation = currentStreakExplanation,
                                 onClick = { t, e -> activeExplanation = t to e }
                             )
                         }
@@ -5934,7 +6037,7 @@ fun HabitDetailScreen(
                             )
                             
                             Text(
-                                text = if (language == "de") "$currentStreak ${if (currentStreak == 1) "Tag" else "Tage"}" else "$currentStreak ${if (currentStreak == 1) "Day" else "Days"}",
+                                text = currentStreakText,
                                 style = MaterialTheme.typography.headlineMedium,
                                 fontSize = 22.sp,
                                 color = TextPrimary,
@@ -5962,13 +6065,7 @@ fun HabitDetailScreen(
                         Box(modifier = Modifier.align(Alignment.TopEnd)) {
                             InfoIconButton(
                                 title = if (language == "de") "Längster Streak" else if (language == "ka") "ყველაზე გრძელი სერია" else "Longest Streak",
-                                explanation = if (language == "de") {
-                                    "Deine historische Bestleistung an aufeinanderfolgenden Tagen, an denen du diese Gewohnheit abgeschlossen hast."
-                                } else if (language == "ka") {
-                        "თქვენი უმაღლესი ისტორიული ჩანაწერი ზედიზედ დღეებში ამ ჩვევის დასრულების შესახებ."
-                    } else {
-                        "Your highest historical record of consecutive days completing this habit."
-                    },
+                                explanation = longestStreakExplanation,
                                 onClick = { t, e -> activeExplanation = t to e }
                             )
                         }
@@ -6005,7 +6102,7 @@ fun HabitDetailScreen(
                             )
                             
                             Text(
-                                text = if (language == "de") "$longestStreak ${if (longestStreak == 1) "Tag" else "Tage"}" else "$longestStreak ${if (longestStreak == 1) "Day" else "Days"}",
+                                text = longestStreakText,
                                 style = MaterialTheme.typography.headlineMedium,
                                 fontSize = 22.sp,
                                 color = TextPrimary,
@@ -9016,6 +9113,54 @@ fun calculateHabitSuccessStatsForPeriod(
     val habitLogs = logs.filter { it.habitId == habit.id }
     val logsByDate = habitLogs.associateBy { it.date }
 
+    if (habit.frequency == "TIMES_WEEKLY") {
+        val targetTimes = habit.specificDays.toIntOrNull() ?: 3
+        var done = 0
+        var missed = 0
+        var skipped = 0
+        var pending = 0
+
+        var currDate = startDate
+        while (!currDate.isAfter(today)) {
+            val startOf7Days = currDate.minusDays(6)
+            var completedInWindow = 0
+            var pausedInWindow = 0
+            for (d in 0..6) {
+                val dayStr = startOf7Days.plusDays(d.toLong()).toString()
+                val log = logsByDate[dayStr]
+                if (log != null && log.isPaused) {
+                    pausedInWindow++
+                } else if (log != null && com.example.data.isLogCompleted(habit, log)) {
+                    completedInWindow++
+                }
+            }
+
+            val adjustedTarget = (targetTimes - pausedInWindow).coerceAtLeast(1)
+            val isSuccess = completedInWindow >= adjustedTarget
+
+            if (currDate == today) {
+                if (isSuccess) {
+                    done++
+                } else {
+                    pending++
+                }
+            } else {
+                if (isSuccess) {
+                    done++
+                } else if (pausedInWindow >= 7) {
+                    skipped++
+                } else {
+                    missed++
+                }
+            }
+
+            currDate = currDate.plusDays(1)
+        }
+
+        val total = done + missed + skipped + pending
+        return SuccessRateStats(done, missed, skipped, pending, total)
+    }
+
     var done = 0
     var missed = 0
     var skipped = 0
@@ -9046,63 +9191,24 @@ fun calculateOverallSuccessStats(
     allLogs: List<HabitLog>,
     periodIndex: Int = 0 // 0 = Week, 1 = Month, 2 = Year, 3 = Total
 ): SuccessRateStats {
-    val today = java.time.LocalDate.now()
-    val todayStr = today.toString()
     val activeHabits = allHabits.filter { !it.isArchived }
-
     if (activeHabits.isEmpty()) return SuccessRateStats()
 
-    val logsMap = allLogs.groupBy { it.habitId to it.date }
-
-    var done = 0
-    var missed = 0
-    var skipped = 0
-    var pending = 0
+    var totalDone = 0
+    var totalMissed = 0
+    var totalSkipped = 0
+    var totalPending = 0
 
     activeHabits.forEach { habit ->
-        val validStartMillis = if (habit.startDate > 946684800000L) habit.startDate else habit.createdAt
-        val rawHabitStartDate = java.time.Instant.ofEpochMilli(validStartMillis.coerceAtLeast(946684800000L)).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
-        val habitStartDate = if (rawHabitStartDate.isBefore(today.minusYears(5))) today.minusYears(5) else rawHabitStartDate
-        val startSdfStr = habitStartDate.toString()
-
-        val startDate = when (periodIndex) {
-            0 -> { // This Week
-                val dayOfWeek = today.dayOfWeek.value
-                val weekStart = today.minusDays((dayOfWeek - 1).toLong())
-                if (weekStart.isBefore(habitStartDate)) habitStartDate else weekStart
-            }
-            1 -> { // This Month
-                val monthStart = today.withDayOfMonth(1)
-                if (monthStart.isBefore(habitStartDate)) habitStartDate else monthStart
-            }
-            2 -> { // This Year
-                val yearStart = today.withDayOfYear(1)
-                if (yearStart.isBefore(habitStartDate)) habitStartDate else yearStart
-            }
-            else -> habitStartDate
-        }
-
-        if (!startDate.isAfter(today)) {
-            var current = startDate
-            while (!current.isAfter(today)) {
-                val dateStr = current.toString()
-                if (isHabitActiveOnDate(habit, dateStr)) {
-                    val log = logsMap[habit.id to dateStr]?.firstOrNull()
-                    val status = getLogStatus(habit, log, dateStr, startSdfStr, todayStr)
-                    when (status) {
-                        "SUCCESS" -> done++
-                        "FAILED" -> missed++
-                        "PAUSED" -> skipped++
-                        "PENDING" -> pending++
-                    }
-                }
-                current = current.plusDays(1)
-            }
-        }
+        val habitStats = calculateHabitSuccessStatsForPeriod(habit, allLogs, periodIndex)
+        totalDone += habitStats.doneCount
+        totalMissed += habitStats.missedCount
+        totalSkipped += habitStats.skippedCount
+        totalPending += habitStats.pendingCount
     }
 
-    val total = done + missed + skipped + pending
-    return SuccessRateStats(done, missed, skipped, pending, total)
+    val total = totalDone + totalMissed + totalSkipped + totalPending
+    return SuccessRateStats(totalDone, totalMissed, totalSkipped, totalPending, total)
 }
 
 @Composable
@@ -11670,7 +11776,8 @@ fun CreateHabitScreen(
     language: String,
     onDismiss: () -> Unit,
     onSave: (name: String, isNegative: Boolean, category: String, icon: String, color: String, type: String, unit: String, target: Float, clickIncrement: Float, freq: String, startMs: Long, specificDays: String, reminderEnabled: Boolean, reminderHour: Int, reminderMinute: Int, customReminders: String, description: String, milestoneRewards: List<com.example.data.MilestoneReward>) -> Unit,
-    editingHabit: Habit? = null
+    editingHabit: Habit? = null,
+    initialMilestoneRewards: List<com.example.data.MilestoneReward> = emptyList()
 ) {
     BackHandler {
         onDismiss()
@@ -11679,7 +11786,7 @@ fun CreateHabitScreen(
     var activeExplanation by remember(editingHabit?.id) { mutableStateOf<Pair<String, String>?>(null) }
     var name by remember(editingHabit?.id) { mutableStateOf(editingHabit?.name ?: "") }
     var description by remember(editingHabit?.id) { mutableStateOf(editingHabit?.description ?: "") }
-    var milestoneRewards by remember(editingHabit?.id) { mutableStateOf<List<com.example.data.MilestoneReward>>(emptyList()) }
+    var milestoneRewards by remember(editingHabit?.id, initialMilestoneRewards) { mutableStateOf(initialMilestoneRewards) }
     var nameError by remember(editingHabit?.id) { mutableStateOf(false) }
     val scrollState = rememberScrollState()
     val coroutineScope = rememberCoroutineScope()
@@ -18045,8 +18152,56 @@ fun calculateStreakFast(habit: Habit, logs: List<HabitLog>): Pair<Int, Int> {
     }.map { it.date }.toSet()
 
     if (habit.frequency == "TIMES_WEEKLY") {
-        val comps = completedDates.size
-        return comps to comps
+        val targetTimes = habit.specificDays.toIntOrNull() ?: 3
+        val today = java.time.LocalDate.now()
+        val habitStartDate = try {
+            java.time.Instant.ofEpochMilli(validStartMillis.coerceAtLeast(946684800000L))
+                .atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+        } catch (e: Exception) {
+            today
+        }
+
+        if (habitStartDate.isAfter(today)) return 0 to 0
+
+        val pausedDates = habitLogs.filter { it.isPaused }.map { it.date }.toSet()
+        var longestStreak = 0
+        var tempStreak = 0
+        var currDate = habitStartDate
+        val daysSuccessMap = mutableMapOf<java.time.LocalDate, Boolean>()
+
+        while (!currDate.isAfter(today)) {
+            val startOf7Days = currDate.minusDays(6)
+            var completedInWindow = 0
+            var pausedInWindow = 0
+            for (d in 0..6) {
+                val dayStr = startOf7Days.plusDays(d.toLong()).toString()
+                if (completedDates.contains(dayStr)) completedInWindow++
+                if (pausedDates.contains(dayStr)) pausedInWindow++
+            }
+            val adjustedTarget = (targetTimes - pausedInWindow).coerceAtLeast(1)
+            val isSuccess = completedInWindow >= adjustedTarget
+            daysSuccessMap[currDate] = isSuccess
+
+            if (isSuccess) {
+                tempStreak++
+                if (tempStreak > longestStreak) longestStreak = tempStreak
+            } else {
+                if (currDate != today) {
+                    tempStreak = 0
+                }
+            }
+            currDate = currDate.plusDays(1)
+        }
+
+        var currentStreak = 0
+        val startFrom = if (daysSuccessMap[today] == true) today else today.minusDays(1)
+        var checkDate = startFrom
+        while (!checkDate.isBefore(habitStartDate) && daysSuccessMap[checkDate] == true) {
+            currentStreak++
+            checkDate = checkDate.minusDays(1)
+        }
+
+        return currentStreak to longestStreak
     }
 
     val sortedDates = completedDates.sorted()
@@ -21466,7 +21621,7 @@ fun RewardsOverviewSheet(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = if (language == "de") "Belohnungs-Übersicht" else if (language == "ka") "ჯილდოების მიმოხილვა" else "Rewards Overview",
+                        text = if (language == "de") "Meilenstein-Belohnungen" else if (language == "ka") "ეტაპობრივი ჯილდოები" else "Milestone Rewards",
                         style = MaterialTheme.typography.titleLarge,
                         color = TextPrimary,
                         fontWeight = FontWeight.Bold
@@ -21486,12 +21641,12 @@ fun RewardsOverviewSheet(
                     Tab(
                         selected = selectedTabIndex == 0,
                         onClick = { selectedTabIndex = 0 },
-                        text = { Text(if (language == "de") "Aktive (${activeRewards.size})" else if (language == "ka") "აქტიური ( ${activeRewards.size} )" else "Active (${activeRewards.size})", color = if (selectedTabIndex == 0) PrimaryViolet else TextSecondary) }
+                        text = { Text(if (language == "de") "Aktiv (${activeRewards.size})" else if (language == "ka") "აქტიური (${activeRewards.size})" else "Active (${activeRewards.size})", color = if (selectedTabIndex == 0) PrimaryViolet else TextSecondary) }
                     )
                     Tab(
                         selected = selectedTabIndex == 1,
                         onClick = { selectedTabIndex = 1 },
-                        text = { Text(if (language == "de") "Erreicht (${achievedRewards.size})" else if (language == "ka") "მიღწეული ( ${achievedRewards.size} )" else "Achieved (${achievedRewards.size})", color = if (selectedTabIndex == 1) PrimaryViolet else TextSecondary) }
+                        text = { Text(if (language == "de") "Freigeschaltet (${achievedRewards.size})" else if (language == "ka") "მიღწეული (${achievedRewards.size})" else "Unlocked (${achievedRewards.size})", color = if (selectedTabIndex == 1) PrimaryViolet else TextSecondary) }
                     )
                 }
 
@@ -21507,7 +21662,7 @@ fun RewardsOverviewSheet(
                         if (activeRewards.isEmpty()) {
                             item {
                                 Text(
-                                    text = if (language == "de") "Keine aktiven Belohnungen definiert." else if (language == "ka") "არ არის განსაზღვრული აქტიური ჯილდოები." else "No active rewards defined.",
+                                    text = if (language == "de") "Keine aktiven Belohnungen festgelegt. Du kannst beim Bearbeiten oder Erstellen einer Gewohnheit Meilensteine und Belohnungen hinzufügen." else if (language == "ka") "არ არის განსაზღვრული აქტიური ჯილდოები." else "No active rewards set. You can add milestone rewards when creating or editing a habit.",
                                     color = TextSecondary,
                                     modifier = Modifier.padding(vertical = 16.dp)
                                 )
@@ -21515,14 +21670,31 @@ fun RewardsOverviewSheet(
                         } else {
                             items(activeRewards) { reward ->
                                 val habitStat = profileStats.habitStreaks.find { it.habit.id == reward.habitId }
-                                val currentValue = when (reward.conditionType) {
-                                    "STREAK" -> habitStat?.longestStreak ?: 0
-                                    "COMPLETIONS" -> habitStat?.totalCompletions ?: 0
-                                    else -> 0
-                                }
-                                val targetValue = reward.conditionValue.coerceAtLeast(1)
-                                val progress = if (reward.conditionType == "TROPHY_COUPLED") 0f else (currentValue.toFloat() / targetValue.toFloat()).coerceIn(0f, 1f)
                                 val trophy = if (reward.conditionType == "TROPHY_COUPLED") STANDARD_TROPHIES.find { it.id == reward.trophyId } else null
+                                
+                                val (currentValue, targetValue) = when (reward.conditionType) {
+                                    "STREAK" -> (habitStat?.longestStreak ?: 0) to reward.conditionValue.coerceAtLeast(1)
+                                    "COMPLETIONS" -> (habitStat?.totalCompletions ?: 0) to reward.conditionValue.coerceAtLeast(1)
+                                    "TROPHY_COUPLED" -> {
+                                        val streak = habitStat?.longestStreak ?: 0
+                                        when (reward.trophyId) {
+                                            "WOOD" -> streak to 7
+                                            "BRONZE" -> streak to 14
+                                            "SILVER" -> streak to 30
+                                            "GOLD" -> streak to 100
+                                            "COMP_10" -> profileStats.totalGlobalCompletions to 10
+                                            "COMP_50" -> profileStats.totalGlobalCompletions to 50
+                                            "COMP_200" -> profileStats.totalGlobalCompletions to 200
+                                            "COMP_500" -> profileStats.totalGlobalCompletions to 500
+                                            "PERF_7" -> profileStats.perfectDaysStreak to 7
+                                            "PERF_30" -> profileStats.perfectDaysStreak to 30
+                                            "PERF_100" -> profileStats.perfectDaysStreak to 100
+                                            else -> 0 to 1
+                                        }
+                                    }
+                                    else -> 0 to 1
+                                }
+                                val progress = (currentValue.toFloat() / targetValue.toFloat()).coerceIn(0f, 1f)
 
                                 Card(
                                     colors = CardDefaults.cardColors(containerColor = AppBg),
@@ -21582,35 +21754,31 @@ fun RewardsOverviewSheet(
 
                                         Spacer(modifier = Modifier.height(10.dp))
                                         
-                                        if (reward.conditionType != "TROPHY_COUPLED") {
-                                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                                Text(
-                                                    text = if (language == "de") "Fortschritt" else if (language == "ka") "პროგრესი" else "Progress",
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = TextSecondary
-                                                )
-                                                Text(
-                                                    text = "$currentValue / $targetValue",
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = TextPrimary,
-                                                    fontWeight = FontWeight.Bold
-                                                )
-                                            }
-                                            Spacer(modifier = Modifier.height(6.dp))
-                                            LinearProgressIndicator(
-                                                progress = progress,
-                                                modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
-                                                color = PrimaryViolet,
-                                                trackColor = AppBorder
-                                            )
-                                        } else {
-                                            val tName = if (trophy != null) (if (language == "de") trophy.titleDe else trophy.titleEn) else (reward.trophyId ?: "")
+                                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                             Text(
-                                                text = if (language == "de") "Gekoppelt an Trophäe: $tName" else if (language == "ka") "დაწყვილებული Trophy: $tName" else "Coupled to Trophy: $tName",
+                                                text = if (reward.conditionType == "TROPHY_COUPLED") {
+                                                    val tName = if (trophy != null) (if (language == "de") trophy.titleDe else trophy.titleEn) else (reward.trophyId ?: "")
+                                                    if (language == "de") "Trophäe: $tName" else if (language == "ka") "Trophy: $tName" else "Trophy: $tName"
+                                                } else {
+                                                    if (language == "de") "Fortschritt" else if (language == "ka") "პროგრესი" else "Progress"
+                                                },
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = TextSecondary
                                             )
+                                            Text(
+                                                text = "$currentValue / $targetValue",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = TextPrimary,
+                                                fontWeight = FontWeight.Bold
+                                            )
                                         }
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        LinearProgressIndicator(
+                                            progress = progress,
+                                            modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
+                                            color = PrimaryViolet,
+                                            trackColor = AppBorder
+                                        )
                                     }
                                 }
                             }
@@ -21619,7 +21787,7 @@ fun RewardsOverviewSheet(
                         if (achievedRewards.isEmpty()) {
                             item {
                                 Text(
-                                    text = if (language == "de") "Noch keine Belohnungen erreicht." else if (language == "ka") "ჯერ არ არის მიღებული ჯილდო." else "No rewards achieved yet.",
+                                    text = if (language == "de") "Noch keine Belohnungen freigeschaltet." else if (language == "ka") "ჯერ არ არის მიღებული ჯილდო." else "No rewards unlocked yet.",
                                     color = TextSecondary,
                                     modifier = Modifier.padding(vertical = 16.dp)
                                 )

@@ -1522,7 +1522,21 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
             val dateStr = dateVal.toString()
             val log = logsByDate[dateStr]
             val isCompleted = isLogCompleted(habit, log)
-            val status = getLogStatus(habit, log, dateStr, startSdfStr, todayStr)
+            val status = if (habit.frequency == "TIMES_WEEKLY") {
+                if (dateStr < startSdfStr || dateStr > todayStr) {
+                    "INACTIVE"
+                } else if (log != null && log.isPaused) {
+                    "PAUSED"
+                } else if (log != null && log.value == -1f) {
+                    "FAILED"
+                } else if (isCompleted) {
+                    "SUCCESS"
+                } else {
+                    "INACTIVE"
+                }
+            } else {
+                getLogStatus(habit, log, dateStr, startSdfStr, todayStr)
+            }
             
             daysList.add(CalendarCellState(id = dateStr, dayNum = i.toString(), isCompleted = isCompleted, status = status))
         }
@@ -1998,7 +2012,10 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    fun updateHabit(habit: Habit) {
+    fun updateHabit(
+        habit: Habit,
+        milestoneRewards: List<com.example.data.MilestoneReward>? = null
+    ) {
         viewModelScope.launch {
             try {
                 val oldHabit = repository.getHabitByIdSuspend(habit.id)
@@ -2012,6 +2029,29 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
                 repository.updateHabit(habit)
             } catch (e: Exception) {
                 e.printStackTrace()
+            }
+            if (milestoneRewards != null) {
+                try {
+                    val existing = repository.getAllMilestoneRewardsRaw().filter { it.habitId == habit.id }
+                    repository.deleteMilestoneRewardsForHabit(habit.id)
+                    milestoneRewards.forEach { reward ->
+                        val matchingExisting = existing.find {
+                            it.rewardText == reward.rewardText &&
+                            it.conditionType == reward.conditionType &&
+                            it.conditionValue == reward.conditionValue &&
+                            it.trophyId == reward.trophyId
+                        }
+                        val finalReward = reward.copy(
+                            id = 0,
+                            habitId = habit.id,
+                            isRedeemed = matchingExisting?.isRedeemed ?: reward.isRedeemed,
+                            unlockedAt = matchingExisting?.unlockedAt ?: reward.unlockedAt
+                        )
+                        repository.insertMilestoneReward(finalReward)
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
             }
             try {
                 com.example.NotificationHelper.scheduleAllHabitReminders(
@@ -2388,110 +2428,59 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
 
         if (habit.frequency == "TIMES_WEEKLY") {
             val targetTimes = habit.specificDays.toIntOrNull() ?: 3
-            val sdfDb = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-
-            // Setup start of start week and today's week
-            val cal = Calendar.getInstance(Locale.GERMANY).apply {
-                firstDayOfWeek = Calendar.MONDAY
-                timeInMillis = validStartMillis
-                set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
-                set(Calendar.HOUR_OF_DAY, 0)
-                set(Calendar.MINUTE, 0)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
-            }
-            val startWeekMonday = cal.timeInMillis
-
-            val todayCal = Calendar.getInstance(Locale.GERMANY).apply {
-                firstDayOfWeek = Calendar.MONDAY
-                timeInMillis = System.currentTimeMillis()
-                set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY)
-                set(Calendar.HOUR_OF_DAY, 23)
-                set(Calendar.MINUTE, 59)
-                set(Calendar.SECOND, 59)
-                set(Calendar.MILLISECOND, 999)
-            }
-            val endWeekSunday = todayCal.timeInMillis
-
-            val currentWeekMonday = Calendar.getInstance(Locale.GERMANY).apply {
-                firstDayOfWeek = Calendar.MONDAY
-                timeInMillis = System.currentTimeMillis()
-                set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
-                set(Calendar.HOUR_OF_DAY, 0)
-                set(Calendar.MINUTE, 0)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
-            } .timeInMillis
-
-            val weekRanges = mutableListOf<Pair<Long, Long>>()
-            val loopCal = Calendar.getInstance(Locale.GERMANY).apply {
-                firstDayOfWeek = Calendar.MONDAY
-                timeInMillis = startWeekMonday
+            val today = if (targetDateStr != null) {
+                try { java.time.LocalDate.parse(targetDateStr) } catch (e: Exception) { java.time.LocalDate.now() }
+            } else java.time.LocalDate.now()
+            
+            val validStartMillis = if (habit.startDate > 946684800000L) habit.startDate else habit.createdAt
+            val habitStartDate = try {
+                java.time.Instant.ofEpochMilli(validStartMillis.coerceAtLeast(946684800000L))
+                    .atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+            } catch (e: Exception) {
+                java.time.LocalDate.now()
             }
 
-            var safetyCount = 0
-            while (loopCal.timeInMillis <= endWeekSunday && safetyCount < 2000) {
-                safetyCount++
-                val mon = loopCal.timeInMillis
-                loopCal.add(Calendar.DAY_OF_YEAR, 6)
-                val sun = loopCal.timeInMillis
-                weekRanges.add(mon to sun)
-                loopCal.add(Calendar.DAY_OF_YEAR, 1)
-            }
+            if (habitStartDate.isAfter(today)) return 0 to 0
 
-            val weekSuccessList = mutableListOf<Boolean>()
-            for (i in weekRanges.indices) {
-                val (mon, sun) = weekRanges[i]
-                var completedCount = 0
-                var pausedCount = 0
-                val dayCal = Calendar.getInstance(Locale.GERMANY).apply {
-                    timeInMillis = mon
+            var longestStreak = 0
+            var tempStreak = 0
+            var currDate = habitStartDate
+            val daysSuccessMap = mutableMapOf<java.time.LocalDate, Boolean>()
+
+            while (!currDate.isAfter(today)) {
+                val startOf7Days = currDate.minusDays(6)
+                var completedInWindow = 0
+                var pausedInWindow = 0
+                for (d in 0..6) {
+                    val dayStr = startOf7Days.plusDays(d.toLong()).toString()
+                    if (completedDates.contains(dayStr)) completedInWindow++
+                    if (pausedDates.contains(dayStr)) pausedInWindow++
                 }
-                for (d in 0 until 7) {
-                    val dStr = sdfDb.format(dayCal.time)
-                    if (completedDates.contains(dStr)) {
-                        completedCount++
-                    }
-                    if (pausedDates.contains(dStr)) {
-                        pausedCount++
-                    }
-                    dayCal.add(Calendar.DAY_OF_YEAR, 1)
-                }
+                val adjustedTarget = (targetTimes - pausedInWindow).coerceAtLeast(1)
+                val isSuccess = completedInWindow >= adjustedTarget
+                daysSuccessMap[currDate] = isSuccess
 
-                val adjustedTarget = (targetTimes - pausedCount).coerceAtLeast(0)
-                val isWeekSuccessful = completedCount >= adjustedTarget
-
-                val isCurrentWeek = (mon == currentWeekMonday)
-                if (isCurrentWeek) {
-                    if (isWeekSuccessful) {
-                        weekSuccessList.add(true)
-                    }
+                if (isSuccess) {
+                    tempStreak++
+                    if (tempStreak > longestStreak) longestStreak = tempStreak
                 } else {
-                    weekSuccessList.add(isWeekSuccessful)
+                    if (currDate != today) {
+                        tempStreak = 0
+                    }
                 }
+                currDate = currDate.plusDays(1)
             }
 
-            var longestW = 0
-            var tempW = 0
-            for (success in weekSuccessList) {
-                if (success) {
-                    tempW++
-                    if (tempW > longestW) longestW = tempW
-                } else {
-                    tempW = 0
-                }
+            // Calculate current streak backwards from today (or yesterday if today is not yet met)
+            var currentStreak = 0
+            val startFrom = if (daysSuccessMap[today] == true) today else today.minusDays(1)
+            var checkDate = startFrom
+            while (!checkDate.isBefore(habitStartDate) && daysSuccessMap[checkDate] == true) {
+                currentStreak++
+                checkDate = checkDate.minusDays(1)
             }
 
-            var currentW = 0
-            for (j in weekSuccessList.indices.reversed()) {
-                if (weekSuccessList[j]) {
-                    currentW++
-                } else {
-                    break
-                }
-            }
-
-            return currentW to longestW
+            return currentStreak to longestStreak
         }
 
         if (habit.isNegative && loggedDates.isEmpty() && validStartMillis >= System.currentTimeMillis()) return 0 to 0
@@ -2616,38 +2605,25 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
         
         if (habit.frequency == "TIMES_WEEKLY") {
             val targetTimes = habit.specificDays.toIntOrNull() ?: 3
-            val cal = Calendar.getInstance(Locale.GERMANY).apply {
-                firstDayOfWeek = Calendar.MONDAY
-                timeInMillis = validStartMillis
-                set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
-                set(Calendar.HOUR_OF_DAY, 0)
-                set(Calendar.MINUTE, 0)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
+            val today = java.time.LocalDate.now()
+            val habitStartDate = try {
+                java.time.Instant.ofEpochMilli(validStartMillis.coerceAtLeast(946684800000L))
+                    .atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+            } catch (e: Exception) {
+                today
             }
-            val startWeekMonday = cal.timeInMillis
 
-            val todayCal = Calendar.getInstance(Locale.GERMANY).apply {
-                firstDayOfWeek = Calendar.MONDAY
-                timeInMillis = System.currentTimeMillis()
-                set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY)
-                set(Calendar.HOUR_OF_DAY, 23)
-                set(Calendar.MINUTE, 59)
-                set(Calendar.SECOND, 59)
-                set(Calendar.MILLISECOND, 999)
-            }
-            val endWeekSunday = todayCal.timeInMillis
+            if (habitStartDate.isAfter(today)) return 0
+
+            var weekMonday = habitStartDate.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY))
+            val currentWeekMonday = today.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY))
 
             var totalExpectedCompletions = 0
-            val loopCal = Calendar.getInstance(Locale.GERMANY).apply {
-                firstDayOfWeek = Calendar.MONDAY
-                timeInMillis = startWeekMonday
-            }
             var safetyCount = 0
-            while (loopCal.timeInMillis <= endWeekSunday && safetyCount < 2000) {
+            while (!weekMonday.isAfter(currentWeekMonday) && safetyCount < 2000) {
                 safetyCount++
                 totalExpectedCompletions += targetTimes
-                loopCal.add(Calendar.WEEK_OF_YEAR, 1)
+                weekMonday = weekMonday.plusWeeks(1)
             }
 
             if (totalExpectedCompletions == 0) return 0
@@ -2920,6 +2896,40 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
             combine(profileStats, language, allMilestoneRewards) { stats, lang, rewards -> 
                 Triple(stats, lang, rewards)
             }.collect { (stats, lang, rewards) ->
+                // Check all milestone rewards to ensure any completed conditions are marked unlocked
+                rewards.forEach { reward ->
+                    if (reward.unlockedAt == 0L) {
+                        val habitStat = stats.habitStreaks.find { it.habit.id == reward.habitId }
+                        val isReached = when (reward.conditionType) {
+                            "STREAK" -> (habitStat?.longestStreak ?: 0) >= reward.conditionValue
+                            "COMPLETIONS" -> (habitStat?.totalCompletions ?: 0) >= reward.conditionValue
+                            "TROPHY_COUPLED" -> {
+                                val streak = habitStat?.longestStreak ?: 0
+                                when (reward.trophyId) {
+                                    "WOOD" -> streak >= 7
+                                    "BRONZE" -> streak >= 14
+                                    "SILVER" -> streak >= 30
+                                    "GOLD" -> streak >= 100
+                                    "COMP_10" -> stats.totalGlobalCompletions >= 10
+                                    "COMP_50" -> stats.totalGlobalCompletions >= 50
+                                    "COMP_200" -> stats.totalGlobalCompletions >= 200
+                                    "COMP_500" -> stats.totalGlobalCompletions >= 500
+                                    "PERF_7" -> stats.perfectDaysStreak >= 7
+                                    "PERF_30" -> stats.perfectDaysStreak >= 30
+                                    "PERF_100" -> stats.perfectDaysStreak >= 100
+                                    else -> false
+                                }
+                            }
+                            else -> false
+                        }
+                        if (isReached) {
+                            viewModelScope.launch {
+                                repository.updateMilestoneReward(reward.copy(unlockedAt = System.currentTimeMillis()))
+                            }
+                        }
+                    }
+                }
+
                 val currentUnlocked = calculateUnlockedAchievementsList(stats, lang, rewards)
                 val currentIds = currentUnlocked.map { it.id }.toSet()
 
@@ -2944,21 +2954,6 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
                     achievementQueue.value = updatedQueue
                     if (_newlyUnlockedAchievement.value == null) {
                         _newlyUnlockedAchievement.value = updatedQueue.firstOrNull()
-                    }
-                    
-                    // Mark associated rewards as unlocked
-                    newlyUnlocked.forEach { ach ->
-                        if (ach.rewardText != null) {
-                            val rewardToUpdate = rewards.find { 
-                                it.conditionType == "CUSTOM_MILESTONE" && it.id.toString() == ach.id.replace("CUSTOM_", "") ||
-                                it.conditionType == "TROPHY_COUPLED" && it.trophyId == ach.tier
-                            }
-                            if (rewardToUpdate != null && rewardToUpdate.unlockedAt == 0L) {
-                                viewModelScope.launch {
-                                    repository.updateMilestoneReward(rewardToUpdate.copy(unlockedAt = System.currentTimeMillis()))
-                                }
-                            }
-                        }
                     }
                 }
             }
