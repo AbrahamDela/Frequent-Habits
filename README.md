@@ -77,6 +77,16 @@ Built with modern, lightweight Android development standards:
 
 ---
 
+## Star History
+
+<a href="https://www.star-history.com/?repos=FrequeNCy144%2FFrequent-Habits&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=FrequeNCy144/Frequent-Habits&type=date&theme=dark&legend=top-left&sealed_token=obNJ8jn6VrM6WTcDOL7mVQU1exCndAPuIbJZzLnd0Dy8pbjQakzz8n1WaQj9F4PfkrNV4A_umsjm4lpaSUVN15NOuOFXfaEyW1vQDILHprGSbN9ZR4cZBg" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=FrequeNCy144/Frequent-Habits&type=date&legend=top-left&sealed_token=obNJ8jn6VrM6WTcDOL7mVQU1exCndAPuIbJZzLnd0Dy8pbjQakzz8n1WaQj9F4PfkrNV4A_umsjm4lpaSUVN15NOuOFXfaEyW1vQDILHprGSbN9ZR4cZBg" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=FrequeNCy144/Frequent-Habits&type=date&legend=top-left&sealed_token=obNJ8jn6VrM6WTcDOL7mVQU1exCndAPuIbJZzLnd0Dy8pbjQakzz8n1WaQj9F4PfkrNV4A_umsjm4lpaSUVN15NOuOFXfaEyW1vQDILHprGSbN9ZR4cZBg" />
+ </picture>
+</a>
+
 ## 🚀 Installation
 
 You can install and update **Frequent Habits** in three convenient ways:
