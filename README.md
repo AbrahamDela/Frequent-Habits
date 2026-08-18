@@ -21,8 +21,7 @@
 
 [![GitHub Release](https://img.shields.io/github/v/release/FrequeNCy144/Frequent-Habits?style=for-the-badge&logo=github&color=7356FF)](https://github.com/FrequeNCy144/Frequent-Habits/releases)
 [![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge)](LICENSE)
-[![Donate: Liberapay](https://img.shields.io/badge/Donate-Liberapay-f6c915?style=for-the-badge&logo=liberapay&logoColor=black)](https://liberapay.com/FrequeNCy/donate)
-[![Donate: Ko-Fi](https://img.shields.io/badge/Donate-Ko--fi-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/frequency_144)
+
 
 <br>
 
@@ -101,6 +100,9 @@ Feedback, bug reports, and pull requests are always welcome! Head over to our [I
 
 
 ### ⭐ Support
+
+[![Donate: Liberapay](https://img.shields.io/badge/Donate-Liberapay-f6c915?style=for-the-badge&logo=liberapay&logoColor=black)](https://liberapay.com/FrequeNCy/donate)
+[![Donate: Ko-Fi](https://img.shields.io/badge/Donate-Ko--fi-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/frequency_144)
 
 <div align="center">
 
