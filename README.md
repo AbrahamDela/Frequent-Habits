@@ -1,4 +1,5 @@
 <div align="center">
+<img width="550" height="550" alt="WhatsApp Image 2026-08-18 at 09 20 02" src="https://github.com/user-attachments/assets/5de91cf1-d448-4717-b66a-629754e4ca36" />
 
 # Frequent Habits
 
