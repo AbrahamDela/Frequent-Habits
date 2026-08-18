@@ -14,8 +14,17 @@ data class IconCategory(
     val id: String,
     val nameDe: String,
     val nameEn: String,
+    val nameKa: String = nameEn,
+    val nameZh: String = nameEn,
     val keys: List<String>
-)
+) {
+    fun getLocalizedName(language: String): String = when (language) {
+        "de" -> nameDe
+        "ka" -> nameKa
+        "zh" -> nameZh
+        else -> nameEn
+    }
+}
 
 object HabitIconMapping {
 
@@ -24,30 +33,40 @@ object HabitIconMapping {
             id = "all",
             nameDe = "Alle",
             nameEn = "All",
+            nameKa = "ყველა",
+            nameZh = "全部",
             keys = emptyList()
         ),
         IconCategory(
             id = "health_sport",
             nameDe = "Sport & Gesundheit",
             nameEn = "Sport & Health",
+            nameKa = "სპორტი და ჯანმრთელობა",
+            nameZh = "运动与健康",
             keys = listOf("dumbbell", "run", "bicycle", "pool", "heart", "meditation", "bed", "spa", "scale", "fire", "pill", "sport", "soccer", "trophy")
         ),
         IconCategory(
             id = "daily_nature",
             nameDe = "Alltag & Natur",
             nameEn = "Daily & Nature",
+            nameKa = "ყოველდღიურობა და ბუნება",
+            nameZh = "日常与自然",
             keys = listOf("sparkle", "sun", "moon", "water", "coffee", "tea", "food", "apple", "smile", "smoke_free", "no_cell", "plant", "pet", "leaf", "drink", "cake")
         ),
         IconCategory(
             id = "learning_work",
             nameDe = "Lernen & Arbeit",
             nameEn = "Learning & Work",
+            nameKa = "სწავლა და სამუშაო",
+            nameZh = "学习与工作",
             keys = listOf("book", "school", "code", "work", "laptop", "pencil", "brush", "palette", "brain", "language", "lightbulb", "camera", "music", "headphones")
         ),
         IconCategory(
             id = "home_money",
             nameDe = "Haushalt & Finanzen",
             nameEn = "Home & Finance",
+            nameKa = "საოჯახო და ფინანსები",
+            nameZh = "居家与财务",
             keys = listOf("clean", "home", "money", "piggy", "shopping", "clock", "timer", "calendar", "task", "phone", "car", "travel", "bell", "party", "star", "shield")
         )
     )

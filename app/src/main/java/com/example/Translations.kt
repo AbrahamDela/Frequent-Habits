@@ -7,7 +7,21 @@ fun tr(lang: String, de: String, en: String): String {
             ?: GEORGIAN_TRANSLATIONS[de]
             ?: translateDynamicGeorgian(en, de)
     }
+    if (lang == "zh") {
+        return CHINESE_TRANSLATIONS[en]
+            ?: CHINESE_TRANSLATIONS[de]
+            ?: translateDynamicChinese(en, de)
+    }
     return en
+}
+
+fun tr(lang: String, de: String, ka: String, zh: String, en: String): String {
+    return when (lang) {
+        "de" -> de
+        "ka" -> ka
+        "zh" -> zh
+        else -> en
+    }
 }
 
 private fun translateDynamicGeorgian(en: String, de: String): String {
@@ -42,6 +56,41 @@ private fun translateDynamicGeorgian(en: String, de: String): String {
     str = str.replace("Support", "მხარდაჭერა")
     str = str.replace("Email", "ელ-ფოსტა")
     str = str.replace("E-Mail", "ელ-ფოსტა")
+    return str
+}
+
+private fun translateDynamicChinese(en: String, de: String): String {
+    var str = en
+    str = str.replace("Habit updated!", "习惯已更新！")
+    str = str.replace("Habit added!", "习惯已添加！")
+    str = str.replace("Delete", "删除")
+    str = str.replace("Edit", "编辑")
+    str = str.replace("Save", "保存")
+    str = str.replace("Cancel", "取消")
+    str = str.replace("Done", "完成")
+    str = str.replace("Add", "添加")
+    str = str.replace("Next", "下一步")
+    str = str.replace("Back", "返回")
+    str = str.replace("Today", "今天")
+    str = str.replace("Yesterday", "昨天")
+    str = str.replace("Tomorrow", "明天")
+    str = str.replace("Total Completions", "累计完成次数")
+    str = str.replace("Total Check-ins", "累计打卡次数")
+    str = str.replace("Total Check-Ins", "累计打卡次数")
+    str = str.replace("Active Habits", "活跃习惯")
+    str = str.replace("Days Longest Streak", "历史最高连续天数")
+    str = str.replace("Streak", "连续达成")
+    str = str.replace("Progress", "进度")
+    str = str.replace("Language", "语言")
+    str = str.replace("Settings", "设置")
+    str = str.replace("Statistics", "数据统计")
+    str = str.replace("Achievements", "成就勋章")
+    str = str.replace("Habits", "习惯")
+    str = str.replace("soundscapes & focus audio", "专注白噪音与背景音频")
+    str = str.replace("Soundscapes & Fokus-Audio", "专注白噪音与背景音频")
+    str = str.replace("Support", "支持与帮助")
+    str = str.replace("Email", "电子邮件")
+    str = str.replace("E-Mail", "电子邮件")
     return str
 }
 
@@ -88,6 +137,7 @@ val GEORGIAN_TRANSLATIONS: Map<String, String> = mapOf(
     "Best Streak" to "საუკეთესო სერია",
     "Power Day" to "საუკეთესო დღე",
     "Bester Tag" to "საუკეთესო დღე",
+    
     // Settings Categories & Items
     "Edit profile picture & name" to "პროფილის სურათის და სახელის რედაქტირება",
     "Profilbild & Nutzername bearbeiten" to "პროფილის სურათის და სახელის რედაქტირება",
@@ -339,8 +389,6 @@ val GEORGIAN_TRANSLATIONS: Map<String, String> = mapOf(
     "Focus Sounds & Soundscapes" to "ფოკუსის ხმები და ხმოვანი გარემო",
     "Verwalten" to "მართვა",
     "Manage" to "მართვა",
-    "Import" to "იმპორტი",
-    "Import" to "იმპორტი",
 
     // New additions
     "Support" to "მხარდაჭერა",
@@ -368,5 +416,298 @@ val GEORGIAN_TRANSLATIONS: Map<String, String> = mapOf(
     "Saturday" to "შაბათი",
     "Wednesday" to "ოთხშაბათი",
     "Custom Unit" to "საბაჟო ერთეული",
-    "Sunday" to "კვირა",
+    "Sunday" to "კვირა"
+)
+
+val CHINESE_TRANSLATIONS: Map<String, String> = mapOf(
+    // Bottom Navigation & Core terms
+    "Heute" to "今天",
+    "Today" to "今天",
+    "Profile" to "我的",
+    "Profil" to "我的",
+    "Stats" to "统计",
+    "Statistik" to "统计",
+    "Statistiken" to "统计",
+    "Habits" to "习惯",
+    "Gewohnheiten" to "习惯",
+    "Achievements" to "成就",
+    "Erfolge" to "成就",
+    "Settings" to "设置",
+    "Einstellungen" to "设置",
+
+    // Share & Profile Card
+    "MEIN PROFIL" to "我的主页",
+    "MY PROFILE" to "我的主页",
+    "Gewohnheiten Held" to "习惯达人",
+    "Habit Hero" to "习惯达人",
+    "Abschlüsse insgesamt" to "累计完成",
+    "Total Completions" to "累计完成",
+    "Check-ins insgesamt" to "累计打卡",
+    "Total Check-ins" to "累计打卡",
+    "Total Check-Ins" to "累计打卡",
+    "Aktive Gewohnheiten" to "活跃习惯",
+    "Active Habits" to "活跃习惯",
+    "Tage beste Serie" to "最高连续天数",
+    "Days Longest Streak" to "最高连续天数",
+    "MONATSRÜCKBLICK" to "月度回顾",
+    "MONTHLY REVIEW" to "月度回顾",
+    "JAHRESRÜCKBLICK" to "年度回顾",
+    "YEAR IN REVIEW" to "年度回顾",
+    "Abschlüsse" to "完成次数",
+    "Completions" to "完成次数",
+    "Aktive Tage" to "活跃天数",
+    "Active Days" to "活跃天数",
+    "Top Gewohnheit" to "最佳习惯",
+    "Top Habit" to "最佳习惯",
+    "Top-Gewohnheit" to "最佳习惯",
+    "Bester Monat" to "最佳月份",
+    "Best Month" to "最佳月份",
+    "Tage Serie" to "天连续",
+    "Days Streak" to "天连续",
+    "Beste Serie" to "最高连续",
+    "Best Streak" to "最高连续",
+    "Power Day" to "最高效日",
+    "Bester Tag" to "最佳单日",
+
+    // Settings Categories & Items
+    "Edit profile picture & name" to "编辑头像与用户名",
+    "Profilbild & Nutzername bearbeiten" to "编辑头像与用户名",
+    "Haptic feedback & Archived habits" to "触觉震动与归档习惯",
+    "Haptischer Impuls beim Erledigen" to "完成打卡时震动反馈",
+    "SAF Backup, Restore & Danger zone" to "SAF 备份、恢复与危险区域",
+    "SAF Backup, Wiederherstellen & Gefahrenbereich" to "SAF 备份、恢复与危险区域",
+    "Profile & Account" to "个人与账户",
+    "Profil & Konto" to "个人与账户",
+    "Appearance & Language" to "外观与语言",
+    "Erscheinungsbild & Sprache" to "外观与语言",
+    "Notifications & Reviews" to "通知与回顾",
+    "Benachrichtigungen & Rückblicke" to "通知与回顾",
+    "Audio & Soundscapes" to "声音与白噪音",
+    "Töne & Entspannung" to "声音与白噪音",
+    "Habits & Archive" to "习惯与归档",
+    "Gewohnheiten & Archiv" to "习惯与归档",
+    "Data & Backup" to "数据与备份",
+    "Daten & Sicherung" to "数据与备份",
+    "Language" to "语言",
+    "Sprache" to "语言",
+    "General & Personalization" to "常规与个性化",
+    "Allgemein & Personalisierung" to "常规与个性化",
+    "Language, Info Cards & Intro" to "语言、提示卡片与简介",
+    "Sprache, Infokarten & Einführung" to "语言、提示卡片与简介",
+    "Language, Info Cards, Haptics & Intro" to "语言、提示卡片、触觉与引导",
+    "Sprache, Infokarten, Haptik & Einführung" to "语言、提示卡片、触觉与引导",
+    "Monthly & Yearly Review settings" to "月度与年度回顾设置",
+    "Monats- & Jahresrückblick Einstellungen" to "月度与年度回顾设置",
+    "Support & About" to "支持与关于",
+    "Support & Über die App" to "支持与关于",
+    "Daten, Sicherung & Archiv" to "数据、备份与归档",
+    "Data, Backup & Archive" to "数据、备份与归档",
+    "Sicherung, Wiederherstellung & Archivierte Gewohnheiten" to "备份、恢复与归档习惯",
+    "Backup, Restore & Archived habits" to "备份、恢复与归档习惯",
+
+    // Common Actions & Buttons
+    "Add" to "添加",
+    "Hinzufügen" to "添加",
+    "Save" to "保存",
+    "Speichern" to "保存",
+    "Cancel" to "取消",
+    "Abbrechen" to "取消",
+    "Delete" to "删除",
+    "Löschen" to "删除",
+    "Edit" to "编辑",
+    "Bearbeiten" to "编辑",
+    "Done" to "完成",
+    "Fertig" to "完成",
+    "Close" to "关闭",
+    "Schließen" to "关闭",
+    "Next" to "下一步",
+    "Weiter" to "下一步",
+    "Back" to "返回",
+    "Zurück" to "返回",
+    "Confirm" to "确认",
+    "Bestätigen" to "确认",
+    "Redeem" to "兑换",
+    "Einlösen" to "兑换",
+    "Restore" to "恢复",
+    "Wiederherstellen" to "恢复",
+    "Export" to "导出",
+    "Exportieren" to "导出",
+    "Import" to "导入",
+    "Importieren" to "导入",
+    "Manage" to "管理",
+    "Verwalten" to "管理",
+
+    // Time & Dates
+    "Yesterday" to "昨天",
+    "Gestern" to "昨天",
+    "Tomorrow" to "明天",
+    "Morgen" to "明天",
+    "Days" to "天",
+    "Tage" to "天",
+    "Weeks" to "周",
+    "Wochen" to "周",
+    "Months" to "月",
+    "Monate" to "月",
+    "Years" to "年",
+    "Jahre" to "年",
+    "Monday" to "周一",
+    "Tuesday" to "周二",
+    "Wednesday" to "周三",
+    "Thursday" to "周四",
+    "Friday" to "周五",
+    "Saturday" to "周六",
+    "Sunday" to "周日",
+
+    // Dialogs & Rewards
+    "Define Reward" to "设定奖励",
+    "Belohnung definieren" to "设定奖励",
+    "Milestone Rewards" to "里程碑奖励",
+    "Meilenstein-Belohnungen" to "里程碑奖励",
+    "Reward" to "奖励",
+    "Belohnung" to "奖励",
+    "Condition:" to "解锁条件：",
+    "Bedingung:" to "解锁条件：",
+    "Trophy" to "奖杯",
+    "Trophäe" to "奖杯",
+    "Manual" to "自定义数值",
+    "Manuell" to "自定义数值",
+    "Target Value" to "目标数值",
+    "Ziel-Wert" to "目标数值",
+    "Habit Trophy:" to "习惯关联奖杯：",
+    "Gewohnheitsspezifische Trophäe:" to "习惯关联奖杯：",
+    "Streak (Days)" to "连续天数",
+    "Streak (Tage)" to "连续天数",
+    "Total (Times)" to "累计次数",
+    "Gesamt (Mal)" to "累计次数",
+    "Reward (e.g., New Book)" to "奖励（例如：买一本新书）",
+
+    // Insights & Reviews
+    "Smart Insights" to "智能洞察",
+    "Monthly Review" to "月度回顾",
+    "Monatsrückblick" to "月度回顾",
+    "Yearly Review" to "年度回顾",
+    "Jahresrückblick" to "年度回顾",
+    "Time Capsule" to "时间胶囊",
+    "Zeitkapsel" to "时间胶囊",
+    "Focus Timer" to "专注计时器",
+    "Fokus-Timer" to "专注计时器",
+    "Soundscapes" to "专注白噪音",
+    "Focus Audio Soundscapes" to "专注背景白噪音",
+    "Fokus-Audio Bibliothek" to "专注背景白噪音",
+    "Select & manage sounds" to "选择并管理声音",
+    "Sound auswählen & verwalten" to "选择并管理声音",
+    "Search sound..." to "搜索声音...",
+    "Sound suchen..." to "搜索声音...",
+    "No Sound (Mute)" to "无声音（静音）",
+    "Kein Sound (Stumm)" to "无声音（静音）",
+    "Import new audio (.mp3, .wav, .m4a)" to "导入新音频 (.mp3, .wav, .m4a)",
+    "Neues Audio importieren (.mp3, .wav, .m4a)" to "导入新音频 (.mp3, .wav, .m4a)",
+
+    // Onboarding & Intro
+    "Introduction" to "使用介绍",
+    "Einführung" to "使用介绍",
+    "Welcome to Everyday Habits" to "欢迎使用 Everyday Habits",
+    "Willkommen bei Everyday Habits" to "欢迎使用 Everyday Habits",
+    "Ready for your journey!" to "准备开启你的习惯之旅！",
+    "Bereit für deine Reise!" to "准备开启你的习惯之旅！",
+
+    // Profile & Settings
+    "Profilbild" to "头像",
+    "Profile Picture" to "头像",
+    "Foto ändern" to "更换头像",
+    "Change Photo" to "更换头像",
+    "Entfernen" to "移除",
+    "Remove" to "移除",
+    "Nutzername" to "用户名",
+    "Username" to "用户名",
+    "Gib deinen Namen ein..." to "输入你的名字...",
+    "Enter your name..." to "输入你的名字...",
+    "Dein Name und Profilbild werden nur lokal auf deinem Gerät gespeichert und für deine personalisierte App-Erfahrung genutzt." to "你的姓名和头像仅保存在本地设备上，用于提供个性化的应用体验。",
+    "Your name and profile picture are stored strictly locally on your device for your personalized app experience." to "你的姓名和头像仅保存在本地设备上，用于提供个性化的应用体验。",
+
+    "Akzentfarbe" to "强调配色",
+    "Accent Color" to "强调配色",
+    "App Design" to "应用主题",
+    "App Theme" to "应用主题",
+    "Dunkel" to "深色模式",
+    "Dark" to "深色模式",
+    "Hell" to "浅色模式",
+    "Light" to "浅色模式",
+    "Infokarten & Hinweise anzeigen" to "显示提示卡片与说明",
+    "Show info cards & tips" to "显示提示卡片与说明",
+    "Blendet Erklärungen und Info-Buttons ein" to "在页面上显示帮助说明与提示按钮",
+    "Display explanatory cards and info icons" to "在页面上显示帮助说明与提示按钮",
+    "Vibration beim Abhaken" to "打卡触觉反馈",
+    "Haptic feedback" to "打卡触觉反馈",
+    "Short vibration pulse on completion" to "完成打卡时触发轻微震动",
+    "Starte die Einführung erneut, um alle App-Tipps zu sehen." to "重新开启功能引导，查看全部使用技巧。",
+    "Restart the introduction to review all app tips." to "重新开启功能引导，查看全部使用技巧。",
+    "Einführung neu starten" to "重新启动介绍引导",
+    "Restart Introduction" to "重新启动介绍引导",
+
+    "Rückblicke & Berichte" to "回顾与统计报告",
+    "Reviews & Reports" to "回顾与统计报告",
+    "Benachrichtigungen" to "通知提醒",
+    "Notifications" to "通知提醒",
+    "Erinnerungen & Rückblick-Alarme erhalten" to "接收习惯提醒与回顾通知",
+    "Receive reminders & review alerts" to "接收习惯提醒与回顾通知",
+    "1x pro Woche eine Push-Benachrichtigung mit deinen spannendsten Insights & Highlights" to "每周推送一次精选的习惯洞察与数据亮点",
+    "Weekly push notification with your most interesting insights & highlights" to "每周推送一次精选的习惯洞察与数据亮点",
+    "Monatliche Statistiken & Highlights" to "月度习惯统计与高光时刻",
+    "Analyze monthly statistics & highlights" to "月度习惯统计与高光时刻",
+    "Großer Jahresrückblick mit Abzeichen & Highlights" to "年度大回顾：勋章成就与年度高光总结",
+    "Grand Year in Review with badges & highlights" to "年度大回顾：勋章成就与年度高光总结",
+
+    "Archivierte Gewohnheiten" to "已归档的习惯",
+    "Archived Habits" to "已归档的习惯",
+    "Inaktive Gewohnheiten reaktivieren" to "重新启用已归档的习惯",
+    "Reactivate suspended habits" to "重新启用已归档的习惯",
+    "Habit-Tracker Import (CSV / ZIP)" to "习惯数据导入 (CSV / ZIP)",
+    "Habit Tracker Import (CSV / ZIP)" to "习惯数据导入 (CSV / ZIP)",
+    "Importiere deine Historie direkt aus Loop Habit Tracker, Bull Habit Tracker (HabitBull) oder eigenen CSV/ZIP-Dateien." to "直接从 Loop Habit Tracker、HabitBull 或自定义 CSV/ZIP 文件导入你的习惯历史。",
+    "Import habits and tracking history directly from Loop Habit Tracker, Bull Habit Tracker (HabitBull), or custom CSV/ZIP files." to "直接从 Loop Habit Tracker、HabitBull 或自定义 CSV/ZIP 文件导入你的习惯历史。",
+    "CSV / ZIP Datei importieren" to "导入 CSV / ZIP 文件",
+    "Import CSV / ZIP File" to "导入 CSV / ZIP 文件",
+    "Lokales SAF Backup & Restore" to "本地 SAF 自动备份与恢复",
+    "Local SAF Backup & Restore" to "本地 SAF 自动备份与恢复",
+    "Wähle einen Ordner aus. Die App erstellt dort täglich automatisch ein Backup der letzten 3 Tage. Du kannst auch jederzeit manuell sichern oder wiederherstellen." to "选择一个本地文件夹。应用每天将自动保存最近 3 天的 JSON 备份。你也可以随时手动备份或恢复。",
+    "Select a local folder. The app will automatically save daily JSON exports there (retaining only the 3 latest). You can also back up or restore manually." to "选择一个本地文件夹。应用每天将自动保存最近 3 天的 JSON 备份。你也可以随时手动备份或恢复。",
+    "Ausgewählter Ordner:" to "已选文件夹：",
+    "Selected Folder:" to "已选文件夹：",
+    "Kein Ordner ausgewählt" to "未选择文件夹",
+    "No folder selected" to "未选择文件夹",
+    "Ordner auswählen" to "选择文件夹",
+    "Select Folder" to "选择文件夹",
+    "Sichern" to "立即备份",
+    "Backup" to "立即备份",
+    "Einspielen" to "恢复数据",
+    "Gefahrenbereich" to "危险区域",
+    "Danger Zone" to "危险区域",
+    "Hiermit werden alle Gewohnheiten unwiderruflich gelöscht." to "这将永久清除所有习惯与历史打卡记录，不可撤销。",
+    "This permanently deletes all habits and tracking history." to "这将永久清除所有习惯与历史打卡记录，不可撤销。",
+    "Alle Daten löschen" to "清空所有数据",
+    "Wipe All Data" to "清空所有数据",
+
+    "Fokus-Sounds & Hintergründe" to "专注声音与背景音效",
+    "Focus Sounds & Soundscapes" to "专注声音与背景音效",
+
+    // More common phrases
+    "Support" to "支持与帮助",
+    "E-Mail Support" to "邮件支持",
+    "Email Support" to "邮件支持",
+    "soundscapes & focus audio" to "专注白噪音与背景音频",
+    "Soundscapes & Fokus-Audio" to "专注白噪音与背景音频",
+    "Help make the app even better" to "帮助我们做得更好",
+    "Hilf mit, die App zu verbessern" to "帮助我们做得更好",
+    "Share with a friend" to "推荐给好友",
+    "Share with..." to "分享至...",
+    "Teilen mit..." to "分享至...",
+    "Support via Ko-fi" to "通过 Ko-fi 赞助支持",
+    "Unterstützen via Ko-fi" to "通过 Ko-fi 赞助支持",
+    "Recommendation: Frequent Habits" to "推荐：Frequent Habits 习惯助手",
+    "Empfehlung: Frequent Habits" to "推荐：Frequent Habits 习惯助手",
+    "Daily Target" to "每日目标",
+    "e.g. cups" to "例如：杯",
+    "Click Increment" to "单次点击增量",
+    "Custom Unit" to "自定义单位"
 )

@@ -396,7 +396,8 @@ data class UnlockedAchievementInfo(
     val rewardText: String? = null,
     val habitName: String? = null,
     val habitColor: String? = null,
-    val habitIcon: String? = null
+    val habitIcon: String? = null,
+    val milestoneRewardId: Int? = null
 )
 
 @Immutable

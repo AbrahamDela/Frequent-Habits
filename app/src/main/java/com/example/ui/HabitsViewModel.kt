@@ -334,6 +334,7 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
             val loc = when (lang) {
                 "de" -> Locale.GERMANY
                 "ka" -> Locale.forLanguageTag("ka")
+                "zh" -> Locale.SIMPLIFIED_CHINESE
                 else -> Locale.US
             }
             val dayNameFormatter = DateTimeFormatter.ofPattern("E", loc)
@@ -341,7 +342,7 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
                 val date = startLocalDate.plusDays(i.toLong())
                 val dayStr = date.format(dbFormatter)
                 val dayNum = date.format(dayNumFormatter)
-                val dayName = if (lang == "ka") date.format(dayNameFormatter).take(3) else date.format(dayNameFormatter).uppercase(loc).take(2)
+                val dayName = if (lang == "ka") date.format(dayNameFormatter).take(3) else if (lang == "zh") date.format(dayNameFormatter) else date.format(dayNameFormatter).uppercase(loc).take(2)
                 Triple(dayStr, dayNum, dayName)
             }
         }
@@ -355,6 +356,7 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
                 when (lang) {
                     "de" -> "Heute"
                     "ka" -> "დღეს"
+                    "zh" -> "今天"
                     else -> "Today"
                 }
             } else {
@@ -362,11 +364,13 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
                 val loc = when (lang) {
                     "de" -> Locale.GERMANY
                     "ka" -> Locale.forLanguageTag("ka")
+                    "zh" -> Locale.SIMPLIFIED_CHINESE
                     else -> Locale.US
                 }
                 val pattern = when (lang) {
                     "de" -> "d. MMMM"
                     "ka" -> "d MMMM"
+                    "zh" -> "M月d日"
                     else -> "MMMM d"
                 }
                 val formatter = DateTimeFormatter.ofPattern(pattern, loc)
@@ -451,12 +455,12 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
             "WEEK" -> {
                 val targetMonday = today.minusDays((today.dayOfWeek.value - 1).toLong()).plusWeeks(coercedOffset.toLong())
                 val targetSunday = targetMonday.plusDays(6)
-                val formatter = DateTimeFormatter.ofPattern("d. MMM", if (lang == "de") Locale.GERMANY else Locale.US)
+                val formatter = DateTimeFormatter.ofPattern("d. MMM", when (lang) { "de" -> Locale.GERMANY; "zh" -> Locale.SIMPLIFIED_CHINESE; else -> Locale.US })
                 "${targetMonday.format(formatter)} - ${targetSunday.format(formatter)} ${targetSunday.year}"
             }
             "MONTH" -> {
                 val targetMonthDate = today.withDayOfMonth(1).plusMonths(coercedOffset.toLong())
-                val formatter = DateTimeFormatter.ofPattern("MMMM yyyy", if (lang == "de") Locale.GERMANY else Locale.US)
+                val formatter = DateTimeFormatter.ofPattern("MMMM yyyy", when (lang) { "de" -> Locale.GERMANY; "zh" -> Locale.SIMPLIFIED_CHINESE; else -> Locale.US })
                 targetMonthDate.format(formatter)
             }
             else -> {
@@ -475,7 +479,7 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
         when (filter) {
             "WEEK" -> {
                 val targetMonday = today.minusDays((today.dayOfWeek.value - 1).toLong()).plusWeeks(coercedOffset.toLong())
-                val labels = if (lang == "de") listOf("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So") else listOf("Mo", "Tu", "We", "Th", "Fr", "Sa", "Su")
+                val labels = if (lang == "de") listOf("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So") else if (lang == "ka") listOf("ორშ", "სამ", "ოთხ", "ხუთ", "პარ", "შაბ", "კვი") else if (lang == "zh") listOf("周一", "周二", "周三", "周四", "周五", "周六", "周日") else listOf("Mo", "Tu", "We", "Th", "Fr", "Sa", "Su")
                 
                 for (i in 0 until 7) {
                     val dDate = targetMonday.plusDays(i.toLong())
@@ -553,6 +557,10 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
                 val targetYear = today.year + coercedOffset
                 val months = if (lang == "de") 
                     listOf("Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez")
+                else if (lang == "ka")
+                    listOf("იან", "თებ", "მარ", "აპრ", "მაი", "ივნ", "ივლ", "აგვ", "სექ", "ოქტ", "ნოე", "დეკ")
+                else if (lang == "zh")
+                    listOf("1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月")
                 else 
                     listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
                 
@@ -929,13 +937,13 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     val statsDayNamesAndNumbers: StateFlow<Pair<List<String>, List<String>>> = language.map { lang ->
-        val sdfDayInitial = DateTimeFormatter.ofPattern("E", if (lang == "de") Locale.GERMANY else Locale.US)
+        val sdfDayInitial = DateTimeFormatter.ofPattern("E", when (lang) { "de" -> Locale.GERMANY; "zh" -> Locale.SIMPLIFIED_CHINESE; "ka" -> Locale.forLanguageTag("ka"); else -> Locale.US })
         val shortNames = mutableListOf<String>()
         val dayNums = mutableListOf<String>()
         val today = LocalDate.now()
         for (i in 0 until 7) {
             val d = today.minusDays(i.toLong())
-            shortNames.add(d.format(sdfDayInitial).take(2).uppercase(if (lang == "de") Locale.GERMANY else Locale.US))
+            shortNames.add(d.format(sdfDayInitial).take(2).uppercase(when (lang) { "de" -> Locale.GERMANY; "zh" -> Locale.SIMPLIFIED_CHINESE; else -> Locale.US }))
             dayNums.add(d.dayOfMonth.toString())
         }
         shortNames.reverse()
@@ -944,7 +952,7 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
     }.flowOn(kotlinx.coroutines.Dispatchers.Default)
      .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), run {
          val lang = _language.value
-         val loc = if (lang == "de") Locale.GERMANY else Locale.US
+         val loc = when (lang) { "de" -> Locale.GERMANY; "zh" -> Locale.SIMPLIFIED_CHINESE; "ka" -> Locale.forLanguageTag("ka"); else -> Locale.US }
          val sdfDayInitial = DateTimeFormatter.ofPattern("E", loc)
          val shortNames = mutableListOf<String>()
          val dayNums = mutableListOf<String>()
@@ -1024,7 +1032,7 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     val heatmapMonthNameAndYear: StateFlow<String> = combine(heatmapMonthCalendar, language) { monthCal, lang ->
-        val sdfHeader = SimpleDateFormat("MMMM yyyy", if (lang == "de") Locale.GERMANY else Locale.US)
+        val sdfHeader = SimpleDateFormat("MMMM yyyy", when (lang) { "de" -> Locale.GERMANY; "zh" -> Locale.SIMPLIFIED_CHINESE; else -> Locale.US })
         sdfHeader.format(monthCal.time)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
 
@@ -1158,7 +1166,7 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
         language
     ) { yearGrid, lang ->
         val labels = mutableListOf<Pair<Int, String>>()
-        val sdfMonth = SimpleDateFormat("MMM", if (lang == "de") Locale.GERMANY else Locale.US)
+        val sdfMonth = SimpleDateFormat("MMM", when (lang) { "de" -> Locale.GERMANY; "zh" -> Locale.SIMPLIFIED_CHINESE; else -> Locale.US })
         var lastAddedIndex = -10
         var lastMonthStr = ""
         
@@ -1219,6 +1227,7 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
             val loc = when (lang) {
                 "de" -> Locale.GERMANY
                 "ka" -> Locale.forLanguageTag("ka")
+                "zh" -> Locale.SIMPLIFIED_CHINESE
                 else -> Locale.US
             }
             val pattern = when (lang) {
@@ -1431,7 +1440,7 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
 
             // Year Month Labels for this specific habit
             val yearMonthLabels = mutableListOf<Pair<Int, String>>()
-            val sdfMonth = SimpleDateFormat("MMM", if (lang == "de") Locale.GERMANY else Locale.US)
+            val sdfMonth = SimpleDateFormat("MMM", when (lang) { "de" -> Locale.GERMANY; "zh" -> Locale.SIMPLIFIED_CHINESE; else -> Locale.US })
             var lastAddedIndex = -10
             var lastMonthStr = ""
             
@@ -1505,7 +1514,7 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
         val logsByDate = habitLogs.associateBy { it.date }
 
         val targetMonthDate = today.withDayOfMonth(1).plusMonths(actualOffset.toLong())
-        val monthNameFormatter = DateTimeFormatter.ofPattern("MMMM yyyy", if (lang == "de") Locale.GERMANY else Locale.US)
+        val monthNameFormatter = DateTimeFormatter.ofPattern("MMMM yyyy", when (lang) { "de" -> Locale.GERMANY; "zh" -> Locale.SIMPLIFIED_CHINESE; else -> Locale.US })
         val monthNameStr = targetMonthDate.format(monthNameFormatter)
 
         val currentMonthDaysCount = targetMonthDate.lengthOfMonth()
@@ -1594,7 +1603,7 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
             val monday = weekDays.first().first
             val monthVal = monday.monthValue
             if (monthVal != lastMonth) {
-                val formatter = java.time.format.DateTimeFormatter.ofPattern("MMM", if (lang == "de") Locale.GERMANY else Locale.US)
+                val formatter = java.time.format.DateTimeFormatter.ofPattern("MMM", when (lang) { "de" -> Locale.GERMANY; "zh" -> Locale.SIMPLIFIED_CHINESE; else -> Locale.US })
                 val labelStr = monday.format(formatter)
                 if (index - lastAddedIndex >= 3) {
                     weeksWithMonthLabels[index] = labelStr
@@ -2990,8 +2999,8 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
                 id = "COMP_10",
                 type = "COMPLETIONS",
                 tier = "COMP_10",
-                title = if (lang == "de") "Erster Schritt" else "First Step",
-                description = if (lang == "de") "Trage insgesamt 10 Erledigungen ein." else "Log a total of 10 completions across all habits."
+                title = if (lang == "de") "Erster Schritt" else if (lang == "ka") "პირველი ნაბიჯი" else if (lang == "zh") "第一步" else "First Step",
+                description = if (lang == "de") "Trage insgesamt 10 Erledigungen ein." else if (lang == "ka") "ჩაწერეთ სულ 10 შესრულება." else if (lang == "zh") "记录累计 10 次完成。" else "Log a total of 10 completions across all habits."
             ))
         }
         if (totalGlobalCompletions >= 50) {
@@ -2999,8 +3008,8 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
                 id = "COMP_50",
                 type = "COMPLETIONS",
                 tier = "COMP_50",
-                title = if (lang == "de") "Gewohnheits-Routine" else "Habit Routine",
-                description = if (lang == "de") "Trage insgesamt 50 Erledigungen ein." else "Log a total of 50 completions across all habits."
+                title = if (lang == "de") "Gewohnheits-Routine" else if (lang == "ka") "ჩვევის რუტინა" else if (lang == "zh") "习惯养成" else "Habit Routine",
+                description = if (lang == "de") "Trage insgesamt 50 Erledigungen ein." else if (lang == "ka") "ჩაწერეთ სულ 50 შესრულება." else if (lang == "zh") "记录累计 50 次完成。" else "Log a total of 50 completions across all habits."
             ))
         }
         if (totalGlobalCompletions >= 200) {
@@ -3008,8 +3017,8 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
                 id = "COMP_200",
                 type = "COMPLETIONS",
                 tier = "COMP_200",
-                title = if (lang == "de") "Eiserner Wille" else "Iron Will",
-                description = if (lang == "de") "Trage insgesamt 200 Erledigungen ein." else "Log a total of 200 completions across all habits."
+                title = if (lang == "de") "Eiserner Wille" else if (lang == "ka") "რკინის ნებისყოფა" else if (lang == "zh") "钢铁意志" else "Iron Will",
+                description = if (lang == "de") "Trage insgesamt 200 Erledigungen ein." else if (lang == "ka") "ჩაწერეთ სულ 200 შესრულება." else if (lang == "zh") "记录累计 200 次完成。" else "Log a total of 200 completions across all habits."
             ))
         }
         if (totalGlobalCompletions >= 500) {
@@ -3017,8 +3026,8 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
                 id = "COMP_500",
                 type = "COMPLETIONS",
                 tier = "COMP_500",
-                title = if (lang == "de") "Lebensstil-Transformation" else "Lifestyle Transformation",
-                description = if (lang == "de") "Trage insgesamt 500 Erledigungen ein." else "Log a total of 500 completions across all habits."
+                title = if (lang == "de") "Lebensstil-Transformation" else if (lang == "ka") "ცხოვრების ტრანსფორმაცია" else if (lang == "zh") "生活蜕变" else "Lifestyle Transformation",
+                description = if (lang == "de") "Trage insgesamt 500 Erledigungen ein." else if (lang == "ka") "ჩაწერეთ სულ 500 შესრულება." else if (lang == "zh") "记录累计 500 次完成。" else "Log a total of 500 completions across all habits."
             ))
         }
 
@@ -3029,8 +3038,8 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
                 id = "PERF_7",
                 type = "PERFECT_DAYS",
                 tier = "PERF_7",
-                title = if (lang == "de") "Perfekte Woche" else "Perfect Week",
-                description = if (lang == "de") "Erreiche eine Serie von 7 perfekten Tagen am Stück." else "Achieve a streak of 7 consecutive perfect days."
+                title = if (lang == "de") "Perfekte Woche" else if (lang == "ka") "სრულყოფილი კვირა" else if (lang == "zh") "完美周" else "Perfect Week",
+                description = if (lang == "de") "Erreiche eine Serie von 7 perfekten Tagen am Stück." else if (lang == "ka") "მიაღწიეთ 7 სრულყოფილი დღის სერიას." else if (lang == "zh") "连续达成 7 个完美天。" else "Achieve a streak of 7 consecutive perfect days."
             ))
         }
         if (perfectDaysStreak >= 30) {
@@ -3038,8 +3047,8 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
                 id = "PERF_30",
                 type = "PERFECT_DAYS",
                 tier = "PERF_30",
-                title = if (lang == "de") "Perfekter Monat" else "Perfect Month",
-                description = if (lang == "de") "Erreiche eine Serie von 30 perfekten Tagen am Stück." else "Achieve a streak of 30 consecutive perfect days."
+                title = if (lang == "de") "Perfekter Monat" else if (lang == "ka") "სრულყოფილი თვე" else if (lang == "zh") "完美月" else "Perfect Month",
+                description = if (lang == "de") "Erreiche eine Serie von 30 perfekten Tagen am Stück." else if (lang == "ka") "მიაღწიეთ 30 სრულყოფილი დღის სერიას." else if (lang == "zh") "连续达成 30 个完美天。" else "Achieve a streak of 30 consecutive perfect days."
             ))
         }
         if (perfectDaysStreak >= 100) {
@@ -3047,8 +3056,8 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
                 id = "PERF_100",
                 type = "PERFECT_DAYS",
                 tier = "PERF_100",
-                title = if (lang == "de") "Perfektion" else "Perfection",
-                description = if (lang == "de") "Erreiche eine Serie von 100 perfekten Tagen am Stück." else "Achieve a streak of 100 consecutive perfect days."
+                title = if (lang == "de") "Perfektion" else if (lang == "ka") "სრულყოფილება" else if (lang == "zh") "完美极致" else "Perfection",
+                description = if (lang == "de") "Erreiche eine Serie von 100 perfekten Tagen am Stück." else if (lang == "ka") "მიაღწიეთ 100 სრულყოფილი დღის სერიას." else if (lang == "zh") "连续达成 100 个完美天。" else "Achieve a streak of 100 consecutive perfect days."
             ))
         }
 
@@ -3061,8 +3070,8 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
                     id = "STREAK_${habit.id}_7",
                     type = "STREAK",
                     tier = "WOOD",
-                    title = if (lang == "de") "${habit.name}: Holz-Streak" else "${habit.name}: Wood Streak",
-                    description = if (lang == "de") "7 Tage Serie erreicht!" else "Reached a 7-day streak!",
+                    title = if (lang == "de") "${habit.name}: Holz-Streak" else if (lang == "ka") "${habit.name}: ხის სერია" else if (lang == "zh") "${habit.name}：木质连续" else "${habit.name}: Wood Streak",
+                    description = if (lang == "de") "7 Tage Serie erreicht!" else if (lang == "ka") "7 დღის სერია მიღწეულია!" else if (lang == "zh") "达成 7 天连续！" else "Reached a 7-day streak!",
                     habitName = habit.name,
                     habitColor = habit.color,
                     habitIcon = habit.icon
@@ -3073,8 +3082,8 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
                     id = "STREAK_${habit.id}_14",
                     type = "STREAK",
                     tier = "BRONZE",
-                    title = if (lang == "de") "${habit.name}: Bronze-Streak" else "${habit.name}: Bronze Streak",
-                    description = if (lang == "de") "14 Tage Serie erreicht!" else "Reached a 14-day streak!",
+                    title = if (lang == "de") "${habit.name}: Bronze-Streak" else if (lang == "ka") "${habit.name}: ბრინჯაოს სერია" else if (lang == "zh") "${habit.name}：青铜连续" else "${habit.name}: Bronze Streak",
+                    description = if (lang == "de") "14 Tage Serie erreicht!" else if (lang == "ka") "14 დღის სერია მიღწეულია!" else if (lang == "zh") "达成 14 天连续！" else "Reached a 14-day streak!",
                     habitName = habit.name,
                     habitColor = habit.color,
                     habitIcon = habit.icon
@@ -3085,8 +3094,8 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
                     id = "STREAK_${habit.id}_30",
                     type = "STREAK",
                     tier = "SILVER",
-                    title = if (lang == "de") "${habit.name}: Silber-Streak" else "${habit.name}: Silver Streak",
-                    description = if (lang == "de") "30 Tage Serie erreicht!" else "Reached a 30-day streak!",
+                    title = if (lang == "de") "${habit.name}: Silber-Streak" else if (lang == "ka") "${habit.name}: ვერცხლის სერია" else if (lang == "zh") "${habit.name}：白银连续" else "${habit.name}: Silver Streak",
+                    description = if (lang == "de") "30 Tage Serie erreicht!" else if (lang == "ka") "30 დღის სერია მიღწეულია!" else if (lang == "zh") "达成 30 天连续！" else "Reached a 30-day streak!",
                     habitName = habit.name,
                     habitColor = habit.color,
                     habitIcon = habit.icon
@@ -3097,8 +3106,8 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
                     id = "STREAK_${habit.id}_100",
                     type = "STREAK",
                     tier = "GOLD",
-                    title = if (lang == "de") "${habit.name}: Gold-Streak" else "${habit.name}: Gold Streak",
-                    description = if (lang == "de") "100 Tage Serie erreicht!" else "Reached a 100-day streak!",
+                    title = if (lang == "de") "${habit.name}: Gold-Streak" else if (lang == "ka") "${habit.name}: ოქროს სერია" else if (lang == "zh") "${habit.name}：黄金连续" else "${habit.name}: Gold Streak",
+                    description = if (lang == "de") "100 Tage Serie erreicht!" else if (lang == "ka") "100 დღის სერია მიღწეულია!" else if (lang == "zh") "达成 100 天连续！" else "Reached a 100-day streak!",
                     habitName = habit.name,
                     habitColor = habit.color,
                     habitIcon = habit.icon
@@ -3106,10 +3115,14 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
             }
         }
 
-        // Apply reward text to standard achievements
+        // Apply reward text and milestoneRewardId to standard achievements
         val finalList = list.map { ach ->
             val habitId = if (ach.id.startsWith("STREAK_")) ach.id.split("_")[1].toIntOrNull() else null
-            ach.copy(rewardText = getRewardText(ach.tier, habitId))
+            val matchingReward = rewards.find { it.conditionType == "TROPHY_COUPLED" && it.trophyId == ach.tier && (habitId == null || it.habitId == habitId) }
+            ach.copy(
+                rewardText = matchingReward?.rewardText,
+                milestoneRewardId = matchingReward?.id
+            )
         }.toMutableList()
 
         // Add custom milestone rewards as virtual achievements
@@ -3128,12 +3141,13 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
                         id = "CUSTOM_${reward.id}",
                         type = "CUSTOM_MILESTONE",
                         tier = "CUSTOM",
-                        title = if (lang == "de") "${habitStat.habit.name}: Meilenstein erreicht" else "${habitStat.habit.name}: Milestone Reached",
-                        description = if (lang == "de") "Belohnung freigeschaltet!" else "Reward unlocked!",
+                        title = if (lang == "de") "${habitStat.habit.name}: Meilenstein erreicht" else if (lang == "ka") "${habitStat.habit.name}: ეტაპი მიღწეულია" else if (lang == "zh") "${habitStat.habit.name}：达成里程碑" else "${habitStat.habit.name}: Milestone Reached",
+                        description = if (lang == "de") "Belohnung freigeschaltet!" else if (lang == "ka") "ჯილდო განბლოკილია!" else if (lang == "zh") "奖励已解锁！" else "Reward unlocked!",
                         habitName = habitStat.habit.name,
                         habitColor = habitStat.habit.color,
                         habitIcon = habitStat.habit.icon,
-                        rewardText = reward.rewardText
+                        rewardText = reward.rewardText,
+                        milestoneRewardId = reward.id
                     ))
                 }
             }

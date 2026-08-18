@@ -757,5 +757,133 @@ class HabitWidgetProvider : AppWidgetProvider() {
             }
             context.sendBroadcast(intent)
         }
+
+        fun drawProgressBarBitmapStatic(progressPercent: Int, isCompleted: Boolean, accentColorInt: Int, isDark: Boolean): Bitmap {
+            val width = 800
+            val height = 40
+            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            val cornerRadius = 20f
+            val rect = android.graphics.RectF(0f, 0f, width.toFloat(), height.toFloat())
+
+            // 1. Background Track
+            val trackPaint = Paint().apply {
+                isAntiAlias = true
+                style = Paint.Style.FILL
+                color = if (isDark) Color.parseColor("#20FFFFFF") else Color.parseColor("#EAEAEF")
+            }
+            canvas.drawRoundRect(rect, cornerRadius, cornerRadius, trackPaint)
+
+            // 2. Progress Fill
+            if (progressPercent > 0) {
+                val fillColor = if (isCompleted) Color.parseColor("#10B981") else accentColorInt
+                val fillPaint = Paint().apply {
+                    isAntiAlias = true
+                    style = Paint.Style.FILL
+                    color = fillColor
+                }
+                val fillWidth = width.toFloat() * (progressPercent.coerceIn(0, 100) / 100f)
+
+                val clipPath = Path().apply {
+                    addRoundRect(rect, cornerRadius, cornerRadius, Path.Direction.CW)
+                }
+                canvas.save()
+                canvas.clipPath(clipPath)
+                canvas.drawRect(0f, 0f, fillWidth, height.toFloat(), fillPaint)
+                canvas.restore()
+            }
+
+            // 3. Subtle Border
+            val borderPaint = Paint().apply {
+                isAntiAlias = true
+                style = Paint.Style.STROKE
+                strokeWidth = 2f
+                color = if (isDark) Color.parseColor("#2C2C38") else Color.parseColor("#E5E5ED")
+            }
+            canvas.drawRoundRect(rect, cornerRadius, cornerRadius, borderPaint)
+
+            return bitmap
+        }
+
+        suspend fun updateWidgetHeaderStatic(context: Context, widgetId: Int) {
+            try {
+                val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+                val todayStr = sdf.format(Date())
+                val db = AppDatabase.getDatabase(context)
+                val allHabits = db.habitDao().getAllHabitsRaw()
+                val widgetLogs = db.habitDao().getLogsForDateRaw(todayStr)
+                val logsMap = widgetLogs.associateBy { it.habitId }
+                val allLogs = db.habitDao().getAllLogsRaw()
+
+                val activeHabits = allHabits
+                    .filter { !it.isArchived && com.example.data.isHabitActiveOnDate(it, todayStr) }
+                    .sortedWith(compareBy<com.example.data.Habit> { it.sortOrder }.thenByDescending { it.id })
+
+                var completed = 0
+                var nonPausedCount = 0
+
+                val curDate = try { java.time.LocalDate.parse(todayStr) } catch (e: Exception) { java.time.LocalDate.now() }
+                val startOf7Days = curDate.minusDays(6).toString()
+                val endOf7Days = curDate.toString()
+
+                activeHabits.forEach { habit ->
+                    val log = logsMap[habit.id]
+                    val isPaused = log != null && log.isPaused
+                    if (!isPaused) {
+                        nonPausedCount++
+                        val isDone = if (habit.frequency == "TIMES_WEEKLY") {
+                            val weeklyTarget = habit.specificDays.toIntOrNull() ?: 3
+                            val weeklyCount = allLogs.filter { l ->
+                                l.habitId == habit.id && l.date >= startOf7Days && l.date <= endOf7Days && com.example.data.isLogCompleted(habit, l)
+                            }.size
+                            weeklyCount >= weeklyTarget || com.example.data.isLogCompleted(habit, log)
+                        } else {
+                            com.example.data.isLogCompleted(habit, log)
+                        }
+                        if (isDone) {
+                            completed++
+                        }
+                    }
+                }
+
+                val sharedPrefs = context.getSharedPreferences("habits_settings", Context.MODE_PRIVATE)
+                val habitPrefs = context.getSharedPreferences("habit_prefs", Context.MODE_PRIVATE)
+                val isDark = sharedPrefs.getBoolean("dark_mode_enabled", habitPrefs.getBoolean("dark_mode_enabled", true))
+
+                val accentColorName = sharedPrefs.getString("accent_color_name", null)
+                    ?: habitPrefs.getString("accent_color_name", "PURPLE")
+                    ?: "PURPLE"
+                val accentColorInt = com.example.ui.HabitIconMapping.getColor(accentColorName).toArgb()
+
+                val progressPercent = if (nonPausedCount > 0) (completed.toFloat() / nonPausedCount * 100).toInt() else 0
+                val isCompleted = progressPercent >= 100 && nonPausedCount > 0
+
+                val layoutId = if (isDark) R.layout.habit_widget else R.layout.habit_widget_light
+                val views = RemoteViews(context.packageName, layoutId)
+
+                val progressBitmap = drawProgressBarBitmapStatic(progressPercent, isCompleted, accentColorInt, isDark)
+                views.setImageViewBitmap(R.id.widget_progress_bar, progressBitmap)
+
+                val perfectStats = com.example.data.StreakCalculator.calculate(allHabits, allLogs, targetDateStr = todayStr)
+                val currentStreak = perfectStats.currentStreak
+
+                sharedPrefs.edit().putInt("current_perfect_streak", currentStreak).apply()
+                views.setTextViewText(R.id.widget_streak_text, currentStreak.toString())
+                views.setTextColor(R.id.widget_streak_text, if (isDark) Color.parseColor("#FF9800") else Color.parseColor("#EA580C"))
+
+                val appWidgetManager = AppWidgetManager.getInstance(context)
+                if (widgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
+                    appWidgetManager.partiallyUpdateAppWidget(widgetId, views)
+                } else {
+                    val componentName = ComponentName(context, HabitWidgetProvider::class.java)
+                    val ids = appWidgetManager.getAppWidgetIds(componentName)
+                    if (ids.isNotEmpty()) {
+                        appWidgetManager.partiallyUpdateAppWidget(ids, views)
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 }

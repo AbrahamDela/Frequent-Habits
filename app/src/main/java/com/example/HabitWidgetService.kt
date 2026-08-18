@@ -49,6 +49,8 @@ class HabitWidgetFactory(private val context: Context, intent: Intent) : RemoteV
                     .filter { !it.isArchived && com.example.data.isHabitActiveOnDate(it, selectedDate) }
                     .sortedWith(compareBy<Habit> { it.sortOrder }.thenByDescending { it.id })
                 activeHabits = active
+
+                HabitWidgetProvider.updateWidgetHeaderStatic(context, widgetId)
             } catch (e: Exception) {
                 e.printStackTrace()
             }

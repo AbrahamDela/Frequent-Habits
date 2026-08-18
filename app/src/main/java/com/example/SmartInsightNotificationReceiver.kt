@@ -76,6 +76,10 @@ class SmartInsightNotificationReceiver : BroadcastReceiver() {
         if (totalGlobalCompletions > 0 && totalGlobalCompletions % 50 == 0) {
             val text = if (language == "de") {
                 "Wahnsinn! Du hast gerade insgesamt **$totalGlobalCompletions** Abschlüsse erreicht. Feiere diesen Meilenstein! 🎉"
+            } else if (language == "ka") {
+                "საოცარია! თქვენ მიაღწიეთ სულ **$totalGlobalCompletions** დასრულებას! 🎉"
+            } else if (language == "zh") {
+                "太棒了！你刚刚达成了累计 **$totalGlobalCompletions** 次完成。庆祝这个里程碑！🎉"
             } else {
                 "Amazing! You just reached a total of **$totalGlobalCompletions** completions. Celebrate this milestone! 🎉"
             }
@@ -87,6 +91,10 @@ class SmartInsightNotificationReceiver : BroadcastReceiver() {
         if (highMomentum != null && highMomentum.second >= 80) {
             val text = if (language == "de") {
                 "Dein Habit **'${highMomentum.first.name}'** hat eine fantastische Stärke von **${highMomentum.second}%** erreicht! 💎"
+            } else if (language == "ka") {
+                "შენმა ჩვევამ **'${highMomentum.first.name}'** მიაღწია სიძლიერეს **${highMomentum.second}%**! 💎"
+            } else if (language == "zh") {
+                "你的习惯 **“${highMomentum.first.name}”** 达到了惊人的 **${highMomentum.second}%** 稳固度！💎"
             } else {
                 "Your habit **'${highMomentum.first.name}'** has reached a fantastic strength of **${highMomentum.second}%**! 💎"
             }
@@ -106,6 +114,10 @@ class SmartInsightNotificationReceiver : BroadcastReceiver() {
             if (matchingHabit != null) {
                 val text = if (language == "de") {
                     "Dein absoluter Spitzenreiter ist **'${matchingHabit.name}'** mit bereits **${maxHabitEntry.value}** Abschlüssen! Tolle Leistung. 🟢"
+                } else if (language == "ka") {
+                    "შენი საუკეთესო ჩვევაა **'${matchingHabit.name}'** უკვე **${maxHabitEntry.value}** დასრულებით! 🟢"
+                } else if (language == "zh") {
+                    "你的冠军习惯是 **“${matchingHabit.name}”**，已完成 **${maxHabitEntry.value}** 次！表现优异。🟢"
                 } else {
                     "Your absolute top performer is **'${matchingHabit.name}'** with already **${maxHabitEntry.value}** completions! Great job. 🟢"
                 }
@@ -140,19 +152,21 @@ class SmartInsightNotificationReceiver : BroadcastReceiver() {
         }
         if (maxDayIndex != -1 && maxCount > 10) {
             val dayName = when (maxDayIndex) {
-                Calendar.MONDAY -> if (language == "de") "Montag" else if (language == "ka") "ორშაბათი" else "Monday"
-                Calendar.TUESDAY -> if (language == "de") "Dienstag" else if (language == "ka") "სამშაბათი" else "Tuesday"
-                Calendar.WEDNESDAY -> if (language == "de") "Mittwoch" else if (language == "ka") "ოთხშაბათი" else "Wednesday"
-                Calendar.THURSDAY -> if (language == "de") "Donnerstag" else if (language == "ka") "ხუთშაბათი" else "Thursday"
-                Calendar.FRIDAY -> if (language == "de") "Freitag" else if (language == "ka") "პარასკევი" else "Friday"
-                Calendar.SATURDAY -> if (language == "de") "Samstag" else if (language == "ka") "შაბათი" else "Saturday"
-                Calendar.SUNDAY -> if (language == "de") "Sonntag" else if (language == "ka") "კვირა" else "Sunday"
+                Calendar.MONDAY -> if (language == "de") "Montag" else if (language == "ka") "ორშაბათი" else if (language == "zh") "周一" else "Monday"
+                Calendar.TUESDAY -> if (language == "de") "Dienstag" else if (language == "ka") "სამშაბათი" else if (language == "zh") "周二" else "Tuesday"
+                Calendar.WEDNESDAY -> if (language == "de") "Mittwoch" else if (language == "ka") "ოთხშაბათი" else if (language == "zh") "周三" else "Wednesday"
+                Calendar.THURSDAY -> if (language == "de") "Donnerstag" else if (language == "ka") "ხუთშაბათი" else if (language == "zh") "周四" else "Thursday"
+                Calendar.FRIDAY -> if (language == "de") "Freitag" else if (language == "ka") "პარასკევი" else if (language == "zh") "周五" else "Friday"
+                Calendar.SATURDAY -> if (language == "de") "Samstag" else if (language == "ka") "შაბათი" else if (language == "zh") "周六" else "Saturday"
+                Calendar.SUNDAY -> if (language == "de") "Sonntag" else if (language == "ka") "კვირა" else if (language == "zh") "周日" else "Sunday"
                 else -> ""
             }
             val text = if (language == "de") {
                 "Dein aktivster Wochentag ist der **$dayName** mit insgesamt **$maxCount** erfolgreichen Abschlüssen! 📈"
             } else if (language == "ka") {
                 "შენი ყველაზე აქტიური დღეა **$dayName** სულ **$maxCount** შესრულებით! 📈"
+            } else if (language == "zh") {
+                "你在一周中最活跃的一天是 **$dayName**，共计成功完成了 **$maxCount** 次！📈"
             } else {
                 "Your most active day of the week is **$dayName** with a total of **$maxCount** successful completions! 📈"
             }
@@ -170,6 +184,8 @@ class SmartInsightNotificationReceiver : BroadcastReceiver() {
                 "In den letzten 7 Tagen hast du **$thisWeekCount** Abschlüsse geschafft (Vorwoche: **$prevWeekCount**). Bleib weiter am Ball! ⚡"
             } else if (language == "ka") {
                 "ბოლო 7 დღეში გაქვს **$thisWeekCount** შესრულება (წინა კვირას: **$prevWeekCount**). ⚡"
+            } else if (language == "zh") {
+                "最近 7 天内你达成了 **$thisWeekCount** 次完成（上周：**$prevWeekCount** 次）。继续保持势头！⚡"
             } else {
                 "In the last 7 days you achieved **$thisWeekCount** completions (prev week: **$prevWeekCount**). Keep staying on track! ⚡"
             }
@@ -185,6 +201,8 @@ class SmartInsightNotificationReceiver : BroadcastReceiver() {
                     "Dein Habit **'${lowest.first.name}'** könnte etwas zusätzliche Aufmerksamkeit gebrauchen (Stärke: **${lowest.second}%**). Heute durchstarten? 🎯"
                 } else if (language == "ka") {
                     "შენს ჩვევას **'${lowest.first.name}'** ცოტა მეტი ყურადღება სჭირდება (სიძლიერე: **${lowest.second}%**). 🎯"
+                } else if (language == "zh") {
+                    "你的习惯 **“${lowest.first.name}”** 可能需要更多关注（稳固度：**${lowest.second}%**）。今天就行动起来？🎯"
                 } else {
                     "Your habit **'${lowest.first.name}'** could use a little extra attention (strength: **${lowest.second}%**). Ready today? 🎯"
                 }
@@ -221,7 +239,7 @@ class SmartInsightNotificationReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         
-        val title = if (language == "de") "Neuer Smart Insight 💡" else "New Smart Insight 💡"
+        val title = if (language == "de") "Neuer Smart Insight 💡" else if (language == "ka") "ახალი ჭკვიანი ანალიტიკა 💡" else if (language == "zh") "新的智能洞察 💡" else "New Smart Insight 💡"
         val notification = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
