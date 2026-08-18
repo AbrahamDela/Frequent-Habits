@@ -1,10 +1,4 @@
-<div align="center">
 
-<img width="160" height="160" alt="Frequent Habits Icon" src="https://github.com/user-attachments/assets/97e750bb-f977-4210-a8fb-e3979dd6aeac" />
-
-# Frequent Habits
-
-### A gorgeous, private, ad-free habit tracker
 
 <br>
 
