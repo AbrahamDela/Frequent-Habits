@@ -38,11 +38,12 @@ We deliver a gorgeous, ultra-modern dark mode interface paired with satisfying a
 ## ✨ Key Features
 
 * 🛡️ **Private by Nature:** Designed from the ground up to respect your privacy. No ads, no tracking, no mandatory accounts, and zero cloud dependencies. Your personal routines and life habits never leave your device.
+* 🌐 **Fully Multilingual:** Available in English, German (Deutsch), Georgian (ქართული), and Simplified Chinese (简体中文) — every screen, onboarding step, smart insight, and milestone reward is fully localized.
 * 💾 **SAF Export Function:** Your data belongs entirely to you. Take full control of your history with secure local JSON backups and restores using Android's Storage Access Framework (SAF) — ensuring true data ownership with zero vendor lock-in.
 * 📊 **Deep Analytics:** Go far beyond simple streak counting. Understand your behavior through an intelligent 100-point scoring system, yearly activity heatmaps, precise weekday frequency breakdown charts, and dynamic progress rings.
 * 🎨 **Ultra-Clean Design:** A clutter-free, aesthetic dark-mode interface built with Jetpack Compose. Enjoy vibrant accent colors, directional slide transitions, and silky-smooth animations that make tracking daily tasks a premium experience.
 * ⏱️ **Audio Timer Function:** Complete time- or session-based habits (such as 30 minutes of reading or meditation) using a dedicated built-in timer featuring ambient background sounds and instant zero-latency completion chimes loaded via SoundPool.
-* ⚡ **Homescreen Widget:** Check off your daily habits directly from your homescreen with a lightweight, lightning-fast widget engineered for zero-delay instant response.
+* ⚡ **Homescreen Widget:** Check off your daily habits directly from your homescreen with a lightweight, lightning-fast widget engineered for zero-delay instant response. Automatically resets right at midnight and resyncs the moment you reopen the app.
 * 📝 **Integrated Mini-Notebook:** Jot down thoughts, milestones, or reasons for a missed routine directly within your daily tracker — complete with subtle violet dot indicators directly on your yearly heatmaps.
 * 🏆 **Gamification & Rewards:** Stay motivated without artificial pressure. Unlock exclusive trophies, achieve "Gold Series", and experience full-screen confetti celebrations paired with custom haptic feedback when reaching new milestones.
 
@@ -99,10 +100,4 @@ You can install and update **Frequent Habits** in three convenient ways:
 
 ## 🤝 Contributing
 
-Feedback, bug reports, and pull requests are always welcome! If you would like to suggest a new feature or report a bug, simply open a new [Issue](https://github.com/FrequeNCy144/Frequent-Habits/issues).
-
----
-
-## 📄 License
-
-This project is open-source and licensed under the **GNU General Public License v3.0 (GPLv3)**. For more details, please see the [LICENSE](LICENSE) file.
+Feedback, bug reports, and pull requests are always welcome! Head over to our [Issue Tracker](https://github.com/FrequeNCy144/Frequent-Habits/issues/new/choose) and pick the template that fits — Bug Report, Feature Request, Language Translation, or a blank issue for anything else. The same picker is also linked directly from **Report Bug** and **Request Feature** in the app's settings.
