@@ -38,15 +38,6 @@
 
 ---
 
-> [!IMPORTANT]
-> **Official Repository:** This is the only official Frequent Habits source. Only download from [F-Droid](https://f-droid.org/packages/com.frequent.habits/), via [Obtainium](https://github.com/ImranR98/Obtainium), or directly from our [GitHub Releases](https://github.com/FrequeNCy144/Frequent-Habits/releases). Beware of copies distributing APKs from other sources.
->
-> **APK Signing Certificate (SHA-256):**
-> `D6:F4:53:7C:BF:D2:82:D1:98:57:D0:AA:45:A9:5E:B1:9E:B5:07:89:2D:B4:B9:2A:F7:69:48:68:60:EA:1F:3D`
->
-> *Verify GitHub Release APKs with AppVerifier or Obtainium. F-Droid builds use F-Droid's own reproducible signing key.*
-
----
 
 Often, you have to make a hard choice when looking for a habit tracker: either choose a visually stunning app trapped behind expensive paywalls and aggressive data harvesting, or settle for privacy-friendly open-source apps that feel visually and functionally basic. **Frequent Habits** bridges exactly this gap.
 
@@ -76,7 +67,7 @@ We deliver a gorgeous, ultra-modern dark mode interface paired with satisfying a
 
 ---
 
-## 📸 Screenshots
+### 📸 Screenshots
 
 <div align="center">
   <img width="23%" alt="01-Build Lasting Habits" src="https://github.com/user-attachments/assets/9e73ebef-3762-4f8b-a44e-d8c79f2957c3" />
@@ -92,7 +83,7 @@ We deliver a gorgeous, ultra-modern dark mode interface paired with satisfying a
 
 ---
 
-## 🚀 Installation
+### 🚀 Installation
 
 You can install and update **Frequent Habits** in three convenient ways:
 
@@ -102,14 +93,14 @@ You can install and update **Frequent Habits** in three convenient ways:
 
 ---
 
-## 🤝 Contributing
+### 🤝 Contributing
 
 Feedback, bug reports, and pull requests are always welcome! Head over to our [Issue Tracker](https://github.com/FrequeNCy144/Frequent-Habits/issues/new/choose) and pick the template that fits — Bug Report, Feature Request, Language Translation, or a blank issue for anything else. The same picker is also linked directly from **Report Bug** and **Request Feature** in the app's settings.
 
 ---
 
 
-## ⭐ Support
+### ⭐ Support
 
 <div align="center">
 
