@@ -1,3 +1,14 @@
+<img width="1242" height="2682" alt="08_100_private_offline_1242x2688" src="https://github.com/user-attachments/assets/6bd725e8-7360-4546-bf0d-65ed655096a7" />
+<img width="1242" height="2682" alt="07_your_app_your_style__1242x2688" src="https://github.com/user-attachments/assets/e07ccfa1-2e33-4b38-9d34-6682435767d8" />
+<img width="1242" height="2682" alt="06_reflect_your_journey_1242x2688" src="https://github.com/user-attachments/assets/e07428d8-06e1-44de-9560-09293a468b19" />
+<img width="1242" height="2682" alt="05_gamification_rewards_1242x2688" src="https://github.com/user-attachments/assets/30e1ed87-60b2-48b2-a3a7-ca0ae8c35604" />
+<img width="1242" height="2682" alt="04_actionable_smart_insights_1242x2688" src="https://github.com/user-attachments/assets/6f0c3bff-3ec1-46be-897b-e7abe192c3b7" />
+<img width="1242" height="2682" alt="03_unrivaled_analytics_1242x2688" src="https://github.com/user-attachments/assets/6069e371-0204-4a23-81e2-beaa4d78c664" />
+<img width="1242" height="2682" alt="02_in_app_focus_timer_1242x2688" src="https://github.com/user-attachments/assets/063a3814-769f-49f4-8440-76ebcb4be3e7" />
+<img width="1242" height="2682" alt="01_build_lasting_habits_1242x2688" src="https://github.com/user-attachments/assets/9e73ebef-3762-4f8b-a44e-d8c79f2957c3" />
+
+
+
 <div align="center">
 
 # Frequent Habits
@@ -137,7 +148,9 @@ You can install and update **Frequent Habits** in three convenient ways:
 2. **Obtainium:** Click the Obtainium badge at the top of this README or paste our GitHub repository URL into [Obtainium](https://github.com/ImranR98/Obtainium) to receive direct release notifications and OTA updates from GitHub.
 3. **Manual APK:** Download the latest `FrequentHabits.apk` directly from our [Releases](https://github.com/FrequeNCy144/Frequent-Habits/releases) page and install it manually on your Android device.
 
----
+---<img width="2048" height="1000" alt="featureGraphic" src="https://github.com/user-attachments/assets/8c87fb72-d320-4afc-8e45-f843fc9736ae" />
+<img width="2048" height="1000" alt="featureGraphic" src="https://github.com/user-attachments/assets/a415302e-70ae-46d3-bd7a-1bc92c73f56d" />
+
 
 ## 🤝 Contributing
 
