@@ -1,8 +1,7 @@
 <div align="center">
 
-# Frequent Habits
+<img width="2048" height="1000" alt="featureGraphic (1)" src="https://github.com/user-attachments/assets/0d434b0f-64ec-493a-88f2-5085d21dfc1f" />
 
-<img width="2560" height="800" alt="github-banner" src="https://github.com/user-attachments/assets/0ee1be60-546a-46bb-aae1-4351c8be9bb8" />
 
 
 <br>
