@@ -1,7 +1,6 @@
 <div align="center">
 
-<img width="2048" height="1000" alt="featureGraphic (1)" src="https://github.com/user-attachments/assets/0d434b0f-64ec-493a-88f2-5085d21dfc1f" />
-
+<img width="2560" height="800" alt="github-banner" src="https://github.com/user-attachments/assets/61df3f2c-a5fe-4633-890d-266e91096ac7" />
 
 
 <br>
