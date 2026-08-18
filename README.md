@@ -37,17 +37,56 @@ We deliver a gorgeous, ultra-modern dark mode interface paired with satisfying a
 
 ## ✨ Key Features
 
-* 🛡️ **Private by Nature:** Designed from the ground up to respect your privacy. No ads, no tracking, no mandatory accounts, and zero cloud dependencies. Your personal routines and life habits never leave your device.
-* 🎯 **Flexible Habit Tracking:** Build lasting habits your way — track daily routines with flexible numeric targets, simple counters, or classic streaks, whatever fits the habit best.
-* 🌐 **Fully Multilingual:** Available in English, German (Deutsch), Georgian (ქართული), and Simplified Chinese (简体中文) — every screen, onboarding step, smart insight, and milestone reward is fully localized.
-* 💾 **Own Your Data:** Take full control of your history with secure local JSON backups and restores via Android's Storage Access Framework (SAF), plus a 1-click import from Loop Habit Tracker for anyone switching over — zero vendor lock-in.
-* 📊 **Deep Analytics:** Go far beyond simple streak counting. Understand your behavior through an intelligent 100-point discipline scoring system, yearly activity heatmaps, precise weekday frequency breakdown charts, and dynamic progress rings.
-* 💡 **Actionable Smart Insights:** Purely algorithmic, on-device pattern detection surfaces your peak days and habit momentum — no AI buzzwords, just your own data working for you.
-* 🎨 **Deep Personalization:** A clutter-free, aesthetic interface built with Jetpack Compose. Customize vibrant accent colors, true OLED dark themes, and personal habit icons, complete with directional slide transitions and silky-smooth animations.
-* ⏱️ **Audio Timer Function:** Complete time- or session-based habits (such as 30 minutes of reading or meditation) using a dedicated built-in timer featuring ambient background soundscapes, your own imported audio, and instant zero-latency completion chimes loaded via SoundPool.
-* ⚡ **Homescreen Widget:** Check off your daily habits directly from your homescreen with a lightweight, lightning-fast widget engineered for zero-delay instant response. Automatically resets right at midnight and resyncs the moment you reopen the app.
-* 📝 **Reflect Your Journey:** Weekly and annual reviews, an integrated mini-notebook for daily thoughts and reflections, and time capsule notes to your future self — with subtle violet dot indicators marking entries directly on your yearly heatmaps.
-* 🏆 **Gamification & Rewards:** Stay motivated without artificial pressure. Unlock exclusive trophies, achieve "Gold Series", define your own custom self-rewards, and experience full-screen confetti celebrations paired with custom haptic feedback when reaching new milestones.
+- 🎯 **Flexible Targets, Counters & Streaks**
+  Track habits your way — numeric goals, simple counters, or classic streaks.
+
+- 🎧 **In-App Focus Timer**
+  Deep work timer with ambient soundscapes and custom audio import.
+
+- 📊 **Yearly Heatmaps**
+  See your entire year of consistency at a glance.
+
+- 🧮 **100-Point Discipline Score**
+  Algorithmic scoring that reflects real consistency, not just streak length.
+
+- 📈 **Weekday Frequency Charts**
+  Spot your strongest and weakest days instantly.
+
+- 🏆 **Trophies & Gold Series**
+  Unlock achievements as your habits grow.
+
+- 🎉 **Custom Self-Rewards & Confetti**
+  Define your own rewards, celebrated with haptics and full-screen confetti.
+
+- 💡 **Algorithmic Smart Insights**
+  On-device pattern detection for peak days and momentum — no AI buzzwords.
+
+- 📝 **Weekly & Annual Reviews**
+  Structured reflections built right into your routine.
+
+- ⏳ **Time Capsules**
+  Leave notes for your future self, tied to your habit history.
+
+- 🎨 **Custom Accent Colors & OLED Themes**
+  Make the app look exactly how you want.
+
+- 🔣 **Personal Habit Icons**
+  Pick icons that actually match your routines.
+
+- 🌐 **4 Languages**
+  Fully localized in English, German, Georgian & Simplified Chinese.
+
+- 💾 **Local JSON Backup & Restore**
+  Full data ownership via Android's Storage Access Framework.
+
+- 📥 **1-Click Loop Import**
+  Switch from Loop Habit Tracker without losing your history.
+
+- ⚡ **Homescreen Widget**
+  Instant check-offs, midnight reset, auto-resync on app open.
+
+- 🔒 **100% Offline, No Ads, No Tracking**
+  Everything stays on your device.
 
 ---
 
@@ -96,4 +135,10 @@ You can install and update **Frequent Habits** in three convenient ways:
 
 1. **F-Droid Store (Recommended):** Download it directly via the official [F-Droid Store](https://f-droid.org/packages/com.frequent.habits/) to receive automatic background updates.
 2. **Obtainium:** Click the Obtainium badge at the top of this README or paste our GitHub repository URL into [Obtainium](https://github.com/ImranR98/Obtainium) to receive direct release notifications and OTA updates from GitHub.
-3. **Manual APK:** Download the latest `FrequentHabits.apk` directly from our
+3. **Manual APK:** Download the latest `FrequentHabits.apk` directly from our [Releases](https://github.com/FrequeNCy144/Frequent-Habits/releases) page and install it manually on your Android device.
+
+---
+
+## 🤝 Contributing
+
+Feedback, bug reports, and pull requests are always welcome! Head over to our [Issue Tracker](https://github.com/FrequeNCy144/Frequent-Habits/issues/new/choose) and pick the template that fits — Bug Report, Feature Request, Language Translation, or a blank issue for anything else. The same picker is also linked directly from **Report Bug** and **Request Feature** in the app's settings.
