@@ -2,7 +2,8 @@
 
 # Frequent Habits
 
-<img width="2048" height="1000" alt="featureGraphic" src="https://github.com/user-attachments/assets/adb7e386-ee83-4683-8534-55a2dd29a278" />
+<img width="2560" height="800" alt="github-banner" src="https://github.com/user-attachments/assets/0ee1be60-546a-46bb-aae1-4351c8be9bb8" />
+
 
 <br>
 
