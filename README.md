@@ -102,18 +102,14 @@ You can install and update **Frequent Habits** in three convenient ways:
 
 ---
 
-## 🛠 Tech Stack
+## 🤝 Contributing
 
-Built with modern, lightweight Android development standards:
-* **UI:** Kotlin & Jetpack Compose (Material Design 3 elements, directional slide transitions)
-* **Audio:** Android SoundPool for zero-latency UI audio playback
-* **Architecture:** MVVM (Model-View-ViewModel), State Hoisting
-* **Database:** Room (SQLite) for 100% local persistence
-* **Asynchrony:** Coroutines & StateFlows
+Feedback, bug reports, and pull requests are always welcome! Head over to our [Issue Tracker](https://github.com/FrequeNCy144/Frequent-Habits/issues/new/choose) and pick the template that fits — Bug Report, Feature Request, Language Translation, or a blank issue for anything else. The same picker is also linked directly from **Report Bug** and **Request Feature** in the app's settings.
 
 ---
 
-## ⭐ Star History
+
+## ⭐ Support
 
 <div align="center">
 
@@ -126,9 +122,3 @@ Built with modern, lightweight Android development standards:
 </a>
 
 </div>
-
----
-
-## 🤝 Contributing
-
-Feedback, bug reports, and pull requests are always welcome! Head over to our [Issue Tracker](https://github.com/FrequeNCy144/Frequent-Habits/issues/new/choose) and pick the template that fits — Bug Report, Feature Request, Language Translation, or a blank issue for anything else. The same picker is also linked directly from **Report Bug** and **Request Feature** in the app's settings.
