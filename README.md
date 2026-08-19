@@ -6,13 +6,9 @@
   <br><br>
 
   <!-- Prominent Download Badges -->
-  <a href="https://f-droid.org/packages/com.frequent.habits/">
-    <img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" height="85" alt="Get it on F-Droid" />
-  </a>
+  <a href="https://f-droid.org/packages/com.frequent.habits/"><img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" height="85" alt="Get it on F-Droid" /></a>
   &nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/FrequeNCy144/Frequent-Habits">
-    <img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" height="85" alt="Get it on Obtainium" />
-  </a>
+  <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/FrequeNCy144/Frequent-Habits"><img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" height="85" alt="Get it on Obtainium" /></a>
 
   <br><br>
 
@@ -22,12 +18,8 @@
   </p>
 
   <!-- Badges -->
-  <a href="https://github.com/FrequeNCy144/Frequent-Habits/releases">
-    <img src="https://img.shields.io/github/v/release/FrequeNCy144/Frequent-Habits?style=for-the-badge&logo=github&color=7356FF" alt="GitHub Release" />
-  </a>
-  <a href="LICENSE">
-    <img src="https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge" alt="License: GPLv3" />
-  </a>
+  <a href="https://github.com/FrequeNCy144/Frequent-Habits/releases"><img src="https://img.shields.io/github/v/release/FrequeNCy144/Frequent-Habits?style=for-the-badge&logo=github&color=7356FF" alt="GitHub Release" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge" alt="License: GPLv3" /></a>
 
   <br><br>
 
@@ -55,22 +47,28 @@ Often, you have to make a hard choice when looking for a habit tracker: either c
 
 ## ✨ Key Features
 
-* 🎯 **Flexible Targets, Counters & Streaks** — Track habits your way: numeric goals, simple counters, or classic streaks.
 * 🎧 **In-App Focus Timer** — Deep work timer with ambient soundscapes and custom audio import.
-* 📊 **Yearly Heatmaps** — See your entire year of consistency at a glance.
-* 🧮 **100-Point Discipline Score** — Algorithmic scoring that reflects real consistency, not just streak length.
-* 📈 **Weekday Frequency Charts** — Spot your strongest and weakest days instantly.
+
+* 📊 **Deep Analytics & Discipline Score** — Track your consistency with yearly heatmaps, weekday frequency charts, and an algorithmic 100-point discipline score.
+
 * 🏆 **Trophies & Gold Series** — Unlock achievements as your habits grow.
+
 * 🎉 **Custom Self-Rewards & Confetti** — Define your own rewards, celebrated with haptics and full-screen confetti.
+
 * 💡 **Algorithmic Smart Insights** — On-device pattern detection for peak days and momentum — no AI buzzwords.
+
 * 📝 **Weekly & Annual Reviews** — Structured reflections built right into your routine.
+
 * ⏳ **Time Capsules** — Leave notes for your future self, tied to your habit history.
+
 * 🎨 **Custom Accent Colors & OLED Themes** — Make the app look exactly how you want.
-* 🔣 **Personal Habit Icons** — Pick icons that actually match your routines.
-* 🌐 **4 Languages** — Fully localized in English, German, Georgian & Simplified Chinese.
+
 * 💾 **Local JSON Backup & Restore** — Full data ownership via Android's Storage Access Framework.
+
 * 📥 **1-Click Loop Import** — Switch from *Loop Habit Tracker* without losing your history.
+
 * ⚡ **Homescreen Widget** — Instant check-offs, midnight reset, auto-resync on app open.
+
 * 🔒 **100% Offline, No Ads, No Tracking** — Everything stays strictly on your device.
 
 ---
@@ -122,13 +120,9 @@ If you love Frequent Habits and want to support its ongoing open-source developm
 
 <div align="center">
 
-  <a href="https://liberapay.com/FrequeNCy/donate">
-    <img src="https://img.shields.io/badge/Donate-Liberapay-f6c915?style=for-the-badge&logo=liberapay&logoColor=black" alt="Liberapay" />
-  </a>
+  <a href="https://liberapay.com/FrequeNCy/donate"><img src="https://img.shields.io/badge/Donate-Liberapay-f6c915?style=for-the-badge&logo=liberapay&logoColor=black" alt="Liberapay" /></a>
   &nbsp;&nbsp;
-  <a href="https://ko-fi.com/frequency_144">
-    <img src="https://img.shields.io/badge/Donate-Ko--fi-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white" alt="Ko-Fi" />
-  </a>
+  <a href="https://ko-fi.com/frequency_144"><img src="https://img.shields.io/badge/Donate-Ko--fi-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white" alt="Ko-Fi" /></a>
 
   <br><br>
 
