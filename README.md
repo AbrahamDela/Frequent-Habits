@@ -1,4 +1,5 @@
 <div align="center">
+<img width="2560" height="1160" alt="github-banner (3)" src="https://github.com/user-attachments/assets/c5f440b6-19a7-4b43-85a8-f620f412818b" />
 
   <!-- Neues Main Banner -->
   <img width="100%" alt="Frequent Habits Banner" src="https://github.com/user-attachments/assets/07f5f66a-4f90-4a2e-8146-f0f37c82fbcf" />
