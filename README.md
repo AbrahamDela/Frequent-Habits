@@ -40,15 +40,19 @@
 
 ---
 
-> ✉️ **Personal Message**
-> 
-> <span style="color: #8A2BE2;">Hey, I just wanted to welcome you personally! This is Frequent Habits—the habit tracker I built after searching for a long, long time for an app with the exact feature set I wanted. As you can probably guess, I never found one. But I’m actually glad I didn't! It gave me the chance to build my very first app, and it has been so much fun.</span>
-> 
-> <span style="color: #8A2BE2;">Frequent Habits has everything I always wished for: an ultra-clean design, deep analytics so I can really crawl into all the quirks of my behavior (I love seeing data about myself!), an interactive widget, an export function so I don't have to sync my personal behavior data to Big Tech, and gamification to keep me on the ball!</span>
-> 
-> <span style="color: #8A2BE2;">I hope you like it as much as I do. If you have any feedback or feature requests, don't hesitate to reach out—either via <a href="https://github.com/FrequeNCy144/Frequent-Habits/issues/new/choose" style="color: #8A2BE2;">Issues</a> or through the email address in the app.</span>
-> 
-> <span style="color: #8A2BE2;">Enjoy! ❤️</span>
+<blockquote style="border-left: 4px solid #8A2BE2; padding-left: 15px; margin-left: 0;">
+
+✉️ **Personal Message**
+
+Hey, I just wanted to welcome you personally! This is Frequent Habits—the habit tracker I built after searching for a long, long time for an app with the exact feature set I wanted. As you can probably guess, I never found one. But I’m actually glad I didn't! It gave me the chance to build my very first app, and it has been so much fun. 
+
+Frequent Habits has everything I always wished for: an ultra-clean design, deep analytics so I can really crawl into all the quirks of my behavior (I love seeing data about myself!), an interactive widget, an export function so I don't have to sync my personal behavior data to Big Tech, and gamification to keep me on the ball!
+
+I hope you like it as much as I do. If you have any feedback or feature requests, don't hesitate to reach out—either via [Issues](https://github.com/FrequeNCy144/Frequent-Habits/issues/new/choose) or through the email address in the app.
+
+Enjoy! ❤️
+
+</blockquote>
 
 ---
 
