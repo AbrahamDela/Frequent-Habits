@@ -1,4 +1,4 @@
-<img width="742" height="336" alt="github-banner__12_-removebg-preview" src="https://github.com/user-attachments/assets/6e449f2a-6d57-4937-92e0-a46e8ebdfb00" />
+<img width="2560" height="1160" alt="github-banner (14)" src="https://github.com/user-attachments/assets/92f66a75-7246-4a09-99ae-e7e76c40bc2b" />
 
 
   <br><br>
