@@ -79,17 +79,17 @@ Often, you have to make a hard choice when looking for a habit tracker: either c
 ## 📸 Screenshots
 
 <div align="center">
-  <img width="23%" alt="Build Lasting Habits" src="https://github.com/user-attachments/assets/cfdb3b49-4af4-4b4b-bb80-a3ae1c175d9a" />
-  <img width="23%" alt="Audio Timer" src="https://github.com/user-attachments/assets/f19fbde1-4b4e-466c-8b5e-e3fe34d06b91" />
-  <img width="23%" alt="Unrivaled Analytics" src="https://github.com/user-attachments/assets/4a670914-9352-43fc-8f49-ad15999eb834" />
-  <img width="23%" alt="Actionable Smart Insights" src="https://github.com/user-attachments/assets/e93d8d71-dc94-4a79-b6da-766f6e90c997" />
+  <img width="23%" alt="Build Lasting Habits" src="https://github.com/user-attachments/assets/81dfbb1a-0211-400e-b8bc-ed377e9e2aa3" />
+  <img width="23%" alt="Audio Timer" src="https://github.com/user-attachments/assets/d049e9b7-a615-490f-ac73-31ae7b5e458a" />
+  <img width="23%" alt="Unrivaled Analytics" src="https://github.com/user-attachments/assets/72631e43-aba7-417d-9c55-d8e6c8314759" />
+  <img width="23%" alt="Actionable Smart Insights" src="https://github.com/user-attachments/assets/e7beea72-0b26-4f63-b0e0-4d9466c0f0b3" />
   
   <br><br>
 
-  <img width="23%" alt="Gamification & Rewards" src="https://github.com/user-attachments/assets/c26d8565-975f-41da-8bcf-610b00d50755" />
-  <img width="23%" alt="Reflect Your Journey" src="https://github.com/user-attachments/assets/0cf4086a-65e7-4cc6-b42a-a04608d10b8c" />
-  <img width="23%" alt="Your App, Your Style" src="https://github.com/user-attachments/assets/40d8520d-7a0b-41aa-a50a-57e89148cf74" />
-  <img width="23%" alt="100% Private & Offline" src="https://github.com/user-attachments/assets/2120889c-a067-46b1-b684-2d5010b140f7" />
+  <img width="23%" alt="Gamification & Rewards" src="https://github.com/user-attachments/assets/a17a47f7-dff2-4327-b798-a415a85d3428" />
+  <img width="23%" alt="Reflect Your Journey" src="https://github.com/user-attachments/assets/e648d727-fbe8-4b9a-af08-045e8f13a8ec" />
+  <img width="23%" alt="Your App, Your Style" src="https://github.com/user-attachments/assets/a86559ad-ed1e-4263-9a1d-a3193fe140ab" />
+  <img width="23%" alt="100% Private & Offline" src="https://github.com/user-attachments/assets/277ba91d-0a7e-4c0f-9b72-3fc09c7f20a7" />
 </div>
 
 ---
