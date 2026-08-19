@@ -49,25 +49,25 @@ Often, you have to make a hard choice when looking for a habit tracker: either c
 
 * 🎧 **In-App Focus Timer** — Deep work timer with ambient soundscapes and custom audio import.
 
-* 📊 **Deep Analytics & Discipline Score** — Track your consistency with yearly heatmaps, weekday frequency charts, and an algorithmic 100-point discipline score.
+* 📊 **Deep Analytics** — Yearly heatmaps, weekday frequency charts, and much more...
 
 * 🏆 **Trophies & Gold Series** — Unlock achievements as your habits grow.
 
-* 🎉 **Custom Self-Rewards & Confetti** — Define your own rewards, celebrated with haptics and full-screen confetti.
+* 🎉 **Custom Self-Rewards** — Define your own rewards for your dedication to your goals.
 
-* 💡 **Algorithmic Smart Insights** — On-device pattern detection for peak days and momentum — no AI buzzwords.
+* 💡 **Algorithmic Smart Insights** — Get interesting insights into your tracking patterns.
 
 * 📝 **Weekly & Annual Reviews** — Structured reflections built right into your routine.
 
 * ⏳ **Time Capsules** — Leave notes for your future self, tied to your habit history.
 
-* 🎨 **Custom Accent Colors & OLED Themes** — Make the app look exactly how you want.
+* 🎨 **Make It Yours** — Choose light or dark mode with custom accent colors.
 
 * 💾 **Local JSON Backup & Restore** — Full data ownership via Android's Storage Access Framework.
 
-* 📥 **1-Click Loop Import** — Switch from *Loop Habit Tracker* without losing your history.
+* 📥 **1-Click Habit Import** — Switch from other habit trackers without losing your history.
 
-* ⚡ **Homescreen Widget** — Instant check-offs, midnight reset, auto-resync on app open.
+* ⚡ **Homescreen Widget** — Check off habits right from your home screen.
 
 * 🔒 **100% Offline, No Ads, No Tracking** — Everything stays strictly on your device.
 
