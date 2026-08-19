@@ -47,7 +47,7 @@
 > I hope you enjoy using it as much as I loved creating it. If you have any feedback or feature requests, feel free to reach out via [Issues](https://github.com/FrequeNCy144/Frequent-Habits/issues/new/choose) or through the email address in the app—I’m always open to suggestions, though I can’t promise every feature will make it in!
 > 
 > Enjoy! ❤️  
-> - @FrequeNCy
+> -@FrequeNCy
 <br>
 
 ---
