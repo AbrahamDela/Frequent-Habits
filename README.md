@@ -52,6 +52,7 @@
 
 ---
 
+
 ## ✨ Key Features
 
 * 🎧 **In-App Focus Timer** — Deep work timer with ambient soundscapes and custom audio import.
@@ -80,6 +81,7 @@
 
 ---
 
+
 ## 📸 Screenshots
 
 <div align="center">
@@ -98,6 +100,7 @@
 
 ---
 
+
 ## 🚀 Installation
 
 You can install and update **Frequent Habits** in three convenient ways:
@@ -107,6 +110,7 @@ You can install and update **Frequent Habits** in three convenient ways:
 3. **Manual APK:** Download the latest `FrequentHabits.apk` directly from our [Releases Page](https://github.com/FrequeNCy144/Frequent-Habits/releases) and install it manually.
 
 ---
+
 
 ## 🤝 Contributing
 
@@ -120,6 +124,7 @@ Head over to our **[Issue Tracker](https://github.com/FrequeNCy144/Frequent-Habi
 *Note: You can also access these forms directly inside the app via **Settings > Report Bug / Request Feature**.*
 
 ---
+
 
 ## ⭐ Support
 
