@@ -42,16 +42,13 @@
 
 ## 📖 About
 
-> [!IMPORTANT]
-> Often, you have to make a hard choice when looking for a habit tracker: either choose a visually stunning app trapped behind expensive paywalls and aggressive data harvesting, or settle for privacy-friendly open-source apps that feel visually and functionally basic.
->
-> Frequent Habits bridges exactly this gap. We deliver a gorgeous, ultra-modern dark mode interface paired with satisfying audio-visual feedback and a depth of comprehensive statistics rarely found anywhere else on the market—all running completely offline on your device with zero cloud dependencies.
->
-> ### 💬 A Message from the Creator
->
-> I searched for a long time for a habit tracker with the specific features I needed, but sadly, I could never find one. So I built my own. This is truly the habit tracker I always wanted but could never find — open source, with an interactive widget, gamification, secure local backups so I own my data, and deep analytics so I can actually understand my own behavior.
->
-> I hope you like it as much as I do. ❤️
+> Hey, I just wanted to welcome you personally! This is Frequent Habits—the habit tracker I built after searching for a long, long time for an app with the exact feature set I wanted. As you can probably guess, I never found one. But I’m actually glad I didn't! It gave me the chance to build my very first app, and it has been so much fun. 
+
+Frequent Habits has everything I always wished for: an ultra-clean design, deep analytics so I can really crawl into all the quirks of my behavior (I love seeing data about myself!), an interactive widget, an export function so I don't have to sync my personal behavior data to Big Tech, and gamification to keep me on the ball!
+
+I hope you like it as much as I do. If you have any feedback or feature requests, don't hesitate to reach out—either via [Issues](https://github.com/FrequeNCy144/Frequent-Habits/issues/new/choose) or through the email address in the app.
+
+Enjoy! ❤️
 
 ---
 
