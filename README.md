@@ -44,10 +44,9 @@
 > 
 > Frequent Habits has everything I always wished for: an ultra-clean design, deep analytics (so I can really dive into all the quirks of my behavior), an interactive widget, local exports so I don't have to sync personal data to Big Tech, and gamification to keep me motivated!
 > 
-> I hope you enjoy using it as much as I loved creating it. If you have any feedback or feature requests, feel free to reach out—either via [Issues](https://github.com/FrequeNCy144/Frequent-Habits/issues/new/choose) or through the email address in the app.
+> I hope you enjoy using it as much as I loved creating it. If you have any feedback or feature requests, feel free to reach out via [Issues](https://github.com/FrequeNCy144/Frequent-Habits/issues/new/choose) or through the email address in the app—I’m always open to suggestions, though I can’t promise every feature will make it in!
 > 
 > Enjoy! ❤️ - @FrequeNCy
-
 <br>
 
 ---
