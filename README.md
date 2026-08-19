@@ -42,11 +42,11 @@
 
 ## 📖 About
 
-Often, you have to make a hard choice when looking for a habit tracker: either choose a visually stunning app trapped behind expensive paywalls and aggressive data harvesting, or settle for privacy-friendly open-source apps that feel visually and functionally basic. 
-
-**Frequent Habits** bridges exactly this gap. We deliver a gorgeous, ultra-modern dark mode interface paired with satisfying audio-visual feedback and a depth of comprehensive statistics rarely found anywhere else on the market—all running completely offline on your device with zero cloud dependencies.
-
 > [!IMPORTANT]
+> Often, you have to make a hard choice when looking for a habit tracker: either choose a visually stunning app trapped behind expensive paywalls and aggressive data harvesting, or settle for privacy-friendly open-source apps that feel visually and functionally basic.
+>
+> Frequent Habits bridges exactly this gap. We deliver a gorgeous, ultra-modern dark mode interface paired with satisfying audio-visual feedback and a depth of comprehensive statistics rarely found anywhere else on the market—all running completely offline on your device with zero cloud dependencies.
+>
 > ### 💬 A Message from the Creator
 >
 > I searched for a long time for a habit tracker with the specific features I needed, but sadly, I could never find one. So I built my own. This is truly the habit tracker I always wanted but could never find — open source, with an interactive widget, gamification, secure local backups so I own my data, and deep analytics so I can actually understand my own behavior.
@@ -118,3 +118,31 @@ Feedback, bug reports, and pull requests are always welcome!
 Head over to our **[Issue Tracker](https://github.com/FrequeNCy144/Frequent-Habits/issues/new/choose)** and pick the template that fits:
 - 🐛 **Bug Report**
 - 💡 **Feature Request**
+- 🌐 **Language Translation**
+
+*Note: You can also access these forms directly inside the app via **Settings > Report Bug / Request Feature**.*
+
+---
+
+## ⭐ Support
+
+If you love Frequent Habits and want to support its ongoing open-source development, feel free to drop a star or support us via:
+
+<div align="center">
+
+  <a href="https://liberapay.com/FrequeNCy/donate"><img src="https://img.shields.io/badge/Donate-Liberapay-f6c915?style=for-the-badge&logo=liberapay&logoColor=black" alt="Liberapay" /></a>
+  &nbsp;&nbsp;
+  <a href="https://ko-fi.com/frequency_144"><img src="https://img.shields.io/badge/Donate-Ko--fi-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white" alt="Ko-Fi" /></a>
+
+  <br><br>
+
+  <!-- Star History -->
+  <a href="https://www.star-history.com/?repos=FrequeNCy144%2FFrequent-Habits&type=date&legend=top-left">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=FrequeNCy144/Frequent-Habits&type=date&theme=dark&legend=top-left&sealed_token=obNJ8jn6VrM6WTcDOL7mVQU1exCndAPuIbJZzLnd0Dy8pbjQakzz8n1WaQj9F4PfkrNV4A_umsjm4lpaSUVN15NOuOFXfaEyW1vQDILHprGSbN9ZR4cZBg" />
+      <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=FrequeNCy144/Frequent-Habits&type=date&legend=top-left&sealed_token=obNJ8jn6VrM6WTcDOL7mVQU1exCndAPuIbJZzLnd0Dy8pbjQakzz8n1WaQj9F4PfkrNV4A_umsjm4lpaSUVN15NOuOFXfaEyW1vQDILHprGSbN9ZR4cZBg" />
+      <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=FrequeNCy144/Frequent-Habits&type=date&legend=top-left&sealed_token=obNJ8jn6VrM6WTcDOL7mVQU1exCndAPuIbJZzLnd0Dy8pbjQakzz8n1WaQj9F4PfkrNV4A_umsjm4lpaSUVN15NOuOFXfaEyW1vQDILHprGSbN9ZR4cZBg" />
+    </picture>
+  </a>
+
+</div>
