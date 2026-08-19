@@ -3,16 +3,6 @@
   <!-- Header Banner -->
 <img width="2560" height="1160" alt="github-banner (1)" src="https://github.com/user-attachments/assets/ffdbe592-9844-4c39-a9d5-2fa3944b255c" />
 
-
-
-
-  <br><br>
-
-  <!-- Prominent Download Badges -->
-  <a href="https://f-droid.org/packages/com.frequent.habits/"><img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" height="85" alt="Get it on F-Droid" /></a>
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/FrequeNCy144/Frequent-Habits"><img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" height="85" alt="Get it on Obtainium" /></a>
-
   <br><br>
 
   <!-- Subtitle -->
@@ -20,9 +10,16 @@
     <b>A modern, privacy-focused & feature-packed open-source habit tracker for Android.</b>
   </p>
 
-  <!-- Badges -->
+  <!-- Tags / Badges -->
   <a href="https://github.com/FrequeNCy144/Frequent-Habits/releases"><img src="https://img.shields.io/github/v/release/FrequeNCy144/Frequent-Habits?style=for-the-badge&logo=github&color=7356FF" alt="GitHub Release" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge" alt="License: GPLv3" /></a>
+
+  <br><br>
+
+  <!-- Prominent Download Badges -->
+  <a href="https://f-droid.org/packages/com.frequent.habits/"><img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" height="85" alt="Get it on F-Droid" /></a>
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/FrequeNCy144/Frequent-Habits"><img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" height="85" alt="Get it on Obtainium" /></a>
 
   <br><br>
 
@@ -38,9 +35,10 @@
 
 </div>
 
----
-## ✉️ **Personal Message**
+<br>
+
 > [!IMPORTANT]
+> **✉️ A Personal Welcome**
 > 
 > Hey, I just wanted to welcome you personally! This is Frequent Habits—the habit tracker I built after searching for a long, long time for an app with the exact feature set I wanted. As you can probably guess, I never found one. But I’m actually glad I didn't! It gave me the chance to build my very first app, and it has been so much fun.
 > 
@@ -50,8 +48,9 @@
 > 
 > Enjoy! ❤️
 
----
+<br>
 
+---
 
 ## ✨ Key Features
 
