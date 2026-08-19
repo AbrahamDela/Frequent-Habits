@@ -1,8 +1,4 @@
-<img width="2560" height="1160" alt="github-banner (11)" src="https://github.com/user-attachments/assets/f99ad462-3e89-4281-8f39-16a8d843944e" />
-
-
-  <!-- Header Banner -->
-<img width="2560" height="1160" alt="github-banner (8)" src="https://github.com/user-attachments/assets/dc7eff21-058f-4123-8028-78dffbe6be9d" />
+<img width="2560" height="1160" alt="github-banner (12)" src="https://github.com/user-attachments/assets/cb558807-e091-47e6-981f-b15b1591cdb1" />
 
 
   <br><br>
