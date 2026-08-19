@@ -1,9 +1,22 @@
-<img width="2560" height="1160" alt="github-banner (1)" src="https://github.com/user-attachments/assets/1d0a3f78-a398-4e45-bc3e-fb36d4f5ae95" />
+<div align="center">
 
-
+  <!-- Header Banner -->
+  <img alt="Frequent Habits Banner" src="https://github.com/user-attachments/assets/1d0a3f78-a398-4e45-bc3e-fb36d4f5ae95" />
 
   <br><br>
 
+  <!-- Prominent Download Badges -->
+  <a href="https://f-droid.org/packages/com.frequent.habits/">
+    <img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" height="85" alt="Get it on F-Droid" />
+  </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/FrequeNCy144/Frequent-Habits">
+    <img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" height="85" alt="Get it on Obtainium" />
+  </a>
+
+  <br><br>
+
+  <!-- Subtitle -->
   <p>
     <b>A modern, privacy-focused & feature-packed open-source habit tracker for Android.</b>
   </p>
@@ -14,17 +27,6 @@
   </a>
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge" alt="License: GPLv3" />
-  </a>
-
-  <br><br>
-
-  <!-- Download Badges -->
-  <a href="https://f-droid.org/packages/com.frequent.habits/">
-    <img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" height="60" alt="Get it on F-Droid" />
-  </a>
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/FrequeNCy144/Frequent-Habits">
-    <img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" height="60" alt="Get it on Obtainium" />
   </a>
 
   <br><br>
