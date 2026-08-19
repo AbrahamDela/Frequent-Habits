@@ -38,7 +38,7 @@
 <br>
 
 > [!IMPORTANT]
-> **✉️ A Personal Welcome**
+> ✉️ **A Personal Welcome**
 > 
 > Hey, I just wanted to welcome you personally! This is Frequent Habits—the habit tracker I built after searching high and low for an app with the exact feature set I wanted. As you can probably guess, I never found one. But I’m actually glad I didn't! It gave me the chance to build my very first app, and it has been an absolute blast.
 > 
@@ -46,7 +46,8 @@
 > 
 > I hope you enjoy using it as much as I loved creating it. If you have any feedback or feature requests, feel free to reach out via [Issues](https://github.com/FrequeNCy144/Frequent-Habits/issues/new/choose) or through the email address in the app—I’m always open to suggestions, though I can’t promise every feature will make it in!
 > 
-> Enjoy! ❤️ - @FrequeNCy
+> Enjoy! ❤️  
+> - @FrequeNCy
 <br>
 
 ---
