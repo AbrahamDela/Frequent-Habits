@@ -46,6 +46,12 @@ Often, you have to make a hard choice when looking for a habit tracker: either c
 
 **Frequent Habits** bridges exactly this gap. We deliver a gorgeous, ultra-modern dark mode interface paired with satisfying audio-visual feedback and a depth of comprehensive statistics rarely found anywhere else on the market—all running completely offline on your device with zero cloud dependencies.
 
+> **💬 A Message from the Creator**
+>
+> I searched for a long time for a habit tracker with the specific features I needed, but sadly, I could never find one. So I built my own. This is truly the habit tracker I always wanted but could never find — open source, with an interactive widget, gamification, secure local backups so I own my data, and deep analytics so I can actually understand my own behavior.
+>
+> I hope you like it as much as I do.
+
 ---
 
 ## ✨ Key Features
