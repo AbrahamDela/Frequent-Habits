@@ -1,8 +1,7 @@
 <div align="center">
-<img width="2560" height="1160" alt="github-banner (3)" src="https://github.com/user-attachments/assets/c5f440b6-19a7-4b43-85a8-f620f412818b" />
 
-  <!-- Neues Main Banner -->
-  <img width="100%" alt="Frequent Habits Banner" src="https://github.com/user-attachments/assets/07f5f66a-4f90-4a2e-8146-f0f37c82fbcf" />
+  <!-- Header Banner -->
+  <img alt="Frequent Habits Banner" src="https://github.com/user-attachments/assets/45cdcee4-dd89-41d7-a5a6-42c50a53bd80" />
 
   <br><br>
 
@@ -78,17 +77,17 @@ Often, you have to make a hard choice when looking for a habit tracker: either c
 ## 📸 Screenshots
 
 <div align="center">
-  <img width="23%" alt="Build Lasting Habits" src="https://github.com/user-attachments/assets/9e73ebef-3762-4f8b-a44e-d8c79f2957c3" />
-  <img width="23%" alt="In-App Focus Timer" src="https://github.com/user-attachments/assets/063a3814-769f-49f4-8440-76ebcb4be3e7" />
-  <img width="23%" alt="Unrivaled Analytics" src="https://github.com/user-attachments/assets/6069e371-0204-4a23-81e2-beaa4d78c664" />
-  <img width="23%" alt="Actionable Smart Insights" src="https://github.com/user-attachments/assets/6f0c3bff-3ec1-46be-897b-e7abe192c3b7" />
+  <img width="23%" alt="Build Lasting Habits" src="https://github.com/user-attachments/assets/cfdb3b49-4af4-4b4b-bb80-a3ae1c175d9a" />
+  <img width="23%" alt="Audio Timer" src="https://github.com/user-attachments/assets/f19fbde1-4b4e-466c-8b5e-e3fe34d06b91" />
+  <img width="23%" alt="Unrivaled Analytics" src="https://github.com/user-attachments/assets/4a670914-9352-43fc-8f49-ad15999eb834" />
+  <img width="23%" alt="Actionable Smart Insights" src="https://github.com/user-attachments/assets/e93d8d71-dc94-4a79-b6da-766f6e90c997" />
   
   <br><br>
 
-  <img width="23%" alt="Gamification & Rewards" src="https://github.com/user-attachments/assets/30e1ed87-60b2-48b2-a3a7-ca0ae8c35604" />
-  <img width="23%" alt="Reflect Your Journey" src="https://github.com/user-attachments/assets/e07428d8-06e1-44de-9560-09293a468b19" />
-  <img width="23%" alt="Your App, Your Style" src="https://github.com/user-attachments/assets/e07ccfa1-2e33-4b38-9d34-6682435767d8" />
-  <img width="23%" alt="100% Private & Offline" src="https://github.com/user-attachments/assets/6bd725e8-7360-4546-bf0d-65ed655096a7" />
+  <img width="23%" alt="Gamification & Rewards" src="https://github.com/user-attachments/assets/c26d8565-975f-41da-8bcf-610b00d50755" />
+  <img width="23%" alt="Reflect Your Journey" src="https://github.com/user-attachments/assets/0cf4086a-65e7-4cc6-b42a-a04608d10b8c" />
+  <img width="23%" alt="Your App, Your Style" src="https://github.com/user-attachments/assets/40d8520d-7a0b-41aa-a50a-57e89148cf74" />
+  <img width="23%" alt="100% Private & Offline" src="https://github.com/user-attachments/assets/2120889c-a067-46b1-b684-2d5010b140f7" />
 </div>
 
 ---
