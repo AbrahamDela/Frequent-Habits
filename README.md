@@ -1,7 +1,8 @@
 <div align="center">
 
   <!-- Header Banner -->
-  <img alt="Frequent Habits Banner" src="https://github.com/user-attachments/assets/45cdcee4-dd89-41d7-a5a6-42c50a53bd80" />
+<img width="2560" height="1160" alt="github-banner (8)" src="https://github.com/user-attachments/assets/dc7eff21-058f-4123-8028-78dffbe6be9d" />
+
 
   <br><br>
 
