@@ -1,9 +1,9 @@
 <div align="center">
 
-  <!-- Logo mit abgerundeten Ecken -->
-  <img src="https://github.com/user-attachments/assets/ed16975b-3eb0-40bb-9dfe-3799e8bdde64" width="140" height="140" alt="Frequent Habits Logo" style="border-radius: 22%;" />
+  <!-- Neues Main Banner -->
+  <img width="100%" alt="Frequent Habits Banner" src="https://github.com/user-attachments/assets/07f5f66a-4f90-4a2e-8146-f0f37c82fbcf" />
 
-  <h1>Frequent Habits</h1>
+  <br><br>
 
   <p>
     <b>A modern, privacy-focused & feature-packed open-source habit tracker for Android.</b>
@@ -16,11 +16,6 @@
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge" alt="License: GPLv3" />
   </a>
-
-  <br><br>
-
-  <!-- Feature Banner -->
-  <img width="100%" alt="Frequent Habits Banner" src="https://github.com/user-attachments/assets/adb7e386-ee83-4683-8534-55a2dd29a278" />
 
   <br><br>
 
