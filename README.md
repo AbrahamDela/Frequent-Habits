@@ -1,37 +1,25 @@
 <div align="center">
 
-  <!-- Logo mit abgerundeten Ecken -->
-  <img src="https://github.com/user-attachments/assets/ed16975b-3eb0-40bb-9dfe-3799e8bdde64" width="140" height="140" alt="Frequent Habits Logo" style="border-radius: 22%;" />
+  <!-- Header Banner -->
+<img width="2560" height="1160" alt="github-banner (1)" src="https://github.com/user-attachments/assets/ffdbe592-9844-4c39-a9d5-2fa3944b255c" />
 
-  <h1>Frequent Habits</h1>
+  <br><br>
 
+  <!-- Subtitle -->
   <p>
     <b>A modern, privacy-focused & feature-packed open-source habit tracker for Android.</b>
   </p>
 
-  <!-- Badges -->
-  <a href="https://github.com/FrequeNCy144/Frequent-Habits/releases">
-    <img src="https://img.shields.io/github/v/release/FrequeNCy144/Frequent-Habits?style=for-the-badge&logo=github&color=7356FF" alt="GitHub Release" />
-  </a>
-  <a href="LICENSE">
-    <img src="https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge" alt="License: GPLv3" />
-  </a>
+  <!-- Tags / Badges -->
+  <a href="https://github.com/FrequeNCy144/Frequent-Habits/releases"><img src="https://img.shields.io/github/v/release/FrequeNCy144/Frequent-Habits?style=for-the-badge&logo=github&color=7356FF" alt="GitHub Release" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge" alt="License: GPLv3" /></a>
 
   <br><br>
 
-  <!-- Feature Banner -->
-  <img width="100%" alt="Frequent Habits Banner" src="https://github.com/user-attachments/assets/adb7e386-ee83-4683-8534-55a2dd29a278" />
-
-  <br><br>
-
-  <!-- Download Badges -->
-  <a href="https://f-droid.org/packages/com.frequent.habits/">
-    <img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" height="60" alt="Get it on F-Droid" />
-  </a>
+  <!-- Prominent Download Badges -->
+  <a href="https://f-droid.org/packages/com.frequent.habits/"><img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" height="85" alt="Get it on F-Droid" /></a>
   &nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/FrequeNCy144/Frequent-Habits">
-    <img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" height="60" alt="Get it on Obtainium" />
-  </a>
+  <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/FrequeNCy144/Frequent-Habits"><img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" height="85" alt="Get it on Obtainium" /></a>
 
   <br><br>
 
@@ -47,55 +35,70 @@
 
 </div>
 
----
+<br>
 
-## 📖 About
-
-Often, you have to make a hard choice when looking for a habit tracker: either choose a visually stunning app trapped behind expensive paywalls and aggressive data harvesting, or settle for privacy-friendly open-source apps that feel visually and functionally basic. 
-
-**Frequent Habits** bridges exactly this gap. We deliver a gorgeous, ultra-modern dark mode interface paired with satisfying audio-visual feedback and a depth of comprehensive statistics rarely found anywhere else on the market—all running completely offline on your device with zero cloud dependencies.
+> [!IMPORTANT]
+> ✉️ **A Personal Message**
+> 
+> Hey, I just wanted to welcome you personally! This is Frequent Habits—the habit tracker I built after searching high and low for an app with the exact feature set I wanted. As you can probably guess, I never found one. But I’m actually glad I didn't! It gave me the chance to build my very first app, and it has been an absolute blast.
+> 
+> Frequent Habits has everything I always wished for: an ultra-clean design, deep analytics (so I can really dive into all the quirks of my behavior), an interactive widget, local exports so I don't have to sync personal data to Big Tech, and gamification to keep me motivated!
+> 
+> I hope you enjoy using it as much as I loved creating it. If you have any feedback or feature requests, feel free to reach out via [Issues](https://github.com/FrequeNCy144/Frequent-Habits/issues/new/choose) or through the email address in the app—I’m always open to suggestions, though I can’t promise every feature will make it in!
+> 
+> Enjoy! ❤️  
+> @FrequeNCy
+<br>
 
 ---
 
 ## ✨ Key Features
 
-* 🎯 **Flexible Targets, Counters & Streaks** — Track habits your way: numeric goals, simple counters, or classic streaks.
 * 🎧 **In-App Focus Timer** — Deep work timer with ambient soundscapes and custom audio import.
-* 📊 **Yearly Heatmaps** — See your entire year of consistency at a glance.
-* 🧮 **100-Point Discipline Score** — Algorithmic scoring that reflects real consistency, not just streak length.
-* 📈 **Weekday Frequency Charts** — Spot your strongest and weakest days instantly.
+
+* 📊 **Deep Analytics** — Yearly heatmaps, weekday frequency charts, and much more...
+
 * 🏆 **Trophies & Gold Series** — Unlock achievements as your habits grow.
-* 🎉 **Custom Self-Rewards & Confetti** — Define your own rewards, celebrated with haptics and full-screen confetti.
-* 💡 **Algorithmic Smart Insights** — On-device pattern detection for peak days and momentum — no AI buzzwords.
+
+* 🎉 **Custom Self-Rewards** — Define your own rewards for your dedication to your goals.
+
+* 💡 **Algorithmic Smart Insights** — Get interesting insights into your tracking patterns.
+
 * 📝 **Weekly & Annual Reviews** — Structured reflections built right into your routine.
+
 * ⏳ **Time Capsules** — Leave notes for your future self, tied to your habit history.
-* 🎨 **Custom Accent Colors & OLED Themes** — Make the app look exactly how you want.
-* 🔣 **Personal Habit Icons** — Pick icons that actually match your routines.
-* 🌐 **4 Languages** — Fully localized in English, German, Georgian & Simplified Chinese.
+
+* 🎨 **Make It Yours** — Choose light or dark mode with custom accent colors.
+
 * 💾 **Local JSON Backup & Restore** — Full data ownership via Android's Storage Access Framework.
-* 📥 **1-Click Loop Import** — Switch from *Loop Habit Tracker* without losing your history.
-* ⚡ **Homescreen Widget** — Instant check-offs, midnight reset, auto-resync on app open.
+
+* 📥 **1-Click Habit Import** — Switch from other habit trackers without losing your history.
+
+* ⚡ **Homescreen Widget** — Check off habits right from your home screen.
+
 * 🔒 **100% Offline, No Ads, No Tracking** — Everything stays strictly on your device.
 
 ---
 
+
 ## 📸 Screenshots
 
 <div align="center">
-  <img width="23%" alt="Build Lasting Habits" src="https://github.com/user-attachments/assets/9e73ebef-3762-4f8b-a44e-d8c79f2957c3" />
-  <img width="23%" alt="In-App Focus Timer" src="https://github.com/user-attachments/assets/063a3814-769f-49f4-8440-76ebcb4be3e7" />
-  <img width="23%" alt="Unrivaled Analytics" src="https://github.com/user-attachments/assets/6069e371-0204-4a23-81e2-beaa4d78c664" />
-  <img width="23%" alt="Actionable Smart Insights" src="https://github.com/user-attachments/assets/6f0c3bff-3ec1-46be-897b-e7abe192c3b7" />
+  <img width="23%" alt="Build Lasting Habits" src="https://github.com/user-attachments/assets/81dfbb1a-0211-400e-b8bc-ed377e9e2aa3" />
+  <img width="23%" alt="Audio Timer" src="https://github.com/user-attachments/assets/d049e9b7-a615-490f-ac73-31ae7b5e458a" />
+  <img width="23%" alt="Unrivaled Analytics" src="https://github.com/user-attachments/assets/72631e43-aba7-417d-9c55-d8e6c8314759" />
+  <img width="23%" alt="Actionable Smart Insights" src="https://github.com/user-attachments/assets/e7beea72-0b26-4f63-b0e0-4d9466c0f0b3" />
   
   <br><br>
 
-  <img width="23%" alt="Gamification & Rewards" src="https://github.com/user-attachments/assets/30e1ed87-60b2-48b2-a3a7-ca0ae8c35604" />
-  <img width="23%" alt="Reflect Your Journey" src="https://github.com/user-attachments/assets/e07428d8-06e1-44de-9560-09293a468b19" />
-  <img width="23%" alt="Your App, Your Style" src="https://github.com/user-attachments/assets/e07ccfa1-2e33-4b38-9d34-6682435767d8" />
-  <img width="23%" alt="100% Private & Offline" src="https://github.com/user-attachments/assets/6bd725e8-7360-4546-bf0d-65ed655096a7" />
+  <img width="23%" alt="Gamification & Rewards" src="https://github.com/user-attachments/assets/a17a47f7-dff2-4327-b798-a415a85d3428" />
+  <img width="23%" alt="Reflect Your Journey" src="https://github.com/user-attachments/assets/e648d727-fbe8-4b9a-af08-045e8f13a8ec" />
+  <img width="23%" alt="Your App, Your Style" src="https://github.com/user-attachments/assets/a86559ad-ed1e-4263-9a1d-a3193fe140ab" />
+  <img width="23%" alt="100% Private & Offline" src="https://github.com/user-attachments/assets/277ba91d-0a7e-4c0f-9b72-3fc09c7f20a7" />
 </div>
 
 ---
+
 
 ## 🚀 Installation
 
@@ -106,6 +109,7 @@ You can install and update **Frequent Habits** in three convenient ways:
 3. **Manual APK:** Download the latest `FrequentHabits.apk` directly from our [Releases Page](https://github.com/FrequeNCy144/Frequent-Habits/releases) and install it manually.
 
 ---
+
 
 ## 🤝 Contributing
 
@@ -120,19 +124,16 @@ Head over to our **[Issue Tracker](https://github.com/FrequeNCy144/Frequent-Habi
 
 ---
 
+
 ## ⭐ Support
 
 If you love Frequent Habits and want to support its ongoing open-source development, feel free to drop a star or support us via:
 
 <div align="center">
 
-  <a href="https://liberapay.com/FrequeNCy/donate">
-    <img src="https://img.shields.io/badge/Donate-Liberapay-f6c915?style=for-the-badge&logo=liberapay&logoColor=black" alt="Liberapay" />
-  </a>
+  <a href="https://liberapay.com/FrequeNCy/donate"><img src="https://img.shields.io/badge/Donate-Liberapay-f6c915?style=for-the-badge&logo=liberapay&logoColor=black" alt="Liberapay" /></a>
   &nbsp;&nbsp;
-  <a href="https://ko-fi.com/frequency_144">
-    <img src="https://img.shields.io/badge/Donate-Ko--fi-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white" alt="Ko-Fi" />
-  </a>
+  <a href="https://ko-fi.com/frequency_144"><img src="https://img.shields.io/badge/Donate-Ko--fi-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white" alt="Ko-Fi" /></a>
 
   <br><br>
 
