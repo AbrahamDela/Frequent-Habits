@@ -96,6 +96,7 @@ object BackupManager {
                 put("id", mReward.id)
                 put("habitId", mReward.habitId)
                 put("rewardText", mReward.rewardText)
+                put("description", mReward.description)
                 put("isRedeemed", mReward.isRedeemed)
                 put("unlockedAt", mReward.unlockedAt)
                 put("conditionType", mReward.conditionType)
@@ -241,6 +242,7 @@ object BackupManager {
                         id = mJson.optInt("id", 0),
                         habitId = mJson.getInt("habitId"),
                         rewardText = mJson.getString("rewardText"),
+                        description = mJson.optString("description", ""),
                         isRedeemed = mJson.optBoolean("isRedeemed", false),
                         unlockedAt = mJson.optLong("unlockedAt", 0L),
                         conditionType = mJson.optString("conditionType", ""),

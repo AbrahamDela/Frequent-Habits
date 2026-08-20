@@ -216,7 +216,7 @@ object CsvImporter {
                             if (normDate != null) {
                                 val valStr = row[1].trim()
                                 val floatVal = parseLogValue(valStr)
-                                if (floatVal > 0f) {
+                                if (floatVal != 0f) {
                                     logs.add(ImportedLogData(normDate, floatVal, isPaused = valStr == "3"))
                                     datesFound.add(normDate)
                                 }
@@ -307,7 +307,7 @@ object CsvImporter {
                                     parseLogValue(rawVal)
                                 }
 
-                                if (floatVal > 0f) {
+                                if (floatVal != 0f) {
                                     logs.add(ImportedLogData(normDate, floatVal, isPaused = rawVal == "3"))
                                     allDates.add(normDate)
                                 }
@@ -341,7 +341,7 @@ object CsvImporter {
                                     parseLogValue(rawVal)
                                 }
 
-                                if (floatVal > 0f) {
+                                if (floatVal != 0f) {
                                     logs.add(ImportedLogData(normDate, floatVal, isPaused = rawVal == "3"))
                                     allDates.add(normDate)
                                 }
@@ -425,7 +425,7 @@ object CsvImporter {
                 val valStr = if (valueColIdx in 0 until row.size) row[valueColIdx].trim() else "1"
                 val parsedVal = parseLogValue(valStr)
 
-                if (parsedVal > 0f) {
+                if (parsedVal != 0f) {
                     val logsList = habitsMap.getOrPut(habitName) { mutableListOf() }
                     logsList.add(ImportedLogData(normDate, parsedVal, isPaused = valStr.lowercase(Locale.ROOT) == "skip" || valStr == "3"))
                     allDates.add(normDate)
@@ -476,7 +476,7 @@ object CsvImporter {
                             if (normDate != null) {
                                 val rawVal = row[colIdx].trim()
                                 val parsedVal = parseLogValue(rawVal)
-                                if (parsedVal > 0f) {
+                                if (parsedVal != 0f) {
                                     logs.add(ImportedLogData(normDate, parsedVal, isPaused = rawVal == "3"))
                                     allDates.add(normDate)
                                 }
@@ -523,7 +523,7 @@ object CsvImporter {
                     if (normDate != null) {
                         val rawVal = row[cIdx].trim()
                         val parsedVal = parseLogValue(rawVal)
-                        if (parsedVal > 0f) {
+                        if (parsedVal != 0f) {
                             logs.add(ImportedLogData(normDate, parsedVal, isPaused = rawVal == "3"))
                             allDates.add(normDate)
                         }
@@ -655,11 +655,15 @@ object CsvImporter {
 
     private fun parseLogValue(rawVal: String): Float {
         val clean = rawVal.trim().lowercase(Locale.ROOT).trim('"', '\'')
-        if (clean.isBlank() || clean == "0" || clean == "false" || clean == "no" || clean == "n" || clean == "missed" || clean == "-1") {
+        if (clean.isBlank() || clean == "-1") {
             return 0f
         }
 
-        if (clean == "1" || clean == "2" || clean == "true" || clean == "yes" || clean == "y" || clean == "x" || clean == "check" || clean == "completed" || clean == "done") {
+        if (clean == "0" || clean == "false" || clean == "no" || clean == "n" || clean == "missed" || clean.startsWith("no")) {
+            return -1f
+        }
+
+        if (clean == "1" || clean == "2" || clean == "true" || clean == "yes" || clean == "y" || clean == "x" || clean == "check" || clean == "completed" || clean == "done" || clean.startsWith("yes")) {
             return 1f
         }
 

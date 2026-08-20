@@ -409,7 +409,7 @@ fun CustomColorPickerDialog(
                 }
 
                 // HEX Input field
-                OutlinedTextField(
+                AppTextField(
                     value = hexText,
                     onValueChange = { input ->
                         hexText = input
@@ -425,17 +425,9 @@ fun CustomColorPickerDialog(
                             } catch (e: Exception) {}
                         }
                     },
-                    label = { Text("HEX Code") },
+                    labelText = "HEX Code",
                     singleLine = true,
-                    textStyle = TextStyle(color = TextPrimary, fontWeight = FontWeight.Bold),
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = PrimaryViolet,
-                        unfocusedBorderColor = AppBorder,
-                        focusedContainerColor = AppBg,
-                        unfocusedContainerColor = AppBg
-                    )
+                    testTag = "hex_color_input"
                 )
             }
         },

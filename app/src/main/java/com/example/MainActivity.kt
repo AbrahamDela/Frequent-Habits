@@ -68,6 +68,9 @@ import androidx.compose.material3.*
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.ui.*
+import com.example.ui.components.AppTextField
+import com.example.ui.components.AppSegmentedButton
+import com.example.ui.components.AppSegmentedButtonWithIcons
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -762,10 +765,7 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
         AchievementUnlockedOverlay(
             achievement = newlyUnlockedAchievement!!,
             language = language,
-            onDismiss = { viewModel.dismissUnlockedAchievement() },
-            onRedeemReward = { rewardId ->
-                viewModel.redeemMilestoneReward(rewardId)
-            }
+            onDismiss = { viewModel.dismissUnlockedAchievement() }
         )
     }
 
@@ -857,6 +857,18 @@ object AudioSoundscapeManager {
     }
 }
 
+@Composable
+fun StandardSheetDragHandle(color: Color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)) {
+    Box(
+        modifier = Modifier
+            .padding(top = 16.dp, bottom = 12.dp)
+            .width(32.dp)
+            .height(4.dp)
+            .clip(CircleShape)
+            .background(color)
+    )
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AudioSoundscapeDialog(
@@ -903,7 +915,9 @@ fun AudioSoundscapeDialog(
         }
     }
 
-    AlertDialog(
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
         onDismissRequest = {
             try {
                 previewPlayer?.stop()
@@ -914,59 +928,54 @@ fun AudioSoundscapeDialog(
             }
             onDismiss()
         },
+        sheetState = sheetState,
         containerColor = AppCard,
-        shape = RoundedCornerShape(24.dp),
-        title = {
+        contentColor = TextPrimary,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        dragHandle = { StandardSheetDragHandle() }
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 32.dp)
+                .fillMaxWidth()
+        ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(PrimaryViolet.copy(alpha = 0.2f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.LibraryMusic,
-                            contentDescription = null,
-                            tint = PrimaryViolet,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Column {
-                        Text(
-                            text = if (language == "de") "Fokus-Audio Bibliothek" else if (language == "ka") "აუდიო ბგერების ფოკუსირება" else if (language == "zh") "专注背景白噪音" else "Focus Audio Soundscapes",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = TextPrimary,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = if (language == "de") "Sound auswählen & verwalten" else if (language == "ka") "აირჩიეთ და მართეთ ხმები" else if (language == "zh") "选择与管理声音" else "Select & manage sounds",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = TextSecondary
-                        )
-                    }
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(PrimaryViolet.copy(alpha = 0.2f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.LibraryMusic,
+                        contentDescription = null,
+                        tint = PrimaryViolet,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
-                IconButton(onClick = {
-                    try {
-                        previewPlayer?.stop()
-                        previewPlayer?.release()
-                        previewPlayer = null
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                    onDismiss()
-                }) {
-                    Icon(imageVector = Icons.Default.Close, contentDescription = "Close", tint = TextSecondary)
+                Spacer(modifier = Modifier.width(10.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = if (language == "de") "Fokus-Audio Bibliothek" else if (language == "ka") "აუდიო ბგერების ფოკუსირება" else if (language == "zh") "专注背景白噪音" else "Focus Audio Soundscapes",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = TextPrimary,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = if (language == "de") "Sound auswählen & verwalten" else if (language == "ka") "აირჩიეთ და მართეთ ხმები" else if (language == "zh") "选择与管理声音" else "Select & manage sounds",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary
+                    )
                 }
             }
-        },
-        text = {
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             ClearFocusOnKeyboardDismiss()
             Column(
                 modifier = Modifier
@@ -981,10 +990,10 @@ fun AudioSoundscapeDialog(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 // Search Field
-                OutlinedTextField(
+                AppTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    placeholder = { Text(if (language == "de") "Sound suchen..." else if (language == "ka") "ხმის ძებნა..." else if (language == "zh") "搜索白噪音..." else "Search sound...", color = TextSecondary, fontSize = 15.sp) },
+                    placeholderText = if (language == "de") "Sound suchen..." else if (language == "ka") "ხმის ძებნა..." else if (language == "zh") "搜索白噪音..." else "Search sound...",
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(22.dp)) },
                     trailingIcon = {
                         if (searchQuery.isNotEmpty()) {
@@ -993,21 +1002,13 @@ fun AudioSoundscapeDialog(
                             }
                         }
                     },
-                    textStyle = TextStyle(color = TextPrimary, fontSize = 15.sp),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus(force = true); keyboardController?.hide() }),
                     modifier = Modifier
-                        .fillMaxWidth()
                         .heightIn(min = 54.dp)
                         .onFocusChanged { isSearchFocused = it.isFocused },
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = PrimaryViolet,
-                        unfocusedBorderColor = AppBorder,
-                        focusedContainerColor = AppBg,
-                        unfocusedContainerColor = AppBg
-                    ),
-                    shape = RoundedCornerShape(16.dp),
-                    singleLine = true
+                    singleLine = true,
+                    testTag = "sound_search_query"
                 )
 
                 // Info Banner
@@ -1257,25 +1258,29 @@ fun AudioSoundscapeDialog(
                         fontWeight = FontWeight.Bold
                     )
                 }
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    try {
-                        previewPlayer?.stop()
-                        previewPlayer?.release()
-                        previewPlayer = null
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                    onDismiss()
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Button(
+                    onClick = {
+                        try {
+                            previewPlayer?.stop()
+                            previewPlayer?.release()
+                            previewPlayer = null
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                        onDismiss()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryViolet),
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (language == "de") "Fertig" else if (language == "ka") "შესრულებულია" else if (language == "zh") "完成" else "Done", color = Color.White, fontWeight = FontWeight.Bold)
                 }
-            ) {
-                Text(if (language == "de") "Fertig" else if (language == "ka") "შესრულებულია" else if (language == "zh") "完成" else "Done", color = PrimaryViolet, fontWeight = FontWeight.Bold)
             }
         }
-    )
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
@@ -1500,34 +1505,32 @@ fun WidgetAddValueDialog(
         val focusManager = LocalFocusManager.current
         val keyboardController = LocalSoftwareKeyboardController.current
 
-        AlertDialog(
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+        ModalBottomSheet(
             onDismissRequest = onDismiss,
+            sheetState = sheetState,
             containerColor = AppCard,
-            title = {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = if (language == "de") "Eintrag: ${habitToLog!!.name}" else if (language == "ka") "ჟურნალი: ${habitToLog!!.name}" else if (language == "zh") "记录：${habitToLog!!.name}" else "Log: ${habitToLog!!.name}",
-                        color = TextPrimary,
-                        style = MaterialTheme.typography.titleLarge
-                    )
-                    IconButton(
-                        onClick = onDismiss,
-                        modifier = Modifier.size(28.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Close",
-                            tint = TextSecondary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-            },
-            text = {
+            contentColor = TextPrimary,
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            dragHandle = { StandardSheetDragHandle() }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 32.dp)
+            ) {
+                Text(
+                    text = if (language == "de") "Eintrag: ${habitToLog!!.name}" else if (language == "ka") "ჟურნალი: ${habitToLog!!.name}" else if (language == "zh") "记录：${habitToLog!!.name}" else "Log: ${habitToLog!!.name}",
+                    color = TextPrimary,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
                 ClearFocusOnKeyboardDismiss()
                 Column(
                     modifier = Modifier
@@ -1980,15 +1983,31 @@ fun WidgetAddValueDialog(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
-                                    BasicTextField(
+                                    AppTextField(
                                         value = audioSearchQuery,
                                         onValueChange = { 
                                             audioSearchQuery = it
                                             isAudioPickerExpanded = true
                                         },
-                                        textStyle = TextStyle(color = TextPrimary, fontSize = 14.sp),
-                                        singleLine = true,
-                                        cursorBrush = SolidColor(PrimaryViolet),
+                                        placeholderText = if (language == "de") "Sound suchen..." else if (language == "ka") "ხმის ძებნა..." else if (language == "zh") "搜索白噪音..." else "Search sound...",
+                                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(18.dp)) },
+                                        trailingIcon = {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                if (audioSearchQuery.isNotEmpty()) {
+                                                    IconButton(onClick = { audioSearchQuery = "" }, modifier = Modifier.size(24.dp)) {
+                                                        Icon(Icons.Default.Close, contentDescription = "Clear", tint = TextSecondary, modifier = Modifier.size(16.dp))
+                                                    }
+                                                }
+                                                IconButton(onClick = { isAudioPickerExpanded = !isAudioPickerExpanded }, modifier = Modifier.size(24.dp)) {
+                                                    Icon(
+                                                        imageVector = if (isAudioPickerExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                                        contentDescription = "Toggle List",
+                                                        tint = TextSecondary,
+                                                        modifier = Modifier.size(18.dp)
+                                                    )
+                                                }
+                                            }
+                                        },
                                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                                         keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus(force = true); keyboardController?.hide() }),
                                         modifier = Modifier
@@ -1998,42 +2017,10 @@ fun WidgetAddValueDialog(
                                                     isAudioPickerExpanded = true
                                                 }
                                             },
-                                        decorationBox = { innerTextField ->
-                                            Row(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .background(AppCard, RoundedCornerShape(14.dp))
-                                                    .border(1.dp, AppBorder, RoundedCornerShape(14.dp))
-                                                    .padding(horizontal = 14.dp, vertical = 12.dp),
-                                                verticalAlignment = Alignment.CenterVertically
-                                            ) {
-                                                Icon(Icons.Default.Search, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(18.dp))
-                                                Spacer(modifier = Modifier.width(8.dp))
-                                                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
-                                                    if (audioSearchQuery.isEmpty()) {
-                                                        Text(
-                                                            if (language == "de") "Sound suchen..." else if (language == "ka") "ხმის ძებნა..." else if (language == "zh") "搜索白噪音..." else "Search sound...",
-                                                            color = TextSecondary,
-                                                            fontSize = 14.sp
-                                                        )
-                                                    }
-                                                    innerTextField()
-                                                }
-                                                if (audioSearchQuery.isNotEmpty()) {
-                                                    IconButton(onClick = { audioSearchQuery = "" }, modifier = Modifier.size(22.dp)) {
-                                                        Icon(Icons.Default.Close, contentDescription = "Clear", tint = TextSecondary, modifier = Modifier.size(16.dp))
-                                                    }
-                                                }
-                                                IconButton(onClick = { isAudioPickerExpanded = !isAudioPickerExpanded }, modifier = Modifier.size(22.dp)) {
-                                                    Icon(
-                                                        imageVector = if (isAudioPickerExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                                                        contentDescription = "Toggle List",
-                                                        tint = TextSecondary,
-                                                        modifier = Modifier.size(18.dp)
-                                                    )
-                                                }
-                                            }
-                                        }
+                                        containerColor = AppCard,
+                                        singleLine = true,
+                                        fillMaxWidth = false,
+                                        testTag = "sound_picker_search"
                                     )
 
                                     IconButton(
@@ -2224,32 +2211,17 @@ fun WidgetAddValueDialog(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            BasicTextField(
+                            AppTextField(
                                 value = inputVal,
                                 onValueChange = { inputVal = it },
-                                textStyle = TextStyle(color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Bold),
-                                singleLine = true,
-                                cursorBrush = SolidColor(PrimaryViolet),
+                                placeholderText = "0.0",
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
                                 keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus(); keyboardController?.hide() }),
-                                modifier = Modifier
-                                    .width(72.dp)
-                                    .testTag("manual_value_input"),
-                                decorationBox = { innerTextField ->
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .background(PrimaryViolet.copy(alpha = 0.18f), RoundedCornerShape(8.dp))
-                                            .border(1.5.dp, PrimaryViolet, RoundedCornerShape(8.dp))
-                                            .padding(horizontal = 8.dp, vertical = 7.dp),
-                                        contentAlignment = Alignment.CenterStart
-                                    ) {
-                                        if (inputVal.isEmpty()) {
-                                            Text("0.0", color = TextSecondary.copy(alpha = 0.7f), fontSize = 13.sp)
-                                        }
-                                        innerTextField()
-                                    }
-                                }
+                                modifier = Modifier.width(78.dp),
+                                containerColor = AppCard,
+                                singleLine = true,
+                                fillMaxWidth = false,
+                                testTag = "manual_value_input"
                             )
 
                             Row(
@@ -2376,10 +2348,8 @@ fun WidgetAddValueDialog(
                         }
                     }
                 }
-            },
-            confirmButton = {},
-            dismissButton = null
-        )
+            }
+        }
     } else {
         LaunchedEffect(Unit) {
             onDismiss()
@@ -2409,7 +2379,7 @@ fun HabitBottomNavigation(
     ) {
         Surface(
             color = AppCard,
-            shape = CircleShape,
+            shape = RoundedCornerShape(22.dp),
             border = BorderStroke(1.dp, AppBorder),
             shadowElevation = 8.dp,
             tonalElevation = 0.dp
@@ -2435,7 +2405,7 @@ fun HabitBottomNavigation(
                     Row(
                         modifier = Modifier
                             .testTag("nav_${tabKey.lowercase()}")
-                            .clip(CircleShape)
+                            .clip(RoundedCornerShape(14.dp))
                             .background(navBgColor)
                             .clickable { onTabSelected(tabKey) }
                             .padding(horizontal = 12.dp, vertical = 10.dp),
@@ -2453,9 +2423,8 @@ fun HabitBottomNavigation(
                             color = navContentColor,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
-                            style = MaterialTheme.typography.labelLarge.copy(
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = FontWeight.Bold
                             )
                         )
                     }
@@ -3429,12 +3398,6 @@ fun TodayScreen(
     }
     var showDailyNoteDialog by remember { mutableStateOf(false) }
 
-    val allMilestoneRewardsToday by viewModel.allMilestoneRewards.collectAsStateWithLifecycle(initialValue = emptyList())
-    val redeemableRewardsCountToday = remember(allMilestoneRewardsToday) {
-        allMilestoneRewardsToday.count { it.unlockedAt > 0L && !it.isRedeemed }
-    }
-    var showRewardsOverviewToday by remember { mutableStateOf(false) }
-
     val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
     val keyboardController = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
 
@@ -3464,72 +3427,29 @@ fun TodayScreen(
                         .padding(bottom = 12.dp)
                         .defaultMinSize(minHeight = 44.dp)
                 ) {
-                    // Top Left: Action Row (Daily Note & Milestone Rewards)
-                    Row(
-                        modifier = Modifier.align(Alignment.CenterStart),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                    // Top Left: Daily Note Button (Notizbuch)
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .border(1.dp, AppBorder, RoundedCornerShape(12.dp))
+                            .background(AppCard, RoundedCornerShape(12.dp))
+                            .clickable { showDailyNoteDialog = true }
+                            .align(Alignment.CenterStart)
+                            .testTag("btn_daily_note"),
+                        contentAlignment = Alignment.Center
                     ) {
-                        // 1. Daily Note Button (Notizbuch)
-                        Box(
-                            modifier = Modifier
-                                .size(44.dp)
-                                .border(1.dp, AppBorder, RoundedCornerShape(12.dp))
-                                .background(AppCard, RoundedCornerShape(12.dp))
-                                .clickable { showDailyNoteDialog = true }
-                                .testTag("btn_daily_note"),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            ZettelMitStiftIcon(
-                                modifier = Modifier.size(22.dp),
-                                color = TextPrimary
+                        ZettelMitStiftIcon(
+                            modifier = Modifier.size(22.dp),
+                            color = TextPrimary
+                        )
+                        if (currentNote.isNotEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(top = 6.dp, end = 6.dp)
+                                    .size(6.dp)
+                                    .background(PrimaryViolet, CircleShape)
                             )
-                            if (currentNote.isNotEmpty()) {
-                                Box(
-                                    modifier = Modifier
-                                        .align(Alignment.TopEnd)
-                                        .padding(top = 6.dp, end = 6.dp)
-                                        .size(6.dp)
-                                        .background(PrimaryViolet, CircleShape)
-                                )
-                            }
-                        }
-
-                        // 2. Milestone Rewards Button with Redeem Indicator Badge
-                        Box(
-                            modifier = Modifier
-                                .size(44.dp)
-                                .border(1.dp, AppBorder, RoundedCornerShape(12.dp))
-                                .background(AppCard, RoundedCornerShape(12.dp))
-                                .clickable { showRewardsOverviewToday = true }
-                                .testTag("btn_rewards_overview"),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Star,
-                                contentDescription = "Rewards",
-                                tint = TextPrimary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            if (redeemableRewardsCountToday > 0) {
-                                Box(
-                                    modifier = Modifier
-                                        .align(Alignment.TopEnd)
-                                        .offset(x = 4.dp, y = (-4).dp)
-                                        .background(PrimaryViolet, CircleShape)
-                                        .padding(horizontal = 5.dp, vertical = 2.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = if (redeemableRewardsCountToday > 99) "99+" else redeemableRewardsCountToday.toString(),
-                                        style = MaterialTheme.typography.labelSmall.copy(
-                                            fontSize = 10.sp,
-                                            fontWeight = FontWeight.Bold
-                                        ),
-                                        color = Color.White
-                                    )
-                                }
-                            }
                         }
                     }
 
@@ -4176,14 +4096,6 @@ fun TodayScreen(
                 viewModel.saveDailyNote(selectedDate, noteText)
                 showDailyNoteDialog = false
             }
-        )
-    }
-
-    if (showRewardsOverviewToday) {
-        RewardsOverviewSheet(
-            viewModel = viewModel,
-            language = language,
-            onDismiss = { showRewardsOverviewToday = false }
         )
     }
 
@@ -5310,35 +5222,42 @@ fun StatsScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Box(
-                        modifier = Modifier
-                            .align(Alignment.CenterStart)
-                            .size(44.dp)
-                            .border(1.dp, AppBorder, RoundedCornerShape(12.dp))
-                            .background(AppCard, RoundedCornerShape(12.dp))
-                            .clickable { showRewardsOverview = true }
-                            .testTag("btn_rewards_overview"),
-                        contentAlignment = Alignment.Center
+                        modifier = Modifier.align(Alignment.CenterStart)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Star,
-                            contentDescription = "Rewards",
-                            tint = TextPrimary,
-                            modifier = Modifier.size(20.dp)
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .border(1.dp, AppBorder, RoundedCornerShape(12.dp))
+                                .background(AppCard, RoundedCornerShape(12.dp))
+                                .clickable { showRewardsOverview = true }
+                                .testTag("btn_rewards_overview"),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Star,
+                                contentDescription = "Rewards",
+                                tint = TextPrimary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
                         if (redeemableRewardsCountStats > 0) {
                             Box(
                                 modifier = Modifier
                                     .align(Alignment.TopEnd)
-                                    .offset(x = 4.dp, y = (-4).dp)
+                                    .offset(x = 6.dp, y = (-6).dp)
+                                    .defaultMinSize(minWidth = 20.dp, minHeight = 20.dp)
                                     .background(PrimaryViolet, CircleShape)
-                                    .padding(horizontal = 5.dp, vertical = 2.dp),
+                                    .border(2.dp, AppBg, CircleShape)
+                                    .padding(horizontal = 4.dp, vertical = 2.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
                                     text = if (redeemableRewardsCountStats > 99) "99+" else redeemableRewardsCountStats.toString(),
                                     style = MaterialTheme.typography.labelSmall.copy(
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        lineHeight = 11.sp
                                     ),
                                     color = Color.White
                                 )
@@ -7286,6 +7205,7 @@ fun TimeframeSelectorPills(
     language: String,
     modifier: Modifier = Modifier,
     customLabels: List<String>? = null,
+    badges: List<Int>? = null,
     accentColor: Color = PrimaryViolet
 ) {
     val labels = customLabels ?: when (language) {
@@ -7298,8 +7218,8 @@ fun TimeframeSelectorPills(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(Color.White.copy(alpha = 0.05f))
-            .border(1.dp, AppBorder.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+            .background(ProgressTrack)
+            .border(1.dp, AppBorder, RoundedCornerShape(12.dp))
             .padding(3.dp),
         horizontalArrangement = Arrangement.spacedBy(2.dp)
     ) {
@@ -7309,24 +7229,41 @@ fun TimeframeSelectorPills(
                 modifier = Modifier
                     .weight(1f)
                     .clip(RoundedCornerShape(10.dp))
-                    .background(if (isSelected) accentColor.copy(alpha = 0.22f) else Color.Transparent)
-                    .then(
-                        if (isSelected) Modifier.border(1.dp, accentColor.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
-                        else Modifier
-                    )
+                    .background(if (isSelected) accentColor else Color.Transparent)
                     .clickable { onTimeframeSelected(index) }
-                    .padding(vertical = 8.dp),
+                    .padding(vertical = 10.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                    color = if (isSelected) accentColor else TextSecondary,
-                    fontSize = 10.5.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        color = if (isSelected) Color.White else TextSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    val badgeCount = badges?.getOrNull(index) ?: 0
+                    if (badgeCount > 0) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Box(
+                            modifier = Modifier
+                                .defaultMinSize(minWidth = 18.dp, minHeight = 18.dp)
+                                .background(if (isSelected) Color.White else PrimaryViolet, CircleShape)
+                                .padding(horizontal = 4.dp, vertical = 2.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = if (badgeCount > 99) "99+" else badgeCount.toString(),
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = if (isSelected) accentColor else Color.White
+                                )
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -9594,22 +9531,19 @@ fun MetricPillBox(
                 text = "$count",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.ExtraBold,
-                color = TextPrimary,
-                fontSize = 16.sp
+                color = TextPrimary
             )
             Text(
                 text = value,
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
-                color = iconTint,
-                fontSize = 11.sp
+                color = iconTint
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall,
                 color = TextSecondary,
-                fontSize = 10.sp,
                 fontWeight = FontWeight.Medium,
                 maxLines = 1
             )
@@ -9629,9 +9563,8 @@ fun AchievementCounterCol(label: String, count: Int) {
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = TextSecondary,
-            fontSize = 11.sp
+            style = MaterialTheme.typography.labelMedium,
+            color = TextSecondary
         )
     }
 }
@@ -10101,6 +10034,21 @@ fun SettingsScreen(
                 e.printStackTrace()
             }
         }
+    }
+
+    var hasNotificationPermission by remember {
+        mutableStateOf(
+            if (android.os.Build.VERSION.SDK_INT >= 33) {
+                androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            } else true
+        )
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        hasNotificationPermission = isGranted
+        viewModel.setReviewNotificationsEnabled(isGranted)
     }
 
     val refreshAudios = remember(context) {
@@ -10596,7 +10544,7 @@ fun SettingsScreen(
                                         Text("GitHub", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold), maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     }
 
-                                    // 2. Email Support
+                                    // 2. Email Contact
                                     OutlinedButton(
                                         onClick = {
                                             val emailIntent = Intent(Intent.ACTION_SENDTO).apply {
@@ -10612,7 +10560,7 @@ fun SettingsScreen(
                                     ) {
                                         Icon(Icons.Default.Email, contentDescription = "Email", modifier = Modifier.size(18.dp), tint = PrimaryViolet)
                                         Spacer(modifier = Modifier.width(6.dp))
-                                        Text(tr(language, "E-Mail Support", "Email Support"), style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        Text(tr(language, "E-Mail Kontakt", "Email Contact"), style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold), maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     }
                                 }
 
@@ -10725,6 +10673,7 @@ fun SettingsScreen(
             } else when (selectedSubpage) {
                 "profile" -> {
                     // SUBPAGE 1: PROFIL & KONTO
+                    // Card 1: Profilbild
                     item {
                         Card(
                             colors = CardDefaults.cardColors(containerColor = AppCard),
@@ -10734,16 +10683,22 @@ fun SettingsScreen(
                                 .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
                         ) {
                             Column(
-                                modifier = Modifier.padding(20.dp),
+                                modifier = Modifier.padding(16.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                 Text(
-                                    text = tr(language, "Profilbild", "Profile Picture"),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = PrimaryViolet,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.align(Alignment.Start)
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Icon(imageVector = Icons.Default.PhotoCamera, contentDescription = null, tint = PrimaryViolet, modifier = Modifier.size(20.dp))
+                                    Text(
+                                        text = tr(language, "Profilbild", "Profile Picture"),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = TextPrimary,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                                 Spacer(modifier = Modifier.height(16.dp))
 
                                 Box(
@@ -10806,361 +10761,11 @@ fun SettingsScreen(
                                         }
                                     }
                                 }
-
-                                Spacer(modifier = Modifier.height(24.dp))
-                                HorizontalDivider(color = AppBorder, thickness = 1.dp)
-                                Spacer(modifier = Modifier.height(20.dp))
-
-                                Text(
-                                    text = tr(language, "Nutzername", "Username"),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = PrimaryViolet,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.align(Alignment.Start)
-                                )
-                                Spacer(modifier = Modifier.height(12.dp))
-
-                                OutlinedTextField(
-                                    value = userName,
-                                    onValueChange = { viewModel.updateUserName(it) },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    placeholder = { Text(tr(language, "Gib deinen Namen ein...", "Enter your name...")) },
-                                    shape = RoundedCornerShape(12.dp),
-                                    singleLine = true,
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        focusedBorderColor = PrimaryViolet,
-                                        unfocusedBorderColor = AppBorder,
-                                        focusedContainerColor = ProgressTrack,
-                                        unfocusedContainerColor = ProgressTrack
-                                    )
-                                )
-
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Text(
-                                    text = tr(
-                                        language,
-                                        "Dein Name und Profilbild werden nur lokal auf deinem Gerät gespeichert und für deine personalisierte App-Erfahrung genutzt.",
-                                        "Your name and profile picture are stored strictly locally on your device for your personalized app experience."
-                                    ),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = TextSecondary,
-                                    textAlign = TextAlign.Center
-                                )
                             }
                         }
                     }
-                }
-                "appearance" -> {
-            // 1. Allgemein & Personalisierung Card
-            item {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = AppCard),
-                    shape = RoundedCornerShape(20.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = tr(language, "Allgemein & Personalisierung", "General & Personalization"),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = PrimaryViolet,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(bottom = 12.dp)
-                        )
 
-                        // Option: Sprache
-                        Column {
-                            Text(
-                                text = tr(language, "Sprache", "Language"),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = TextPrimary,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Button(
-                                    onClick = { viewModel.setLanguage("de") },
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (language == "de") PrimaryViolet else ProgressTrack,
-                                        contentColor = if (language == "de") Color.White else TextPrimary
-                                    ),
-                                    shape = RoundedCornerShape(12.dp),
-                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
-                                ) {
-                                    Text("Deutsch")
-                                }
-                                Button(
-                                    onClick = { viewModel.setLanguage("en") },
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (language == "en") PrimaryViolet else ProgressTrack,
-                                        contentColor = if (language == "en") Color.White else TextPrimary
-                                    ),
-                                    shape = RoundedCornerShape(12.dp),
-                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
-                                ) {
-                                    Text("English")
-                                }
-                                Button(
-                                    onClick = { viewModel.setLanguage("ka") },
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (language == "ka") PrimaryViolet else ProgressTrack,
-                                        contentColor = if (language == "ka") Color.White else TextPrimary
-                                    ),
-                                    shape = RoundedCornerShape(12.dp),
-                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
-                                ) {
-                                    Text("ქართული")
-                                }
-                                Button(
-                                    onClick = { viewModel.setLanguage("zh") },
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (language == "zh") PrimaryViolet else ProgressTrack,
-                                        contentColor = if (language == "zh") Color.White else TextPrimary
-                                    ),
-                                    shape = RoundedCornerShape(12.dp),
-                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
-                                ) {
-                                    Text("简体中文")
-                                }
-                            }
-                        }
-
-                        // Option: Akzentfarbe
-                        Spacer(modifier = Modifier.height(16.dp))
-                        HorizontalDivider(color = AppBorder, thickness = 1.dp)
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Column {
-                            Text(
-                                text = tr(language, "Akzentfarbe", "Accent Color"),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = TextPrimary,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            
-                            com.example.ui.components.ColorPaletteSelector(
-                                selectedColorKey = accentColorName,
-                                onColorSelected = { viewModel.setAccentColorName(it) },
-                                language = language
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-                        HorizontalDivider(color = AppBorder, thickness = 1.dp)
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Option: App Theme
-                        Column {
-                            Text(
-                                text = tr(language, "App Design", "App Theme"),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = TextPrimary,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                // Dark Mode Button
-                                Button(
-                                    onClick = { viewModel.setDarkModeEnabled(true) },
-                                    modifier = Modifier.weight(1f),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (darkModeEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
-                                    ),
-                                    shape = RoundedCornerShape(12.dp),
-                                    border = BorderStroke(1.dp, if (darkModeEnabled) Color.Transparent else MaterialTheme.colorScheme.outline)
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            imageVector = Icons.Default.DarkMode,
-                                            contentDescription = null,
-                                            tint = if (darkModeEnabled) Color.White else MaterialTheme.colorScheme.onSurface,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text(
-                                            text = tr(language, "Dunkel", "Dark"),
-                                            color = if (darkModeEnabled) Color.White else MaterialTheme.colorScheme.onSurface,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-                                }
-
-                                // Light Mode Button
-                                Button(
-                                    onClick = { viewModel.setDarkModeEnabled(false) },
-                                    modifier = Modifier.weight(1f),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (!darkModeEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
-                                    ),
-                                    shape = RoundedCornerShape(12.dp),
-                                    border = BorderStroke(1.dp, if (!darkModeEnabled) Color.Transparent else MaterialTheme.colorScheme.outline)
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            imageVector = Icons.Default.LightMode,
-                                            contentDescription = null,
-                                            tint = if (!darkModeEnabled) Color.White else MaterialTheme.colorScheme.onSurface,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text(
-                                            text = tr(language, "Hell", "Light"),
-                                            color = if (!darkModeEnabled) Color.White else MaterialTheme.colorScheme.onSurface,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                        
-                        Spacer(modifier = Modifier.height(16.dp))
-                        HorizontalDivider(color = AppBorder, thickness = 1.dp)
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Option: Infokarten & Hinweise
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Info,
-                                    contentDescription = "Info Cards",
-                                    tint = PrimaryViolet,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column {
-                                    Text(
-                                        text = tr(language, "Infokarten & Hinweise anzeigen", "Show info cards & tips"),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = TextPrimary,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                    Text(
-                                        text = tr(language, "Blendet Erklärungen und Info-Buttons ein", "Display explanatory cards and info icons"),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = TextSecondary
-                                    )
-                                }
-                            }
-                            Switch(
-                                checked = infoCardsEnabled,
-                                onCheckedChange = { viewModel.setInfoCardsEnabled(it) },
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = Color.White,
-                                    checkedTrackColor = PrimaryViolet,
-                                    uncheckedThumbColor = TextSecondary,
-                                    uncheckedTrackColor = ProgressTrack
-                                )
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-                        HorizontalDivider(color = AppBorder, thickness = 1.dp)
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Option: Vibration beim Abhaken
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Vibration,
-                                    contentDescription = "Vibration",
-                                    tint = PrimaryViolet,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column {
-                                    Text(
-                                        text = tr(language, "Vibration beim Abhaken", "Haptic feedback"),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = TextPrimary,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                    Text(
-                                        text = tr(language, "Haptischer Impuls beim Erledigen", "Short vibration pulse on completion"),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = TextSecondary
-                                    )
-                                }
-                            }
-                            Switch(
-                                checked = vibrationEnabled,
-                                onCheckedChange = { viewModel.setVibrationEnabled(it) },
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = Color.White,
-                                    checkedTrackColor = PrimaryViolet,
-                                    uncheckedThumbColor = TextSecondary,
-                                    uncheckedTrackColor = ProgressTrack
-                                )
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-                        HorizontalDivider(color = AppBorder, thickness = 1.dp)
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Option: Onboarding neu starten
-                        Column {
-                            Text(
-                                text = tr(language, "Einführung", "Introduction"),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = TextPrimary,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Text(
-                                text = tr(language, "Starte die Einführung erneut, um alle App-Tipps zu sehen.", "Restart the introduction to review all app tips."),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextSecondary,
-                                modifier = Modifier.padding(bottom = 10.dp)
-                            )
-                            Button(
-                                onClick = { viewModel.resetOnboarding() },
-                                colors = ButtonDefaults.buttonColors(containerColor = ProgressTrack),
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.testTag("btn_restart_onboarding")
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.RestartAlt,
-                                    contentDescription = null,
-                                    tint = TextPrimary,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = tr(language, "Einführung neu starten", "Restart Introduction"),
-                                    color = TextPrimary,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-                    }
-                }
-                }
-                }
-                "audio" -> {
+                    // Card 2: Nutzername & Konto
                     item {
                         Card(
                             colors = CardDefaults.cardColors(containerColor = AppCard),
@@ -11170,598 +10775,1004 @@ fun SettingsScreen(
                                 .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
-                                Text(
-                                    text = tr(language, "Töne & Entspannung", "Audio & Soundscapes"),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = PrimaryViolet,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(bottom = 12.dp)
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Icon(imageVector = Icons.Default.Person, contentDescription = null, tint = PrimaryViolet, modifier = Modifier.size(20.dp))
+                                    Text(
+                                        text = tr(language, "Nutzername & Konto", "Username & Account"),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = TextPrimary,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                AppTextField(
+                                    value = userName,
+                                    onValueChange = { viewModel.updateUserName(it) },
+                                    placeholderText = tr(language, "Gib deinen Namen ein...", "Enter your name..."),
+                                    containerColor = ProgressTrack,
+                                    singleLine = true,
+                                    testTag = "settings_username_input"
                                 )
-                                Column {
+
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                    text = tr(
+                                        language,
+                                        "Dein Name und Profilbild werden nur lokal auf deinem Gerät gespeichert.",
+                                        "Your name and profile picture are stored strictly locally on your device."
+                                    ),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = TextSecondary
+                                )
+                            }
+                        }
+                    }
+                }
+
+                "appearance" -> {
+                    // SUBPAGE 2: ERSCHEINUNGSBILD & SPRACHE
+                    // Card 1: Sprache & Region
+                    item {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = AppCard),
+                            shape = RoundedCornerShape(20.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Icon(imageVector = Icons.Default.Language, contentDescription = null, tint = PrimaryViolet, modifier = Modifier.size(20.dp))
+                                    Text(
+                                        text = tr(language, "Sprache & Region", "Language & Region"),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = TextPrimary,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(12.dp))
+                                AppSegmentedButton(
+                                    options = listOf("Deutsch", "English", "ქართული", "简体中文"),
+                                    selectedIndex = when (language) {
+                                        "de" -> 0
+                                        "en" -> 1
+                                        "ka" -> 2
+                                        "zh" -> 3
+                                        else -> 0
+                                    },
+                                    onOptionSelected = { index ->
+                                        val newLang = when (index) {
+                                            0 -> "de"
+                                            1 -> "en"
+                                            2 -> "ka"
+                                            3 -> "zh"
+                                            else -> "de"
+                                        }
+                                        viewModel.setLanguage(newLang)
+                                    },
+                                    testTagPrefix = "settings_language"
+                                )
+                            }
+                        }
+                    }
+
+                    // Card 2: App Theme
+                    item {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = AppCard),
+                            shape = RoundedCornerShape(20.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Icon(imageVector = Icons.Default.DarkMode, contentDescription = null, tint = PrimaryViolet, modifier = Modifier.size(20.dp))
+                                    Text(
+                                        text = tr(language, "Erscheinungsbild", "App Theme"),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = TextPrimary,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = tr(language, "Wechsle zwischen hellem und dunklem Design", "Switch between light and dark theme"),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = TextSecondary
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                AppSegmentedButtonWithIcons(
+                                    options = listOf(
+                                        tr(language, "Dunkel", "Dark") to Icons.Default.DarkMode,
+                                        tr(language, "Hell", "Light") to Icons.Default.LightMode
+                                    ),
+                                    selectedIndex = if (darkModeEnabled) 0 else 1,
+                                    onOptionSelected = { index -> viewModel.setDarkModeEnabled(index == 0) },
+                                    testTagPrefix = "app_theme_toggle"
+                                )
+                            }
+                        }
+                    }
+
+                    // Card 3: Akzentfarbe
+                    item {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = AppCard),
+                            shape = RoundedCornerShape(20.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Icon(imageVector = Icons.Default.Palette, contentDescription = null, tint = PrimaryViolet, modifier = Modifier.size(20.dp))
+                                    Text(
+                                        text = tr(language, "Akzentfarbe", "Accent Color"),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = TextPrimary,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = tr(language, "Passe die Primärfarbe der App an dein Design an", "Customize the primary accent color of the app"),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = TextSecondary
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                com.example.ui.components.ColorPaletteSelector(
+                                    selectedColorKey = accentColorName,
+                                    onColorSelected = { viewModel.setAccentColorName(it) },
+                                    language = language
+                                )
+                            }
+                        }
+                    }
+
+                    // Card 4: Infokarten & Tipps
+                    item {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = AppCard),
+                            shape = RoundedCornerShape(20.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier.fillMaxWidth()
+                                        modifier = Modifier.weight(1f)
                                     ) {
                                         Icon(
-                                            imageVector = Icons.Default.MusicNote,
-                                            contentDescription = null,
+                                            imageVector = Icons.Default.Info,
+                                            contentDescription = "Info Cards",
                                             tint = PrimaryViolet,
                                             modifier = Modifier.size(20.dp)
                                         )
                                         Spacer(modifier = Modifier.width(12.dp))
                                         Column {
                                             Text(
-                                                text = tr(language, "Fokus-Sounds & Hintergründe", "Focus Sounds & Soundscapes"),
-                                                style = MaterialTheme.typography.bodyMedium,
+                                                text = tr(language, "Infokarten & Hinweise", "Info Cards & Tips"),
+                                                style = MaterialTheme.typography.titleMedium,
                                                 color = TextPrimary,
-                                                fontWeight = FontWeight.Medium
+                                                fontWeight = FontWeight.Bold
                                             )
+                                            Spacer(modifier = Modifier.height(4.dp))
                                             Text(
-                                                text = if (language == "de") {
-                                                    val count = importedAudios.size
-                                                    val currentName = selectedAudioFile?.nameWithoutExtension ?: "Kein Sound"
-                                                    "$count Sounds • Standard: $currentName"
-                                                } else if (language == "ka") {
-                                                    val count = importedAudios.size
-                                                    val currentName = selectedAudioFile?.nameWithoutExtension ?: "ხმის გარეშე"
-                                                    "$count ხმოვანი გარემო • ნაგულისხმევი: $currentName"
-                                                } else {
-                                                    val count = importedAudios.size
-                                                    val currentName = selectedAudioFile?.nameWithoutExtension ?: "No Sound"
-                                                    "$count sounds • Default: $currentName"
-                                                },
+                                                text = tr(language, "Blendet Erklärungen und Info-Buttons ein", "Display explanatory cards and info icons"),
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = TextSecondary
                                             )
                                         }
                                     }
-                                    Spacer(modifier = Modifier.height(12.dp))
-                                    Row(
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Button(
-                                            onClick = { showAudioDialog = true },
-                                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryViolet),
-                                            shape = RoundedCornerShape(12.dp),
-                                            modifier = Modifier.weight(1f)
-                                        ) {
-                                            Icon(imageVector = Icons.Default.LibraryMusic, contentDescription = null, modifier = Modifier.size(18.dp))
-                                            Spacer(modifier = Modifier.width(6.dp))
-                                            Text(tr(language, "Verwalten", "Manage"), fontWeight = FontWeight.Bold)
-                                        }
-                                        OutlinedButton(
-                                            onClick = { audioPickerLauncherSettings.launch("audio/*") },
-                                            shape = RoundedCornerShape(12.dp),
-                                            border = BorderStroke(1.dp, SuccessGreen)
-                                        ) {
-                                            Icon(imageVector = Icons.Default.AddCircle, contentDescription = null, tint = SuccessGreen, modifier = Modifier.size(18.dp))
-                                            Spacer(modifier = Modifier.width(4.dp))
-                                            Text(if (language == "de") "Import" else if (language == "ka") "იმპორტი" else if (language == "zh") "导入" else "Import", color = SuccessGreen, fontWeight = FontWeight.Bold)
-                                        }
-                                    }
+                                    Switch(
+                                        checked = infoCardsEnabled,
+                                        onCheckedChange = { viewModel.setInfoCardsEnabled(it) },
+                                        colors = SwitchDefaults.colors(
+                                            checkedThumbColor = Color.White,
+                                            checkedTrackColor = PrimaryViolet,
+                                            uncheckedThumbColor = TextSecondary,
+                                            uncheckedTrackColor = ProgressTrack
+                                        )
+                                    )
                                 }
                             }
                         }
                     }
-                }
-                "notifications" -> {
-                    // 3. Rückblicke & Berichte Card
-            item {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = AppCard),
-                    shape = RoundedCornerShape(20.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = tr(language, "Rückblicke & Berichte", "Reviews & Reports"),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = PrimaryViolet,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(bottom = 12.dp)
-                        )
 
-                        // Option: Benachrichtigungen erlauben (mit Android-Berechtigungsabfrage)
-                        var hasNotificationPermission by remember {
-                            mutableStateOf(
-                                if (android.os.Build.VERSION.SDK_INT >= 33) {
-                                    androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED
-                                } else true
-                            )
-                        }
-
-                        val permissionLauncher = rememberLauncherForActivityResult(
-                            contract = ActivityResultContracts.RequestPermission()
-                        ) { isGranted: Boolean ->
-                            hasNotificationPermission = isGranted
-                            viewModel.setReviewNotificationsEnabled(isGranted)
-                        }
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.NotificationsActive,
-                                    contentDescription = "Notifications",
-                                    tint = PrimaryViolet,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column {
-                                    Text(
-                                        text = tr(language, "Benachrichtigungen", "Notifications"),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = TextPrimary,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                    Text(
-                                        text = tr(language, "Erinnerungen & Rückblick-Alarme erhalten", "Receive reminders & review alerts"),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = TextSecondary
-                                    )
-                                }
-                            }
-                            Switch(
-                                checked = reviewNotificationsEnabled && hasNotificationPermission,
-                                onCheckedChange = { isChecked ->
-                                    if (isChecked) {
-                                        if (android.os.Build.VERSION.SDK_INT >= 33 && !hasNotificationPermission) {
-                                            permissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-                                        } else {
-                                            viewModel.setReviewNotificationsEnabled(true)
-                                        }
-                                    } else {
-                                        viewModel.setReviewNotificationsEnabled(false)
-                                    }
-                                },
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = Color.White,
-                                    checkedTrackColor = PrimaryViolet,
-                                    uncheckedThumbColor = TextSecondary,
-                                    uncheckedTrackColor = ProgressTrack
-                                )
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-                        HorizontalDivider(color = AppBorder, thickness = 1.dp)
-                        Spacer(modifier = Modifier.height(16.dp))
-                        
-                        // Option: Smart Insights Notifications
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Lightbulb,
-                                    contentDescription = "Insights",
-                                    tint = PrimaryViolet,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column {
-                                    Text(
-                                        text = if (language == "de") "Smart Insights" else if (language == "ka") "Smart Insights" else if (language == "zh") "智能洞察" else "Smart Insights",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = TextPrimary,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                    Text(
-                                        text = tr(language, "1x pro Woche eine Push-Benachrichtigung mit deinen spannendsten Insights & Highlights", "Weekly push notification with your most interesting insights & highlights"),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = TextSecondary
-                                    )
-                                }
-                            }
-                            Switch(
-                                checked = insightNotificationsEnabled && hasNotificationPermission,
-                                onCheckedChange = { isChecked ->
-                                    if (isChecked) {
-                                        if (android.os.Build.VERSION.SDK_INT >= 33 && !hasNotificationPermission) {
-                                            permissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-                                        } else {
-                                            viewModel.setInsightNotificationsEnabled(true)
-                                        }
-                                    } else {
-                                        viewModel.setInsightNotificationsEnabled(false)
-                                    }
-                                },
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = Color.White,
-                                    checkedTrackColor = PrimaryViolet,
-                                    uncheckedThumbColor = TextSecondary,
-                                    uncheckedTrackColor = ProgressTrack
-                                )
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-                        HorizontalDivider(color = AppBorder, thickness = 1.dp)
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Option: Monatsrückblick
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.CalendarViewMonth,
-                                    contentDescription = "Monthly",
-                                    tint = PrimaryViolet,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column {
-                                    Text(
-                                        text = tr(language, "Monatsrückblick", "Monthly Review"),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = TextPrimary,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                    Text(
-                                        text = tr(language, "Monatliche Statistiken & Highlights", "Analyze monthly statistics & highlights"),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = TextSecondary
-                                    )
-                                }
-                            }
-                            Switch(
-                                checked = monthlyReviewEnabled,
-                                onCheckedChange = { viewModel.setMonthlyReviewEnabled(it) },
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = Color.White,
-                                    checkedTrackColor = PrimaryViolet,
-                                    uncheckedThumbColor = TextSecondary,
-                                    uncheckedTrackColor = ProgressTrack
-                                )
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-                        HorizontalDivider(color = AppBorder, thickness = 1.dp)
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Option: Jahresrückblick
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.DateRange,
-                                    contentDescription = "Yearly",
-                                    tint = PrimaryViolet,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column {
-                                    Text(
-                                        text = tr(language, "Jahresrückblick", "Yearly Review"),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = TextPrimary,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                    Text(
-                                        text = tr(language, "Großer Jahresrückblick mit Abzeichen & Highlights", "Grand Year in Review with badges & highlights"),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = TextSecondary
-                                    )
-                                }
-                            }
-                            Switch(
-                                checked = yearlyReviewEnabled,
-                                onCheckedChange = { viewModel.setYearlyReviewEnabled(it) },
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = Color.White,
-                                    checkedTrackColor = PrimaryViolet,
-                                    uncheckedThumbColor = TextSecondary,
-                                    uncheckedTrackColor = ProgressTrack
-                                )
-                            )
-                        }
-                    }
-                }
-            }
-        }
-                "data" -> {
-                    // 4. Daten & Sicherung Card
-            item {
-                val archiveInteractionSource = remember { MutableInteractionSource() }
-                val archiveIsPressed by archiveInteractionSource.collectIsPressedAsState()
-                val archiveArrowOffsetX by animateDpAsState(
-                    targetValue = if (archiveIsPressed) 8.dp else 0.dp,
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
-                    label = "archive_arrow_offset"
-                )
-                val archiveArrowScale by animateFloatAsState(
-                    targetValue = if (archiveIsPressed) 1.25f else 1.0f,
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
-                    label = "archive_arrow_scale"
-                )
-
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = AppCard),
-                    shape = RoundedCornerShape(20.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = tr(language, "Daten, Sicherung & Archiv", "Data, Backup & Archive"),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = ErrorRed,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(bottom = 12.dp)
-                        )
-
-                        // Option: Archivierte Gewohnheiten
-                        Row(
+                    // Card 5: Haptisches Feedback
+                    item {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = AppCard),
+                            shape = RoundedCornerShape(20.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable(
-                                    interactionSource = archiveInteractionSource,
-                                    indication = ripple(),
-                                    onClick = { showArchivedList = true }
-                                )
-                                .padding(vertical = 4.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                                .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                                Icon(
-                                    imageVector = Icons.Default.Inbox,
-                                    contentDescription = "Archive",
-                                    tint = PrimaryViolet,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Vibration,
+                                            contentDescription = "Vibration",
+                                            tint = PrimaryViolet,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Column {
+                                            Text(
+                                                text = tr(language, "Vibration beim Abhaken", "Haptic Feedback"),
+                                                style = MaterialTheme.typography.titleMedium,
+                                                color = TextPrimary,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                text = tr(language, "Haptischer Impuls beim Erledigen von Aufgaben", "Short vibration pulse on task completion"),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = TextSecondary
+                                            )
+                                        }
+                                    }
+                                    Switch(
+                                        checked = vibrationEnabled,
+                                        onCheckedChange = { viewModel.setVibrationEnabled(it) },
+                                        colors = SwitchDefaults.colors(
+                                            checkedThumbColor = Color.White,
+                                            checkedTrackColor = PrimaryViolet,
+                                            uncheckedThumbColor = TextSecondary,
+                                            uncheckedTrackColor = ProgressTrack
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Card 6: Einführung
+                    item {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = AppCard),
+                            shape = RoundedCornerShape(20.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Icon(imageVector = Icons.Default.RestartAlt, contentDescription = null, tint = PrimaryViolet, modifier = Modifier.size(20.dp))
                                     Text(
-                                        text = tr(language, "Archivierte Gewohnheiten", "Archived Habits"),
-                                        style = MaterialTheme.typography.bodyMedium,
+                                        text = tr(language, "Einführung & Onboarding", "Introduction & Onboarding"),
+                                        style = MaterialTheme.typography.titleMedium,
                                         color = TextPrimary,
                                         fontWeight = FontWeight.Bold
                                     )
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = tr(language, "Starte die Einführung erneut, um alle App-Tipps zu sehen.", "Restart the introduction to review all app tips."),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = TextSecondary,
+                                    modifier = Modifier.padding(bottom = 12.dp)
+                                )
+                                Button(
+                                    onClick = { viewModel.resetOnboarding() },
+                                    colors = ButtonDefaults.buttonColors(containerColor = ProgressTrack),
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.testTag("btn_restart_onboarding")
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.RestartAlt,
+                                        contentDescription = null,
+                                        tint = TextPrimary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
                                     Text(
-                                        text = tr(language, "Inaktive Gewohnheiten reaktivieren", "Reactivate suspended habits"),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = TextSecondary
+                                        text = tr(language, "Einführung neu starten", "Restart Introduction"),
+                                        color = TextPrimary,
+                                        fontWeight = FontWeight.Bold
                                     )
                                 }
                             }
-                            Icon(
-                                imageVector = Icons.Default.ChevronRight,
-                                contentDescription = "Go",
-                                tint = if (archiveIsPressed) PrimaryViolet else TextSecondary,
-                                modifier = Modifier
-                                    .offset(x = archiveArrowOffsetX)
-                                    .scale(archiveArrowScale)
-                                    .size(20.dp)
-                            )
                         }
+                    }
+                }
 
-                        Spacer(modifier = Modifier.height(16.dp))
-                        HorizontalDivider(color = AppBorder, thickness = 1.dp)
-                        Spacer(modifier = Modifier.height(16.dp))
+                "audio" -> {
+                    // SUBPAGE 3: TÖNE & ENTSPANNUNG
+                    item {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = AppCard),
+                            shape = RoundedCornerShape(20.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Icon(imageVector = Icons.Default.LibraryMusic, contentDescription = null, tint = PrimaryViolet, modifier = Modifier.size(20.dp))
+                                    Text(
+                                        text = tr(language, "Fokus-Sounds & Hintergründe", "Focus Sounds & Soundscapes"),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = TextPrimary,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.MusicNote,
+                                        contentDescription = null,
+                                        tint = PrimaryViolet,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column {
+                                        Text(
+                                            text = tr(language, "Klangwelten verwalten", "Manage Soundscapes"),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = TextPrimary,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                        Text(
+                                            text = if (language == "de") {
+                                                val count = importedAudios.size
+                                                val currentName = selectedAudioFile?.nameWithoutExtension ?: "Kein Sound"
+                                                "$count Sounds • Standard: $currentName"
+                                            } else if (language == "ka") {
+                                                val count = importedAudios.size
+                                                val currentName = selectedAudioFile?.nameWithoutExtension ?: "ხმის გარეშე"
+                                                "$count ხმოვანი გარემო • ნაგულისხმევი: $currentName"
+                                            } else {
+                                                val count = importedAudios.size
+                                                val currentName = selectedAudioFile?.nameWithoutExtension ?: "No Sound"
+                                                "$count sounds • Default: $currentName"
+                                            },
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = TextSecondary
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Button(
+                                        onClick = { showAudioDialog = true },
+                                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryViolet),
+                                        shape = RoundedCornerShape(12.dp),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Icon(imageVector = Icons.Default.LibraryMusic, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(tr(language, "Verwalten", "Manage"), fontWeight = FontWeight.Bold)
+                                    }
+                                    OutlinedButton(
+                                        onClick = { audioPickerLauncherSettings.launch("audio/*") },
+                                        shape = RoundedCornerShape(12.dp),
+                                        border = BorderStroke(1.dp, SuccessGreen)
+                                    ) {
+                                        Icon(imageVector = Icons.Default.AddCircle, contentDescription = null, tint = SuccessGreen, modifier = Modifier.size(18.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(if (language == "de") "Import" else if (language == "ka") "იმპორტი" else if (language == "zh") "导入" else "Import", color = SuccessGreen, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
 
-                        // Habit-Tracker CSV / ZIP Import
-                        Column {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
+                "notifications" -> {
+                    // SUBPAGE 4: BENACHRICHTIGUNGEN & RÜCKBLICKE
+                    // Card 1: Benachrichtigungen
+                    item {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = AppCard),
+                            shape = RoundedCornerShape(20.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.NotificationsActive,
+                                            contentDescription = "Notifications",
+                                            tint = PrimaryViolet,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Column {
+                                            Text(
+                                                text = tr(language, "Benachrichtigungen", "System Reminders"),
+                                                style = MaterialTheme.typography.titleMedium,
+                                                color = TextPrimary,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                text = tr(language, "Erinnerungen & Rückblick-Alarme erhalten", "Receive reminders & review alerts"),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = TextSecondary
+                                            )
+                                        }
+                                    }
+                                    Switch(
+                                        checked = reviewNotificationsEnabled && hasNotificationPermission,
+                                        onCheckedChange = { isChecked ->
+                                            if (isChecked) {
+                                                if (android.os.Build.VERSION.SDK_INT >= 33 && !hasNotificationPermission) {
+                                                    permissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                                                } else {
+                                                    viewModel.setReviewNotificationsEnabled(true)
+                                                }
+                                            } else {
+                                                viewModel.setReviewNotificationsEnabled(false)
+                                            }
+                                        },
+                                        colors = SwitchDefaults.colors(
+                                            checkedThumbColor = Color.White,
+                                            checkedTrackColor = PrimaryViolet,
+                                            uncheckedThumbColor = TextSecondary,
+                                            uncheckedTrackColor = ProgressTrack
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Card 2: Smart Insights
+                    item {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = AppCard),
+                            shape = RoundedCornerShape(20.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Lightbulb,
+                                            contentDescription = "Insights",
+                                            tint = PrimaryViolet,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Column {
+                                            Text(
+                                                text = if (language == "de") "Smart Insights" else if (language == "ka") "Smart Insights" else if (language == "zh") "智能洞察" else "Smart Insights",
+                                                style = MaterialTheme.typography.titleMedium,
+                                                color = TextPrimary,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                text = tr(language, "Wöchentlicher Push mit deinen spannendsten Insights & Highlights", "Weekly push notification with your most interesting insights & highlights"),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = TextSecondary
+                                            )
+                                        }
+                                    }
+                                    Switch(
+                                        checked = insightNotificationsEnabled && hasNotificationPermission,
+                                        onCheckedChange = { isChecked ->
+                                            if (isChecked) {
+                                                if (android.os.Build.VERSION.SDK_INT >= 33 && !hasNotificationPermission) {
+                                                    permissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                                                } else {
+                                                    viewModel.setInsightNotificationsEnabled(true)
+                                                }
+                                            } else {
+                                                viewModel.setInsightNotificationsEnabled(false)
+                                            }
+                                        },
+                                        colors = SwitchDefaults.colors(
+                                            checkedThumbColor = Color.White,
+                                            checkedTrackColor = PrimaryViolet,
+                                            uncheckedThumbColor = TextSecondary,
+                                            uncheckedTrackColor = ProgressTrack
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Card 3: Monatsrückblick
+                    item {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = AppCard),
+                            shape = RoundedCornerShape(20.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.CalendarViewMonth,
+                                            contentDescription = "Monthly",
+                                            tint = PrimaryViolet,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Column {
+                                            Text(
+                                                text = tr(language, "Monatsrückblick", "Monthly Review"),
+                                                style = MaterialTheme.typography.titleMedium,
+                                                color = TextPrimary,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                text = tr(language, "Monatliche Statistiken & Highlights", "Analyze monthly statistics & highlights"),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = TextSecondary
+                                            )
+                                        }
+                                    }
+                                    Switch(
+                                        checked = monthlyReviewEnabled,
+                                        onCheckedChange = { viewModel.setMonthlyReviewEnabled(it) },
+                                        colors = SwitchDefaults.colors(
+                                            checkedThumbColor = Color.White,
+                                            checkedTrackColor = PrimaryViolet,
+                                            uncheckedThumbColor = TextSecondary,
+                                            uncheckedTrackColor = ProgressTrack
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Card 4: Jahresrückblick
+                    item {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = AppCard),
+                            shape = RoundedCornerShape(20.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.DateRange,
+                                            contentDescription = "Yearly",
+                                            tint = PrimaryViolet,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Column {
+                                            Text(
+                                                text = tr(language, "Jahresrückblick", "Yearly Review"),
+                                                style = MaterialTheme.typography.titleMedium,
+                                                color = TextPrimary,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                text = tr(language, "Großer Jahresrückblick mit Abzeichen & Highlights", "Grand Year in Review with badges & highlights"),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = TextSecondary
+                                            )
+                                        }
+                                    }
+                                    Switch(
+                                        checked = yearlyReviewEnabled,
+                                        onCheckedChange = { viewModel.setYearlyReviewEnabled(it) },
+                                        colors = SwitchDefaults.colors(
+                                            checkedThumbColor = Color.White,
+                                            checkedTrackColor = PrimaryViolet,
+                                            uncheckedThumbColor = TextSecondary,
+                                            uncheckedTrackColor = ProgressTrack
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                "data" -> {
+                    // SUBPAGE 5: DATEN, SICHERUNG & ARCHIV
+                    // Card 1: Archivierte Gewohnheiten
+                    item {
+                        val archiveInteractionSource = remember { MutableInteractionSource() }
+                        val archiveIsPressed by archiveInteractionSource.collectIsPressedAsState()
+                        val archiveArrowOffsetX by animateDpAsState(
+                            targetValue = if (archiveIsPressed) 8.dp else 0.dp,
+                            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+                            label = "archive_arrow_offset"
+                        )
+                        val archiveArrowScale by animateFloatAsState(
+                            targetValue = if (archiveIsPressed) 1.25f else 1.0f,
+                            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+                            label = "archive_arrow_scale"
+                        )
+
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = AppCard),
+                            shape = RoundedCornerShape(20.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Icon(imageVector = Icons.Default.Inbox, contentDescription = null, tint = PrimaryViolet, modifier = Modifier.size(20.dp))
+                                    Text(
+                                        text = tr(language, "Archivierte Gewohnheiten", "Archived Habits"),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = TextPrimary,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable(
+                                            interactionSource = archiveInteractionSource,
+                                            indication = ripple(),
+                                            onClick = { showArchivedList = true }
+                                        )
+                                        .padding(vertical = 4.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                        Icon(
+                                            imageVector = Icons.Default.Inbox,
+                                            contentDescription = "Archive",
+                                            tint = PrimaryViolet,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Column {
+                                            Text(
+                                                text = tr(language, "Archiv öffnen", "Open Archive"),
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = TextPrimary,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Text(
+                                                text = tr(language, "Inaktive Gewohnheiten ansehen & reaktivieren", "View & reactivate suspended habits"),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = TextSecondary
+                                            )
+                                        }
+                                    }
+                                    Icon(
+                                        imageVector = Icons.Default.ChevronRight,
+                                        contentDescription = "Go",
+                                        tint = if (archiveIsPressed) PrimaryViolet else TextSecondary,
+                                        modifier = Modifier
+                                            .offset(x = archiveArrowOffsetX)
+                                            .scale(archiveArrowScale)
+                                            .size(20.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Card 2: Loop Habit Tracker Import (ZIP / CSV)
+                    item {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = AppCard),
+                            shape = RoundedCornerShape(20.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        Icon(imageVector = Icons.Default.UploadFile, contentDescription = null, tint = PrimaryViolet, modifier = Modifier.size(20.dp))
+                                        Text(
+                                            text = tr(language, "Loop Habit Tracker Import", "Loop Habit Tracker Import"),
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = TextPrimary,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                    Surface(
+                                        color = PrimaryViolet.copy(alpha = 0.15f),
+                                        shape = RoundedCornerShape(100.dp)
+                                    ) {
+                                        Text(
+                                            text = "ZIP / CSV",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = PrimaryViolet,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text = tr(language, "Loop Habit Tracker Import (ZIP / CSV)", "Loop Habit Tracker Import (ZIP / CSV)"),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = TextPrimary,
+                                    text = tr(
+                                        language,
+                                        "Importiere deine gesamte Historie (ZIP) direkt aus dem Loop Habit Tracker, oder lade einzelne CSV-Dateien (Loop, Bull, Custom) hoch.",
+                                        "Import your entire history (ZIP) directly from Loop Habit Tracker, or upload individual CSV files (Loop, Bull, Custom)."
+                                    ),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = TextSecondary
+                                )
+
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                Button(
+                                    onClick = { csvPickerLauncher.launch(arrayOf("*/*", "text/*", "text/csv", "text/comma-separated-values", "application/zip", "application/x-zip-compressed")) },
+                                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryViolet),
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Icon(Icons.Default.UploadFile, contentDescription = "Import", modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(tr(language, "CSV / ZIP Datei importieren", "Import CSV / ZIP File"))
+                                }
+                            }
+                        }
+                    }
+
+                    // Card 3: Lokales SAF Backup & Wiederherstellung
+                    item {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = AppCard),
+                            shape = RoundedCornerShape(20.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Icon(imageVector = Icons.Default.Backup, contentDescription = null, tint = PrimaryViolet, modifier = Modifier.size(20.dp))
+                                    Text(
+                                        text = tr(language, "Backup & Wiederherstellung", "Backup & Restore"),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = TextPrimary,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = tr(
+                                        language,
+                                        "Wähle einen Ordner aus. Die App erstellt dort täglich automatisch ein Backup der letzten 3 Tage. Du kannst auch jederzeit manuell sichern oder wiederherstellen.",
+                                        "Select a local folder. The app will automatically save daily JSON exports there (retaining only the 3 latest). You can also back up or restore manually."
+                                    ),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = TextSecondary
+                                )
+
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                Text(
+                                    text = tr(language, "Ausgewählter Ordner:", "Selected Folder:"),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = TextSecondary,
                                     fontWeight = FontWeight.Bold
                                 )
-                                Surface(
-                                    color = PrimaryViolet.copy(alpha = 0.15f),
-                                    shape = RoundedCornerShape(100.dp)
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(ProgressTrack)
+                                        .padding(8.dp)
                                 ) {
                                     Text(
-                                        text = "LOOP ZIP / CSV",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = PrimaryViolet,
+                                        text = if (backupFolderUri.isEmpty()) {
+                                            tr(language, "Kein Ordner ausgewählt", "No folder selected")
+                                        } else {
+                                            backupFolderUri
+                                        },
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = if (backupFolderUri.isEmpty()) ErrorRed else SuccessGreen,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                Button(
+                                    onClick = { folderLauncher.launch(null) },
+                                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryViolet),
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Icon(Icons.Default.Folder, contentDescription = "Folder", modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(tr(language, "Ordner auswählen", "Select Folder"))
+                                }
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Button(
+                                        onClick = { viewModel.triggerManualBackup() },
+                                        enabled = backupFolderUri.isNotEmpty(),
+                                        colors = ButtonDefaults.buttonColors(containerColor = ProgressTrack),
+                                        modifier = Modifier.weight(1f),
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Icon(Icons.Default.Backup, contentDescription = "Backup", modifier = Modifier.size(18.dp))
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(tr(language, "Sichern", "Backup"))
+                                    }
+
+                                    Button(
+                                        onClick = { fileLauncher.launch(arrayOf("application/json", "*/*")) },
+                                        colors = ButtonDefaults.buttonColors(containerColor = ProgressTrack),
+                                        modifier = Modifier.weight(1f),
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Icon(Icons.Default.Restore, contentDescription = "Restore", modifier = Modifier.size(18.dp))
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(tr(language, "Einspielen", "Restore"))
+                                    }
+                                }
+
+                                if (syncStatus != null) {
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                    Text(
+                                        text = syncStatus ?: "",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = SuccessGreen,
                                         fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                        modifier = Modifier.clickable { viewModel.clearSyncStatus() }
                                     )
                                 }
                             }
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = tr(
-                                    language,
-                                    "Importiere deine gesamte Historie (ZIP) direkt aus dem Loop Habit Tracker, oder lade einzelne CSV-Dateien (Loop, Bull, Custom) hoch.",
-                                    "Import your entire history (ZIP) directly from Loop Habit Tracker, or upload individual CSV files (Loop, Bull, Custom)."
-                                ),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextSecondary
-                            )
-
-                            Spacer(modifier = Modifier.height(12.dp))
-
-                            Button(
-                                onClick = { csvPickerLauncher.launch(arrayOf("*/*", "text/*", "text/csv", "text/comma-separated-values", "application/zip", "application/x-zip-compressed")) },
-                                colors = ButtonDefaults.buttonColors(containerColor = PrimaryViolet),
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Icon(Icons.Default.UploadFile, contentDescription = "Import", modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(tr(language, "CSV / ZIP Datei importieren", "Import CSV / ZIP File"))
-                            }
                         }
+                    }
 
-                        Spacer(modifier = Modifier.height(16.dp))
-                        HorizontalDivider(color = AppBorder, thickness = 1.dp)
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // SAF Backup & Restore
-                        Column {
-                            Text(
-                                text = tr(language, "Lokales SAF Backup & Restore", "Local SAF Backup & Restore"),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = TextPrimary,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = tr(
-                                    language,
-                                    "Wähle einen Ordner aus. Die App erstellt dort täglich automatisch ein Backup der letzten 3 Tage. Du kannst auch jederzeit manuell sichern oder wiederherstellen.",
-                                    "Select a local folder. The app will automatically save daily JSON exports there (retaining only the 3 latest). You can also back up or restore manually."
-                                ),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextSecondary
-                            )
-
-                            Spacer(modifier = Modifier.height(12.dp))
-
-                            // Selected folder info
-                            Text(
-                                text = tr(language, "Ausgewählter Ordner:", "Selected Folder:"),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextSecondary,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(ProgressTrack)
-                                    .padding(8.dp)
-                            ) {
+                    // Card 4: Gefahrenbereich
+                    item {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = AppCard),
+                            shape = RoundedCornerShape(20.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Icon(imageVector = Icons.Default.DeleteForever, contentDescription = null, tint = ErrorRed, modifier = Modifier.size(20.dp))
+                                    Text(
+                                        text = tr(language, "Gefahrenbereich", "Danger Zone"),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = ErrorRed,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text = if (backupFolderUri.isEmpty()) {
-                                        tr(language, "Kein Ordner ausgewählt", "No folder selected")
-                                    } else {
-                                        backupFolderUri
-                                    },
+                                    text = tr(language, "Hiermit werden alle Gewohnheiten unwiderruflich gelöscht.", "This permanently deletes all habits and tracking history."),
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = if (backupFolderUri.isEmpty()) ErrorRed else SuccessGreen,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis
+                                    color = TextSecondary,
+                                    modifier = Modifier.padding(bottom = 12.dp)
                                 )
-                            }
-
-                            Spacer(modifier = Modifier.height(12.dp))
-
-                            Button(
-                                onClick = { folderLauncher.launch(null) },
-                                colors = ButtonDefaults.buttonColors(containerColor = PrimaryViolet),
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Icon(Icons.Default.Folder, contentDescription = "Folder", modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(tr(language, "Ordner auswählen", "Select Folder"))
-                            }
-
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
                                 Button(
-                                    onClick = { viewModel.triggerManualBackup() },
-                                    enabled = backupFolderUri.isNotEmpty(),
-                                    colors = ButtonDefaults.buttonColors(containerColor = ProgressTrack),
-                                    modifier = Modifier.weight(1f),
+                                    onClick = { showWipeConfirm = true },
+                                    colors = ButtonDefaults.buttonColors(containerColor = ErrorRed),
+                                    modifier = Modifier.fillMaxWidth(),
                                     shape = RoundedCornerShape(12.dp)
                                 ) {
-                                    Icon(Icons.Default.Backup, contentDescription = "Backup", modifier = Modifier.size(18.dp))
+                                    Icon(Icons.Default.DeleteForever, contentDescription = "Wipe", modifier = Modifier.size(18.dp))
                                     Spacer(modifier = Modifier.width(6.dp))
-                                    Text(tr(language, "Sichern", "Backup"))
+                                    Text(tr(language, "Alles löschen", "Wipe All Data"))
                                 }
-
-                                Button(
-                                    onClick = { fileLauncher.launch(arrayOf("application/json", "*/*")) },
-                                    colors = ButtonDefaults.buttonColors(containerColor = ProgressTrack),
-                                    modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(12.dp)
-                                ) {
-                                    Icon(Icons.Default.Restore, contentDescription = "Restore", modifier = Modifier.size(18.dp))
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(tr(language, "Einspielen", "Restore"))
-                                }
-                            }
-
-                            if (syncStatus != null) {
-                                Spacer(modifier = Modifier.height(10.dp))
-                                Text(
-                                    text = syncStatus ?: "",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = SuccessGreen,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.clickable { viewModel.clearSyncStatus() }
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-                        HorizontalDivider(color = AppBorder, thickness = 1.dp)
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Danger Zone / Wipe All Data
-                        Column {
-                            Text(
-                                text = tr(language, "Gefahrenbereich", "Danger Zone"),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = ErrorRed,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = tr(language, "Hiermit werden alle Gewohnheiten unwiderruflich gelöscht.", "This permanently deletes all habits and tracking history."),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextSecondary,
-                                modifier = Modifier.padding(bottom = 10.dp)
-                            )
-                            Button(
-                                onClick = { showWipeConfirm = true },
-                                colors = ButtonDefaults.buttonColors(containerColor = ErrorRed),
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Icon(Icons.Default.DeleteForever, contentDescription = "Wipe", modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(tr(language, "Alles löschen", "Wipe All Data"))
                             }
                         }
                     }
                 }
             }
         }
-    }
-}
 
         // Floating Header Overlay with vertical gradient fade-out
         Box(
@@ -11909,11 +11920,11 @@ fun CreateHabitScreen(
     var selectedColor by remember(editingHabit?.id) { mutableStateOf(editingHabit?.color ?: "purple") }
     var type by remember(editingHabit?.id) { mutableStateOf(editingHabit?.type ?: "BINARY") } // "BINARY" or "NUMBER"
     var unit by remember(editingHabit?.id) { mutableStateOf(editingHabit?.unit ?: (if (language == "de") "Minuten" else if (language == "ka") "წუთები" else if (language == "zh") "分钟" else "Minutes")) }
-    var selectedChip by remember(editingHabit?.id, unit) {
+    var selectedChip by remember(editingHabit?.id) {
         val standardUnitsDe = listOf("Minuten", "Liter", "ml", "km", "Stunden", "Mal")
         val standardUnitsEn = listOf("Minutes", "Liters", "ml", "km", "Hours", "Times")
         val initialChip = when {
-            unit.isEmpty() -> if (language == "de") "Minuten" else if (language == "ka") "წუთები" else if (language == "zh") "分钟" else "Minutes"
+            unit.isEmpty() -> if (language == "de") "Anderes..." else if (language == "ka") "მორგებული..." else if (language == "zh") "自定义..." else "Custom..."
             language == "de" && unit in standardUnitsDe -> unit
             language != "de" && unit in standardUnitsEn -> unit
             unit.lowercase() in listOf("minuten", "minutes", "min") -> if (language == "de") "Minuten" else if (language == "ka") "წუთები" else if (language == "zh") "分钟" else "Minutes"
@@ -11962,6 +11973,24 @@ fun CreateHabitScreen(
     }
     var reminderToEditTime by remember(editingHabit?.id) { mutableStateOf<String?>(null) }
     var showAddCustomDialog by remember(editingHabit?.id) { mutableStateOf(false) }
+
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var hasNotificationPermission by remember {
+        mutableStateOf(
+            if (android.os.Build.VERSION.SDK_INT >= 33) {
+                androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            } else true
+        )
+    }
+    
+    val notificationPermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        hasNotificationPermission = isGranted
+        if (isGranted) {
+            showAddCustomDialog = true
+        }
+    }
     
     // Default start date is today or habit's startDate (cleared to midnight for new habits so they start today!)
     val initialDateMillis = remember(editingHabit?.id) {
@@ -12028,174 +12057,384 @@ fun CreateHabitScreen(
         ) {
             Spacer(modifier = Modifier.height(84.dp))
             
-            // Name field directly
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = if (language == "de") "Name der Gewohnheit" else if (language == "ka") "ჩვევის სახელი" else if (language == "zh") "习惯名称" else "Habit Name",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = TextPrimary,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(start = 4.dp)
-                )
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { 
-                        name = it
-                        if (it.isNotBlank()) {
-                            nameError = false
-                        }
-                    },
-                    placeholder = { Text(if (language == "de") "z.B. Meditieren, Laufen, Lesen..." else if (language == "ka") "მაგ., მედიტაცია, სირბილი, კითხვა..." else if (language == "zh") "例如：冥想、跑步、阅读..." else "e.g., Meditate, Running, Reading...") },
-                    isError = nameError,
-                    supportingText = {
-                        if (nameError) {
-                            Text(
-                                text = if (language == "de") "Bitte gib einen Namen ein" else if (language == "ka") "გთხოვთ შეიყვანოთ სახელი" else if (language == "zh") "请输入名称" else "Please enter a name",
-                                color = FailedRed,
-                                style = MaterialTheme.typography.labelSmall
-                            )
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .focusRequester(nameFocusRequester)
-                        .testTag("habit_name_input"),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = PrimaryViolet,
-                        unfocusedBorderColor = AppBorder,
-                        errorBorderColor = FailedRed,
-                        errorCursorColor = FailedRed,
-                        errorSupportingTextColor = FailedRed,
-                        focusedContainerColor = AppCard,
-                        unfocusedContainerColor = AppCard,
-                        errorContainerColor = FailedRed.copy(alpha = 0.08f)
-                    ),
-                    shape = RoundedCornerShape(16.dp),
-                    singleLine = true,
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = null,
-                            tint = if (name.isNotBlank()) PrimaryViolet else TextSecondary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                )
-            }
-
-            // Description field (optional)
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = if (language == "de") "Beschreibung (optional)" else if (language == "ka") "აღწერა (სურვილისამებრ)" else if (language == "zh") "描述说明（可选）" else "Description (optional)",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = TextPrimary,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(start = 4.dp)
-                )
-                OutlinedTextField(
-                    value = description,
-                    onValueChange = { description = it },
-                    placeholder = { Text(if (language == "de") "z.B. Notizen, Motivation oder Regeln..." else if (language == "ka") "მაგ. შენიშვნები, მოტივაცია თუ წესები..." else if (language == "zh") "例如：备忘、动力寄语或规则..." else "e.g. Notes, motivation or rules...") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("habit_description_input"),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = PrimaryViolet,
-                        unfocusedBorderColor = AppBorder,
-                        focusedContainerColor = AppCard,
-                        unfocusedContainerColor = AppCard
-                    ),
-                    shape = RoundedCornerShape(16.dp),
-                    minLines = 1,
-                    maxLines = 4,
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.Description,
-                            contentDescription = null,
-                            tint = if (description.isNotBlank()) PrimaryViolet else TextSecondary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                )
-            }
-
-                // Goal Segment (Aufbauen / Abgewöhnen)
+            // 1. CARD: Basis-Informationen
+            Card(
+                colors = CardDefaults.cardColors(containerColor = AppCard),
+                shape = RoundedCornerShape(20.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
+            ) {
                 Column(
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
+                        Icon(imageVector = Icons.Default.Edit, contentDescription = null, tint = PrimaryViolet, modifier = Modifier.size(20.dp))
                         Text(
-                            text = if (language == "de") "Ziel" else if (language == "ka") "მიზანი" else if (language == "zh") "目标" else "Goal",
-                            style = MaterialTheme.typography.titleLarge,
+                            text = if (language == "de") "Basis-Informationen" else if (language == "ka") "ძირითადი ინფორმაცია" else if (language == "zh") "基本信息" else "Basic Information",
+                            style = MaterialTheme.typography.titleMedium,
                             color = TextPrimary,
                             fontWeight = FontWeight.Bold
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
+                    }
+
+                    // Name field
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            text = if (language == "de") "Name der Gewohnheit" else if (language == "ka") "ჩვევის სახელი" else if (language == "zh") "习惯名称" else "Habit Name",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = TextSecondary,
+                            fontWeight = FontWeight.Medium
+                        )
+                        AppTextField(
+                            value = name,
+                            onValueChange = { 
+                                name = it
+                                if (it.isNotBlank()) nameError = false
+                            },
+                            placeholderText = if (language == "de") "z.B. Meditieren, Laufen, Lesen..." else if (language == "ka") "მაგ., მედიტაცია, სირბილი, კითხვა..." else if (language == "zh") "例如：冥想、跑步、阅读..." else "e.g., Meditate, Running, Reading...",
+                            isError = nameError,
+                            supportingText = {
+                                if (nameError) {
+                                    Text(
+                                        text = if (language == "de") "Bitte gib einen Namen ein" else if (language == "ka") "გთხოვთ შეიყვანოთ სახელი" else if (language == "zh") "请输入名称" else "Please enter a name",
+                                        color = FailedRed,
+                                        style = MaterialTheme.typography.labelSmall
+                                    )
+                                }
+                            },
+                            modifier = Modifier.focusRequester(nameFocusRequester),
+                            testTag = "habit_name_input",
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = null,
+                                    tint = if (name.isNotBlank()) PrimaryViolet else TextSecondary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        )
+                    }
+
+                    // Description field (optional)
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            text = if (language == "de") "Beschreibung (optional)" else if (language == "ka") "აღწერა (სურვილისამებრ)" else if (language == "zh") "描述说明（可选）" else "Description (optional)",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = TextSecondary,
+                            fontWeight = FontWeight.Medium
+                        )
+                        AppTextField(
+                            value = description,
+                            onValueChange = { description = it },
+                            placeholderText = if (language == "de") "z.B. Notizen, Motivation oder Regeln..." else if (language == "ka") "მაგ. შენიშვნები, მოტივაცია თუ წესები..." else if (language == "zh") "例如：备忘、动力寄语或规则..." else "e.g. Notes, motivation or rules...",
+                            testTag = "habit_description_input",
+                            singleLine = false,
+                            minLines = 1,
+                            maxLines = 4,
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Description,
+                                    contentDescription = null,
+                                    tint = if (description.isNotBlank()) PrimaryViolet else TextSecondary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        )
+                    }
+                }
+            }
+
+            // 2. CARD: Ziel & Messung
+            Card(
+                colors = CardDefaults.cardColors(containerColor = AppCard),
+                shape = RoundedCornerShape(20.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.Flag, contentDescription = null, tint = PrimaryViolet, modifier = Modifier.size(20.dp))
+                        Text(
+                            text = if (language == "de") "Ziel & Messung" else if (language == "ka") "მიზანი და გაზომვა" else if (language == "zh") "目标与计量" else "Goal & Measurement",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = TextPrimary,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.weight(1f))
                         InfoIconButton(
-                            title = if (language == "de") "Gewohnheitstyp" else if (language == "ka") "ჩვევის ტიპი" else if (language == "zh") "习惯类型" else "Habit Type",
+                            title = if (language == "de") "Gewohnheitstyp & Messung" else if (language == "ka") "ჩვევის ტიპი" else if (language == "zh") "习惯类型与计量" else "Habit Type & Measurement",
                             explanation = if (language == "de") {
-                                "Aufbauende Gewohnheit: Perfekt für neue Routinen (z.B. Sport, Meditation). Jeder Log erhöht deinen Fortschritt bis zum Tagesziel.\n\nAbgewöhnende Gewohnheit: Perfekt um schlechte Angewohnheiten loszuwerden (z.B. Rauchen). Standardmäßig als 'Erfolgreich' markiert, solange du dein Limit nicht überschreitest."
+                                "Aufbauend: Für neue Routinen (z.B. Sport).\nAbgewöhnend: Für schlechte Angewohnheiten (z.B. Rauchen).\n\nJa/Nein: Einfaches Abhaken.\nZahlenbasiert: Menge tracken (z.B. 2 Liter trinken)."
                             } else {
-                                "Building Habit: Ideal for establishing new routines (e.g., exercise, meditation). Each log increases progress toward your daily goal.\n\nQuitting Habit: Ideal for breaking bad habits (e.g., smoking). Marked as 'Successful' by default as long as you stay within limits."
+                                "Building: For new routines.\nQuitting: For bad habits.\n\nYes/No: Simple checkmark.\nNumeric: Track quantity."
                             },
                             onClick = { t, e -> activeExplanation = t to e }
                         )
                     }
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Button(
-                            onClick = { isNegative = false },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (!isNegative) PrimaryViolet else ProgressTrack,
-                                contentColor = if (!isNegative) Color.White else TextPrimary
+                    // Goal Segment
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            text = if (language == "de") "Gewohnheits-Ziel" else if (language == "ka") "მიზანი" else if (language == "zh") "目标" else "Goal",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = TextSecondary,
+                            fontWeight = FontWeight.Medium
+                        )
+                        AppSegmentedButtonWithIcons(
+                            options = listOf(
+                                (if (language == "de") "Aufbauen" else if (language == "ka") "აშენება" else if (language == "zh") "养成" else "Build") to Icons.Default.ArrowUpward,
+                                (if (language == "de") "Abgewöhnen" else if (language == "ka") "თავი დაანებე" else if (language == "zh") "戒除" else "Quit") to Icons.Default.ArrowDownward
                             ),
-                            modifier = Modifier.weight(1f).height(46.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            contentPadding = PaddingValues(0.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.ArrowUpward, contentDescription = "Build Up", modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(if (language == "de") "Aufbauen" else if (language == "ka") "აშენება" else if (language == "zh") "养成" else "Build", style = MaterialTheme.typography.titleSmall)
-                            }
-                        }
+                            selectedIndex = if (isNegative) 1 else 0,
+                            onOptionSelected = { index -> isNegative = (index == 1) },
+                            testTagPrefix = "goal_segment"
+                        )
+                    }
 
-                        Button(
-                            onClick = { isNegative = true },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (isNegative) PrimaryViolet else ProgressTrack,
-                                contentColor = if (isNegative) Color.White else TextPrimary
+                    HorizontalDivider(color = AppBorder, thickness = 1.dp)
+
+                    // Measurement Type
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            text = if (language == "de") "Art der Messung" else if (language == "ka") "გაზომვის ტიპი" else if (language == "zh") "计量方式" else "Measurement Type",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = TextSecondary,
+                            fontWeight = FontWeight.Medium
+                        )
+                        AppSegmentedButton(
+                            options = listOf(
+                                if (language == "de") "Ja / Nein" else if (language == "ka") "დიახ / არა" else if (language == "zh") "是 / 否" else "Yes / No",
+                                if (language == "de") "Zahlenbasiert" else if (language == "ka") "რიცხვითი" else if (language == "zh") "数值计量" else "Numeric"
                             ),
-                            modifier = Modifier.weight(1f).height(46.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            contentPadding = PaddingValues(0.dp)
+                            selectedIndex = if (type == "NUMBER") 1 else 0,
+                            onOptionSelected = { index -> type = if (index == 1) "NUMBER" else "BINARY" },
+                            testTagPrefix = "measurement_type"
+                        )
+                    }
+
+                    if (type == "NUMBER") {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.ArrowDownward, contentDescription = "Quit Down", modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(if (language == "de") "Abgewöhnen" else if (language == "ka") "თავი დაანებე" else if (language == "zh") "戒除" else "Quit", style = MaterialTheme.typography.titleSmall)
+                            Text(
+                                text = if (language == "de") "Einheit auswählen" else if (language == "ka") "აირჩიეთ ერთეული" else if (language == "zh") "选择单位" else "Select Unit",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = TextSecondary,
+                                fontWeight = FontWeight.SemiBold
+                            )
+
+                            val standardUnits = if (language == "de") {
+                                listOf("Minuten", "Liter", "ml", "km", "Stunden", "Mal", "Anderes...")
+                            } else {
+                                listOf("Minutes", "Liters", "ml", "km", "Hours", "Times", "Custom...")
+                            }
+
+                            val row1 = standardUnits.take(4)
+                            val row2 = standardUnits.drop(4)
+
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    row1.forEach { standardUnit ->
+                                        val isSelected = selectedChip == standardUnit
+                                        Button(
+                                            onClick = { 
+                                                selectedChip = standardUnit
+                                                if (standardUnit != "Anderes..." && standardUnit != "Custom...") {
+                                                    unit = standardUnit
+                                                } else {
+                                                    unit = ""
+                                                }
+                                            },
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = if (isSelected) PrimaryViolet else ProgressTrack,
+                                                contentColor = if (isSelected) Color.White else TextPrimary
+                                            ),
+                                            border = BorderStroke(1.dp, if (isSelected) Color.Transparent else AppBorder),
+                                            modifier = Modifier.weight(1f).height(44.dp),
+                                            shape = RoundedCornerShape(12.dp),
+                                            contentPadding = PaddingValues(0.dp)
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.Center
+                                            ) {
+                                                if (standardUnit.lowercase() in listOf("minuten", "minutes")) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Timer,
+                                                        contentDescription = null,
+                                                        tint = if (isSelected) Color.White else TextSecondary,
+                                                        modifier = Modifier.size(16.dp)
+                                                    )
+                                                    Spacer(modifier = Modifier.width(4.dp))
+                                                }
+                                                Text(
+                                                    text = standardUnit,
+                                                    style = MaterialTheme.typography.labelMedium,
+                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    row2.forEach { standardUnit ->
+                                        val isSelected = selectedChip == standardUnit
+                                        Button(
+                                            onClick = { 
+                                                selectedChip = standardUnit
+                                                if (standardUnit != "Anderes..." && standardUnit != "Custom...") {
+                                                    unit = standardUnit
+                                                } else {
+                                                    unit = ""
+                                                }
+                                            },
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = if (isSelected) PrimaryViolet else ProgressTrack,
+                                                contentColor = if (isSelected) Color.White else TextPrimary
+                                            ),
+                                            border = BorderStroke(1.dp, if (isSelected) Color.Transparent else AppBorder),
+                                            modifier = Modifier.weight(1f).height(44.dp),
+                                            shape = RoundedCornerShape(12.dp),
+                                            contentPadding = PaddingValues(0.dp)
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.Center
+                                            ) {
+                                                Text(
+                                                    text = standardUnit,
+                                                    style = MaterialTheme.typography.labelMedium,
+                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                if (selectedChip == "Anderes..." || selectedChip == "Custom...") {
+                                    Column(
+                                        modifier = Modifier.weight(1f),
+                                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Text(
+                                            text = tr(language, "Eigene Einheit", "Custom Unit"),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = TextSecondary,
+                                            fontWeight = FontWeight.Medium,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        AppTextField(
+                                            value = unit,
+                                            onValueChange = { unit = it },
+                                            placeholderText = tr(language, "z. B. Tassen", "e.g. cups"),
+                                            singleLine = true
+                                        )
+                                    }
+                                }
+
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(
+                                        text = tr(language, "Tagesziel", "Daily Target"),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = TextSecondary,
+                                        fontWeight = FontWeight.Medium,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    AppTextField(
+                                        value = targetValueStr,
+                                        onValueChange = { targetValueStr = it },
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                        singleLine = true
+                                    )
+                                }
+
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(
+                                        text = tr(language, "Erhöhung / Klick", "Click Increment"),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = TextSecondary,
+                                        fontWeight = FontWeight.Medium,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    AppTextField(
+                                        value = clickIncrementStr,
+                                        onValueChange = { clickIncrementStr = it },
+                                        placeholderText = "1",
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                        singleLine = true
+                                    )
+                                }
                             }
                         }
                     }
                 }
+            }
 
-                // Customize Visuals (Icons & Colors)
+            // 3. CARD: Aussehen anpassen
+            Card(
+                colors = CardDefaults.cardColors(containerColor = AppCard),
+                shape = RoundedCornerShape(20.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
+            ) {
                 Column(
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text(
-                        text = if (language == "de") "Aussehen anpassen" else if (language == "ka") "Visuals-ის მორგება" else if (language == "zh") "定制视觉外观" else "Customize Visuals",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = TextPrimary,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.Palette, contentDescription = null, tint = HabitOrange, modifier = Modifier.size(20.dp))
+                        Text(
+                            text = if (language == "de") "Aussehen anpassen" else if (language == "ka") "Visuals-ის მორგება" else if (language == "zh") "定制视觉外观" else "Customize Visuals",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = TextPrimary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
 
                     // Icon selector
                     Text(
@@ -12221,12 +12460,13 @@ fun CreateHabitScreen(
                                     Text(
                                         text = if (language == "de") cat.nameDe else cat.nameEn,
                                         style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = if (isCatSelected) FontWeight.Bold else FontWeight.Normal
+                                        fontWeight = if (isCatSelected) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (isCatSelected) Color.White else TextSecondary
                                     )
                                 },
                                 colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = activeColor.copy(alpha = 0.25f),
-                                    selectedLabelColor = TextPrimary,
+                                    selectedContainerColor = activeColor,
+                                    selectedLabelColor = Color.White,
                                     containerColor = ProgressTrack,
                                     labelColor = TextSecondary
                                 ),
@@ -12236,9 +12476,9 @@ fun CreateHabitScreen(
                                     selectedBorderColor = activeColor,
                                     borderColor = AppBorder,
                                     borderWidth = 1.dp,
-                                    selectedBorderWidth = 1.5.dp
+                                    selectedBorderWidth = 1.dp
                                 ),
-                                shape = RoundedCornerShape(20.dp)
+                                shape = RoundedCornerShape(12.dp)
                             )
                         }
                     }
@@ -12276,7 +12516,7 @@ fun CreateHabitScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(210.dp)
-                            .background(AppCard, RoundedCornerShape(16.dp))
+                            .background(ProgressTrack, RoundedCornerShape(16.dp))
                             .border(1.dp, AppBorder, RoundedCornerShape(16.dp))
                             .padding(8.dp)
                     ) {
@@ -12296,7 +12536,7 @@ fun CreateHabitScreen(
                                     modifier = Modifier
                                         .size(48.dp)
                                         .background(
-                                            if (isSelected) activeColor.copy(alpha = 0.2f) else ProgressTrack,
+                                            if (isSelected) activeColor.copy(alpha = 0.2f) else AppCard,
                                             RoundedCornerShape(12.dp)
                                         )
                                         .border(
@@ -12350,7 +12590,7 @@ fun CreateHabitScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                    HorizontalDivider(color = AppBorder, thickness = 1.dp)
 
                     // Color selector dots
                     Text(
@@ -12366,286 +12606,54 @@ fun CreateHabitScreen(
                         language = language
                     )
                 }
+            }
 
-                // Type Toggle (Ja/Nein vs Zahlenbasiert)
+            // 4. CARD: Häufigkeit & Startdatum
+            Card(
+                colors = CardDefaults.cardColors(containerColor = AppCard),
+                shape = RoundedCornerShape(20.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
+            ) {
                 Column(
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
+                        Icon(imageVector = Icons.Default.CalendarToday, contentDescription = null, tint = PrimaryViolet, modifier = Modifier.size(20.dp))
                         Text(
-                            text = if (language == "de") "Art der Messung" else if (language == "ka") "გაზომვის ტიპი" else if (language == "zh") "计量方式" else "Measurement Type",
-                            style = MaterialTheme.typography.titleLarge,
+                            text = if (language == "de") "Häufigkeit & Startdatum" else if (language == "ka") "სიხშირე და თარიღი" else if (language == "zh") "频率与开始日期" else "Frequency & Start Date",
+                            style = MaterialTheme.typography.titleMedium,
                             color = TextPrimary,
                             fontWeight = FontWeight.Bold
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        InfoIconButton(
-                            title = if (language == "de") "Art der Messung" else if (language == "ka") "გაზომვის ტიპი" else if (language == "zh") "计量方式" else "Measurement Type",
-                            explanation = if (language == "de") {
-                                "Ja / Nein: Ideal für einfache Gewohnheiten (z.B. Vitamine einnehmen, Bett machen).\n\nZahlenbasiert: Perfekt für Gewohnheiten, bei denen du eine Menge oder Dauer tracken willst (z.B. 2 Liter trinken, 30 Minuten lesen)."
-                            } else if (language == "ka") {
-                        "დიახ / არა: იდეალურია მარტივი ჩვევებისთვის, რომლებსაც ან აკეთებთ ან არ აკეთებთ (მაგ., ვიტამინების მიღება, საწოლის გასწორება).\n\nციფრული: იდეალურია ჩვევებისთვის, სადაც გსურთ თვალყური ადევნოთ რაოდენობას ან ხანგრძლივობას (მაგ., დალიეთ 2 ლიტრი, წაიკითხეთ 30 წუთი)."
-                    } else {
-                        "Yes / No: Perfect for simple habits that you either do or don't (e.g., take vitamins, make bed).\n\nNumeric: Perfect for habits where you want to track a quantity or duration (e.g., drink 2 liters, read for 30 minutes)."
-                    },
-                            onClick = { t, e -> activeExplanation = t to e }
-                        )
                     }
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Button(
-                            onClick = { type = "BINARY" },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (type == "BINARY") PrimaryViolet else ProgressTrack,
-                                contentColor = if (type == "BINARY") Color.White else TextPrimary
-                            ),
-                            modifier = Modifier.weight(1f).height(46.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            contentPadding = PaddingValues(0.dp)
-                        ) {
-                            Text(if (language == "de") "Ja / Nein" else if (language == "ka") "დიახ / არა" else if (language == "zh") "是 / 否" else "Yes / No", style = MaterialTheme.typography.titleSmall)
-                        }
-
-                        Button(
-                            onClick = { type = "NUMBER" },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (type == "NUMBER") PrimaryViolet else ProgressTrack,
-                                contentColor = if (type == "NUMBER") Color.White else TextPrimary
-                            ),
-                            modifier = Modifier.weight(1f).height(46.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            contentPadding = PaddingValues(0.dp)
-                        ) {
-                            Text(if (language == "de") "Zahlenbasiert" else if (language == "ka") "რიცხვითი" else if (language == "zh") "数值计量" else "Numeric", style = MaterialTheme.typography.titleSmall)
-                        }
-                    }
-                }
-
-                if (type == "NUMBER") {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Text(
-                            text = if (language == "de") "Einheit auswählen" else if (language == "ka") "აირჩიეთ ერთეული" else if (language == "zh") "选择单位" else "Select Unit",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = TextSecondary,
-                            fontWeight = FontWeight.SemiBold
-                        )
-
-                        val standardUnits = if (language == "de") {
-                            listOf("Minuten", "Liter", "ml", "km", "Stunden", "Mal", "Anderes...")
-                        } else {
-                            listOf("Minutes", "Liters", "ml", "km", "Hours", "Times", "Custom...")
-                        }
-
-                        val row1 = standardUnits.take(4)
-                        val row2 = standardUnits.drop(4)
-
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                row1.forEach { standardUnit ->
-                                    val isSelected = selectedChip == standardUnit
-                                    Button(
-                                        onClick = { 
-                                            selectedChip = standardUnit
-                                            if (standardUnit != "Anderes..." && standardUnit != "Custom...") {
-                                                unit = standardUnit
-                                            } else {
-                                                unit = ""
-                                            }
-                                        },
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = if (isSelected) PrimaryViolet else ProgressTrack,
-                                            contentColor = if (isSelected) Color.White else TextPrimary
-                                        ),
-                                        modifier = Modifier.weight(1f).height(44.dp),
-                                        shape = RoundedCornerShape(12.dp),
-                                        contentPadding = PaddingValues(0.dp)
-                                    ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.Center
-                                        ) {
-                                            if (standardUnit.lowercase() in listOf("minuten", "minutes")) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Timer,
-                                                    contentDescription = null,
-                                                    tint = if (isSelected) Color.White else TextSecondary,
-                                                    modifier = Modifier.size(16.dp)
-                                                )
-                                                Spacer(modifier = Modifier.width(4.dp))
-                                            }
-                                            Text(
-                                                text = standardUnit,
-                                                style = MaterialTheme.typography.titleSmall.copy(fontSize = 12.sp),
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                        }
-                                    }
-                                }
+                    // Frequency Selector
+                    val freqOptions = listOf(
+                        "DAILY" to (if (language == "de") "Täglich" else if (language == "ka") "ყოველდღიური" else if (language == "zh") "每天" else "Daily"),
+                        "TIMES_WEEKLY" to (if (language == "de") "X mal/Wo" else if (language == "ka") "X ჯერ / კვირა" else if (language == "zh") "每周 X 次" else "X times/Wk"),
+                        "SPECIFIC" to (if (language == "de") "Tage" else if (language == "ka") "დღეები" else if (language == "zh") "天" else "Days")
+                    )
+                    val selectedFreqIndex = freqOptions.indexOfFirst { it.first == frequency }.coerceAtLeast(0)
+                    AppSegmentedButton(
+                        options = freqOptions.map { it.second },
+                        selectedIndex = selectedFreqIndex,
+                        onOptionSelected = { index ->
+                            val key = freqOptions[index].first
+                            frequency = key
+                            if (key == "SPECIFIC" && specificDaysSet.isEmpty()) {
+                                specificDaysSet = setOf(1, 2, 3, 4, 5, 6, 7)
                             }
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                row2.forEach { standardUnit ->
-                                    val isSelected = selectedChip == standardUnit
-                                    Button(
-                                        onClick = { 
-                                            selectedChip = standardUnit
-                                            if (standardUnit != "Anderes..." && standardUnit != "Custom...") {
-                                                unit = standardUnit
-                                            } else {
-                                                unit = ""
-                                            }
-                                        },
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = if (isSelected) PrimaryViolet else ProgressTrack,
-                                            contentColor = if (isSelected) Color.White else TextPrimary
-                                        ),
-                                        modifier = Modifier.weight(1f).height(44.dp),
-                                        shape = RoundedCornerShape(12.dp),
-                                        contentPadding = PaddingValues(0.dp)
-                                    ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.Center
-                                        ) {
-                                            Text(
-                                                text = standardUnit,
-                                                style = MaterialTheme.typography.titleSmall.copy(fontSize = 12.sp),
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            if (selectedChip == "Anderes..." || selectedChip == "Custom...") {
-                                OutlinedTextField(
-                                    value = unit,
-                                    onValueChange = { unit = it },
-                                    label = { Text(tr(language, "Eigene Einheit", "Custom Unit")) },
-                                    placeholder = { Text(tr(language, "z. B. Tassen", "e.g. cups")) },
-                                    modifier = Modifier.weight(1f),
-                                    singleLine = true,
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        focusedBorderColor = PrimaryViolet,
-                                        unfocusedBorderColor = AppBorder,
-                                        focusedContainerColor = AppCard,
-                                        unfocusedContainerColor = AppCard,
-                                        focusedLabelColor = PrimaryViolet,
-                                        focusedTextColor = TextPrimary,
-                                        unfocusedTextColor = TextPrimary
-                                    )
-                                )
-                            }
-
-                            OutlinedTextField(
-                                value = targetValueStr,
-                                onValueChange = { targetValueStr = it },
-                                label = { Text(tr(language, "Tagesziel", "Daily Target")) },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                modifier = Modifier.weight(1f),
-                                singleLine = true,
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = PrimaryViolet,
-                                    unfocusedBorderColor = AppBorder,
-                                    focusedContainerColor = AppCard,
-                                    unfocusedContainerColor = AppCard,
-                                    focusedLabelColor = PrimaryViolet,
-                                    focusedTextColor = TextPrimary,
-                                    unfocusedTextColor = TextPrimary
-                                )
-                            )
-
-                            OutlinedTextField(
-                                value = clickIncrementStr,
-                                onValueChange = { clickIncrementStr = it },
-                                label = { Text(tr(language, "Erhöhung / Klick", "Click Increment")) },
-                                placeholder = { Text("1") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                modifier = Modifier.weight(1f),
-                                singleLine = true,
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = PrimaryViolet,
-                                    unfocusedBorderColor = AppBorder,
-                                    focusedContainerColor = AppCard,
-                                    unfocusedContainerColor = AppCard,
-                                    focusedLabelColor = PrimaryViolet,
-                                    focusedTextColor = TextPrimary,
-                                    unfocusedTextColor = TextPrimary
-                                )
-                            )
-                        }
-                    }
-                }
-
-                // Frequency Selector
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = if (language == "de") "Häufigkeit" else if (language == "ka") "სიხშირე" else if (language == "zh") "频率" else "Frequency",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = TextPrimary,
-                        fontWeight = FontWeight.Bold
+                        },
+                        testTagPrefix = "frequency_selection"
                     )
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        val freqOptions = listOf(
-                            "DAILY" to (if (language == "de") "Täglich" else if (language == "ka") "ყოველდღიური" else if (language == "zh") "每天" else "Daily"),
-                            "TIMES_WEEKLY" to (if (language == "de") "X mal/Wo" else if (language == "ka") "X ჯერ / კვირა" else if (language == "zh") "每周 X 次" else "X times/Wk"),
-                            "SPECIFIC" to (if (language == "de") "Tage" else if (language == "ka") "დღეები" else if (language == "zh") "天" else "Days")
-                        )
-                        freqOptions.forEach { (key, label) ->
-                            val isSelected = frequency == key
-                            Button(
-                                onClick = { 
-                                    frequency = key 
-                                    if (key == "SPECIFIC" && specificDaysSet.isEmpty()) {
-                                        specificDaysSet = setOf(1, 2, 3, 4, 5, 6, 7)
-                                    }
-                                },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (isSelected) PrimaryViolet else ProgressTrack,
-                                    contentColor = if (isSelected) Color.White else TextPrimary
-                                ),
-                                modifier = Modifier.weight(1f).height(44.dp),
-                                shape = RoundedCornerShape(12.dp),
-                                contentPadding = PaddingValues(0.dp)
-                            ) {
-                                Text(label, style = MaterialTheme.typography.titleSmall, maxLines = 1)
-                            }
-                        }
-                    }
-
                     if (frequency == "TIMES_WEEKLY") {
-                        Spacer(modifier = Modifier.height(4.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
                             horizontalArrangement = Arrangement.SpaceBetween
@@ -12659,9 +12667,7 @@ fun CreateHabitScreen(
                                             color = if (isSelected) SuccessGreen else ProgressTrack,
                                             shape = CircleShape
                                         )
-                                        .clickable {
-                                            timesWeekly = num
-                                        },
+                                        .clickable { timesWeekly = num },
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
@@ -12673,46 +12679,14 @@ fun CreateHabitScreen(
                                 }
                             }
                         }
-                        if (LocalInfoCardsEnabled.current) {
-                            Spacer(modifier = Modifier.height(10.dp))
-                            Surface(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp),
-                                color = PrimaryViolet.copy(alpha = 0.12f),
-                                border = BorderStroke(1.dp, PrimaryViolet.copy(alpha = 0.3f))
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(12.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Info,
-                                        contentDescription = "Info",
-                                        tint = PrimaryViolet,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(10.dp))
-                                    Text(
-                                        text = if (language == "de") "Flexibler 7-Tage-Zeitraum: Das Wochenziel zählt deine Abschlüsse der letzten 7 Tage (rollierend) – nicht starr von Montag bis Sonntag." else if (language == "ka") "მოქნილი 7 დღიანი ფანჯარა: თქვენი ყოველკვირეული სამიზნე ითვლის დასრულებებს ბოლო 7 დღის განმავლობაში (მოძრავი) - არა მკაცრად ორშაბათიდან კვირამდე." else if (language == "zh") "灵活 7 天滚动窗口：每周目标根据过去 7 天内的完成情况动态计算，而非固定在周一至周日。" else "Flexible 7-day window: Your weekly target counts completions over the last 7 days (rolling) — not strictly Monday to Sunday.",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = TextPrimary
-                                    )
-                                }
-                            }
-                        }
                     }
 
                     if (frequency == "SPECIFIC") {
-                        Spacer(modifier = Modifier.height(4.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            val weekdays = if (language == "de") {
-                                listOf("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So")
-                            } else {
-                                listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
-                            }
+                            val weekdays = if (language == "de") listOf("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So") else listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
                             weekdays.forEachIndexed { index, dayName ->
                                 val dayNum = index + 1
                                 val isSelected = specificDaysSet.contains(dayNum)
@@ -12724,11 +12698,7 @@ fun CreateHabitScreen(
                                             shape = CircleShape
                                         )
                                         .clickable {
-                                            specificDaysSet = if (isSelected) {
-                                                specificDaysSet - dayNum
-                                            } else {
-                                                specificDaysSet + dayNum
-                                            }
+                                            specificDaysSet = if (isSelected) specificDaysSet - dayNum else specificDaysSet + dayNum
                                         },
                                     contentAlignment = Alignment.Center
                                 ) {
@@ -12742,391 +12712,364 @@ fun CreateHabitScreen(
                             }
                         }
                     }
-                }
 
-                // Daily Reminder Section
-                val reminderEnabled = remindersList.isNotEmpty()
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.Notifications,
-                                    contentDescription = "Notification",
-                                    tint = PrimaryViolet,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = if (language == "de") "Erinnerung" else if (language == "ka") "შეხსენება" else if (language == "zh") "提醒" else "Reminder",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                InfoIconButton(
-                                    title = if (language == "de") "Erinnerung" else if (language == "ka") "შეხსენება" else if (language == "zh") "提醒" else "Reminder",
-                                    explanation = if (language == "de") {
-                                        "Richte dir Benachrichtigungen ein, um zur gewünschten Uhrzeit an deine Gewohnheit erinnert zu werden."
-                                    } else {
-                                        "Set up notifications so you get reminded of your habit at your desired time."
-                                    },
-                                    onClick = { t, e -> activeExplanation = t to e },
-                                    modifier = Modifier.size(32.dp)
-                                )
-                            }
-                        }
+                    HorizontalDivider(color = AppBorder, thickness = 1.dp)
 
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            if (remindersList.isNotEmpty()) {
-                                remindersList.forEach { reminderTime ->
-                                    Card(
-                                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
-                                        shape = RoundedCornerShape(10.dp),
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable {
-                                                reminderToEditTime = reminderTime
-                                                showAddCustomDialog = true
-                                            }
-                                    ) {
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Notifications,
-                                                    contentDescription = "Time Icon",
-                                                    tint = PrimaryViolet,
-                                                    modifier = Modifier.size(20.dp)
-                                                )
-                                                Spacer(modifier = Modifier.width(12.dp))
-                                                Text(
-                                                    text = reminderTime,
-                                                    style = MaterialTheme.typography.titleMedium,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = MaterialTheme.colorScheme.onSurface
-                                                )
-                                            }
-                                            
-                                            IconButton(
-                                                onClick = {
-                                                    remindersList = remindersList.filter { it != reminderTime }
-                                                },
-                                                modifier = Modifier.size(36.dp)
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Delete,
-                                                    contentDescription = "Delete Reminder",
-                                                    tint = FailedRed,
-                                                    modifier = Modifier.size(20.dp)
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            // Add Button
-                            OutlinedButton(
-                                onClick = {
-                                    reminderToEditTime = null
-                                    showAddCustomDialog = true
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(44.dp),
-                                shape = RoundedCornerShape(10.dp),
-                                border = BorderStroke(1.dp, PrimaryViolet.copy(alpha = 0.5f)),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = PrimaryViolet)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Add,
-                                    contentDescription = "Add Reminder Icon",
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = if (language == "de") "Erinnerung hinzufügen" else if (language == "ka") "დაამატეთ შეხსენება" else if (language == "zh") "添加提醒" else "Add Reminder",
-                                    fontWeight = FontWeight.Bold,
-                                    style = MaterialTheme.typography.titleSmall
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // Milestone Rewards Section
-                var showAddRewardDialog by remember { mutableStateOf(false) }
-
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.Star,
-                                    contentDescription = "Milestone Rewards",
-                                    tint = PrimaryViolet,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = if (language == "de") "Meilenstein-Belohnungen" else if (language == "ka") "Milestone ჯილდოები" else if (language == "zh") "里程碑奖励" else "Milestone Rewards",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                InfoIconButton(
-                                    title = if (language == "de") "Meilenstein-Belohnungen" else if (language == "ka") "Milestone ჯილდოები" else if (language == "zh") "里程碑奖励" else "Milestone Rewards",
-                                    explanation = if (language == "de") {
-                                        "Setze dir persönliche Belohnungen für das Erreichen von Meilensteinen (z. B. 30 Tage Serie oder eine bestimmte Trophäe). Sobald du das Ziel erreichst, wird die Belohnung freigeschaltet!"
-                                    } else if (language == "ka") {
-                        "დააწესეთ პირადი ჯილდოები ეტაპების მიღწევისთვის (მაგ. 30-დღიანი სერია ან კონკრეტული თასი). მას შემდეგ რაც მიაღწევთ მიზანს, ჯილდო იხსნება!"
-                    } else {
-                        "Set personal rewards for reaching milestones (e.g. 30-day streak or a specific trophy). Once you reach the target, the reward unlocks!"
-                    },
-                                    onClick = { t, e -> activeExplanation = t to e },
-                                    modifier = Modifier.size(32.dp)
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            if (milestoneRewards.isNotEmpty()) {
-                                milestoneRewards.forEachIndexed { index, reward ->
-                                    Card(
-                                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
-                                        shape = RoundedCornerShape(10.dp),
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Column(modifier = Modifier.weight(1f)) {
-                                                Text(
-                                                    text = reward.rewardText,
-                                                    style = MaterialTheme.typography.titleMedium,
-                                                    color = MaterialTheme.colorScheme.onSurface,
-                                                    fontWeight = FontWeight.Bold
-                                                )
-                                                val condText = when (reward.conditionType) {
-                                                    "STREAK" -> if (language == "de") "${reward.conditionValue} Tage Serie" else if (language == "ka") "${reward.conditionValue} დღის სტრიქონი" else if (language == "zh") "${reward.conditionValue} 天连续" else "${reward.conditionValue} Day Streak"
-                                                    "COMPLETIONS" -> if (language == "de") "${reward.conditionValue} Erledigungen" else if (language == "ka") "${reward.conditionValue} დასრულებები" else if (language == "zh") "${reward.conditionValue} 次完成" else "${reward.conditionValue} Completions"
-                                                    "TROPHY_COUPLED" -> {
-                                                        val tr = STANDARD_TROPHIES.find { it.id == reward.trophyId }
-                                                        if (tr != null) {
-                                                            if (language == "de") "Trophäe: ${tr.titleDe}" else if (language == "ka") "ტროფი: ${tr.titleEn}" else if (language == "zh") "奖杯：${tr.titleEn}" else "Trophy: ${tr.titleEn}"
-                                                        } else {
-                                                            reward.trophyId ?: ""
-                                                        }
-                                                    }
-                                                    else -> ""
-                                                }
-                                                if (condText.isNotEmpty()) {
-                                                    Text(
-                                                        text = condText,
-                                                        style = MaterialTheme.typography.bodySmall,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                    )
-                                                }
-                                            }
-                                            IconButton(
-                                                onClick = {
-                                                    milestoneRewards = milestoneRewards.filterIndexed { i, _ -> i != index }
-                                                },
-                                                modifier = Modifier.size(36.dp)
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Delete,
-                                                    contentDescription = "Delete Reward",
-                                                    tint = FailedRed,
-                                                    modifier = Modifier.size(20.dp)
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            OutlinedButton(
-                                onClick = { showAddRewardDialog = true },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(44.dp),
-                                shape = RoundedCornerShape(10.dp),
-                                border = BorderStroke(1.dp, PrimaryViolet.copy(alpha = 0.5f)),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = PrimaryViolet)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Add,
-                                    contentDescription = "Add Reward Icon",
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = if (language == "de") "Belohnung hinzufügen" else if (language == "ka") "დაამატე ჯილდო" else if (language == "zh") "添加奖励" else "Add Reward",
-                                    fontWeight = FontWeight.Bold,
-                                    style = MaterialTheme.typography.titleSmall
-                                )
-                            }
-                        }
-                    }
-                }
-                
-                if (showAddRewardDialog) {
-                    AddMilestoneRewardDialog(
-                        language = language,
-                        onDismiss = {
-                            showAddRewardDialog = false
-                        },
-                        onAdd = { reward ->
-                            milestoneRewards = milestoneRewards + reward
-                            showAddRewardDialog = false
-                        }
+                    // Start Date Sub-row
+                    Text(
+                        text = if (language == "de") "Startdatum" else if (language == "ka") "დაწყების თარიღი" else if (language == "zh") "开始日期" else "Start Date",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = TextSecondary,
+                        fontWeight = FontWeight.Medium
                     )
-                }
 
-                // Start Date Trigger Card
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = ProgressTrack),
+                        border = BorderStroke(1.dp, AppBorder),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                showDatePicker = !showDatePicker
+                                if (showDatePicker) {
+                                    coroutineScope.launch {
+                                        kotlinx.coroutines.delay(150)
+                                        scrollState.animateScrollTo(scrollState.maxValue)
+                                    }
+                                }
+                            }
+                    ) {
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
                                     imageVector = Icons.Default.DateRange,
-                                    contentDescription = "Start Date Icon",
+                                    contentDescription = "Calendar",
                                     tint = PrimaryViolet,
                                     modifier = Modifier.size(20.dp)
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = if (language == "de") "Startdatum" else if (language == "ka") "დაწყების თარიღი" else if (language == "zh") "开始日期" else "Start Date",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                InfoIconButton(
-                                    title = if (language == "de") "Startdatum" else if (language == "ka") "დაწყების თარიღი" else if (language == "zh") "开始日期" else "Start Date",
-                                    explanation = if (language == "de") {
-                                        "Legt fest, ab welchem Tag die Gewohnheit aktiv ist. Frühere Tage vor dem Startdatum werden in Serien und Statistiken nicht als unvollständig gewertet."
-                                    } else if (language == "ka") {
-                        "ადგენს დღეს, საიდანაც ჩვევა გააქტიურდება. დაწყების თარიღამდე დღეები არ ჩაითვლება გამოტოვებულად სტრიქონებში და სტატისტიკაში."
-                    } else {
-                        "Sets the day from which the habit becomes active. Days prior to the start date won't count as missed in streaks and stats."
-                    },
-                                    onClick = { t, e -> activeExplanation = t to e },
-                                    modifier = Modifier.size(32.dp)
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    showDatePicker = !showDatePicker
-                                    if (showDatePicker) {
-                                        coroutineScope.launch {
-                                            kotlinx.coroutines.delay(150)
-                                            scrollState.animateScrollTo(scrollState.maxValue)
-                                        }
-                                    }
-                                }
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
+                                Spacer(modifier = Modifier.width(12.dp))
                                 Text(
                                     text = formattedStartDate,
                                     style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.onSurface,
+                                    color = TextPrimary,
                                     fontWeight = FontWeight.Bold
                                 )
-                                Icon(
-                                    imageVector = Icons.Default.KeyboardArrowDown,
-                                    contentDescription = "Open Date Picker",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(20.dp)
-                                )
                             }
+                            
+                            Icon(
+                                imageVector = if (showDatePicker) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                contentDescription = "Toggle DatePicker",
+                                tint = TextSecondary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
+
+                    if (showDatePicker) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
+                                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
+                                .padding(12.dp)
+                        ) {
+                            SimpleDatePickerView(
+                                initialTimeMs = startDateMillis,
+                                onDateSelected = {
+                                    startDateMillis = it
+                                    showDatePicker = false
+                                }
+                            )
                         }
                     }
                 }
+            }
 
-                if (showDatePicker) {
-                    Box(
+            // 5. CARD: Erinnerungen
+            Card(
+                colors = CardDefaults.cardColors(containerColor = AppCard),
+                shape = RoundedCornerShape(20.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(imageVector = Icons.Default.NotificationsActive, contentDescription = null, tint = PrimaryViolet, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = if (language == "de") "Erinnerungen" else if (language == "ka") "შეხსენება" else if (language == "zh") "提醒" else "Reminders",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = TextPrimary,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.weight(1f))
+                        InfoIconButton(
+                            title = if (language == "de") "Erinnerungen" else if (language == "ka") "შეხსენება" else if (language == "zh") "提醒" else "Reminders",
+                            explanation = if (language == "de") {
+                                "Richte dir Benachrichtigungen ein, um zur gewünschten Uhrzeit an deine Gewohnheit erinnert zu werden."
+                            } else {
+                                "Set up notifications so you get reminded of your habit at your desired time."
+                            },
+                            onClick = { t, e -> activeExplanation = t to e }
+                        )
+                    }
+
+                    if (remindersList.isNotEmpty()) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            remindersList.forEach { reminderTime ->
+                                Card(
+                                    colors = CardDefaults.cardColors(containerColor = ProgressTrack),
+                                    border = BorderStroke(1.dp, AppBorder),
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            reminderToEditTime = reminderTime
+                                            if (android.os.Build.VERSION.SDK_INT >= 33 && !hasNotificationPermission) {
+                                                notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                                            } else {
+                                                showAddCustomDialog = true
+                                            }
+                                        }
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(
+                                                imageVector = Icons.Default.Notifications,
+                                                contentDescription = "Time Icon",
+                                                tint = PrimaryViolet,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(12.dp))
+                                            Text(
+                                                text = reminderTime,
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = TextPrimary
+                                            )
+                                        }
+                                        
+                                        IconButton(
+                                            onClick = {
+                                                remindersList = remindersList.filter { it != reminderTime }
+                                            },
+                                            modifier = Modifier.size(36.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Delete,
+                                                contentDescription = "Delete Reminder",
+                                                tint = FailedRed,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Add Button
+                    Button(
+                        onClick = {
+                            reminderToEditTime = null
+                            if (android.os.Build.VERSION.SDK_INT >= 33 && !hasNotificationPermission) {
+                                notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                            } else {
+                                showAddCustomDialog = true
+                            }
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
-                            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
-                            .padding(12.dp)
+                            .height(46.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = ProgressTrack,
+                            contentColor = TextPrimary
+                        ),
+                        border = BorderStroke(1.dp, AppBorder)
                     ) {
-                        SimpleDatePickerView(
-                            initialTimeMs = startDateMillis,
-                            onDateSelected = {
-                                startDateMillis = it
-                                showDatePicker = false
-                            }
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add Reminder Icon",
+                            tint = TextPrimary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (language == "de") "Erinnerung hinzufügen" else if (language == "ka") "დაამატეთ შეხსენება" else if (language == "zh") "添加提醒" else "Add Reminder",
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary,
+                            style = MaterialTheme.typography.titleSmall
                         )
                     }
                 }
+            }
+
+            // 6. CARD: Meilenstein-Belohnungen
+            Card(
+                colors = CardDefaults.cardColors(containerColor = AppCard),
+                shape = RoundedCornerShape(20.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, AppBorder, RoundedCornerShape(20.dp))
+            ) {
+                var showAddRewardDialog by remember { mutableStateOf(false) }
+
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(imageVector = Icons.Default.EmojiEvents, contentDescription = null, tint = HabitOrange, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = if (language == "de") "Meilenstein-Belohnungen" else if (language == "ka") "Milestone ჯილდოები" else if (language == "zh") "里程碑奖励" else "Milestone Rewards",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = TextPrimary,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.weight(1f))
+                        InfoIconButton(
+                            title = if (language == "de") "Meilenstein-Belohnungen" else if (language == "ka") "Milestone ჯილდოები" else if (language == "zh") "里程碑奖励" else "Milestone Rewards",
+                            explanation = if (language == "de") {
+                                "Setze dir persönliche Belohnungen für das Erreichen von Meilensteinen (z. B. 30 Tage Serie). Sobald du das Ziel erreichst, wird die Belohnung freigeschaltet!"
+                            } else {
+                                "Set personal rewards for reaching milestones (e.g. 30-day streak). Once you reach the target, the reward unlocks!"
+                            },
+                            onClick = { t, e -> activeExplanation = t to e }
+                        )
+                    }
+
+                    if (milestoneRewards.isNotEmpty()) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            milestoneRewards.forEachIndexed { index, reward ->
+                                Card(
+                                    colors = CardDefaults.cardColors(containerColor = ProgressTrack),
+                                    border = BorderStroke(1.dp, AppBorder),
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = reward.rewardText,
+                                                style = MaterialTheme.typography.titleMedium,
+                                                color = TextPrimary,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            val condText = when (reward.conditionType) {
+                                                "STREAK" -> if (language == "de") "${reward.conditionValue} Tage Serie" else if (language == "ka") "${reward.conditionValue} დღის სტრიქონი" else if (language == "zh") "${reward.conditionValue} 天连续" else "${reward.conditionValue} Day Streak"
+                                                "COMPLETIONS" -> if (language == "de") "${reward.conditionValue} Erledigungen" else if (language == "ka") "${reward.conditionValue} დასრულებები" else if (language == "zh") "${reward.conditionValue} 次完成" else "${reward.conditionValue} Completions"
+                                                "TROPHY_COUPLED" -> {
+                                                    val tr = STANDARD_TROPHIES.find { it.id == reward.trophyId }
+                                                    if (tr != null) {
+                                                        if (language == "de") "Trophäe: ${tr.titleDe}" else if (language == "ka") "ტროფი: ${tr.titleEn}" else if (language == "zh") "奖杯：${tr.titleEn}" else "Trophy: ${tr.titleEn}"
+                                                    } else {
+                                                        reward.trophyId ?: ""
+                                                    }
+                                                }
+                                                else -> ""
+                                            }
+                                            if (condText.isNotEmpty()) {
+                                                Text(
+                                                    text = condText,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = TextSecondary
+                                                )
+                                            }
+                                        }
+                                        IconButton(
+                                            onClick = {
+                                                milestoneRewards = milestoneRewards.filterIndexed { i, _ -> i != index }
+                                            },
+                                            modifier = Modifier.size(36.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Delete,
+                                                contentDescription = "Delete Reward",
+                                                tint = FailedRed,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Button(
+                        onClick = { showAddRewardDialog = true },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(46.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = ProgressTrack,
+                            contentColor = TextPrimary
+                        ),
+                        border = BorderStroke(1.dp, AppBorder)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add Reward Icon",
+                            tint = TextPrimary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (language == "de") "Belohnung hinzufügen" else if (language == "ka") "დაამატე ჯილდო" else if (language == "zh") "添加奖励" else "Add Reward",
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary,
+                            style = MaterialTheme.typography.titleSmall
+                        )
+                    }
+                }
+
+                if (showAddRewardDialog) {
+                    AddMilestoneRewardDialog(
+                        language = language,
+                        onDismiss = { showAddRewardDialog = false },
+                        onAdd = { reward ->
+                            milestoneRewards = milestoneRewards + reward
+                            showAddRewardDialog = false
+                        }
+                    )
+                }
+            }
 
                 // Action buttons (Erstellen/Speichern, Abbrechen)
                 Row(
@@ -13316,13 +13259,16 @@ val STANDARD_TROPHIES = listOf(
     StandardTrophyOption("COMP_50", "COMPLETIONS", "COMP_50", "50 Abschlüsse", "50 Completions", "Insgesamt 50 Gewohnheits-Abschlüsse erreichen", "Achieve 50 total completions", "50 დასრულება", "მიაღწიეთ 50 დასრულებას", "50 次完成", "累计达成 50 次习惯完成"),
     StandardTrophyOption("COMP_200", "COMPLETIONS", "COMP_200", "200 Abschlüsse", "200 Completions", "Insgesamt 200 Gewohnheits-Abschlüsse erreichen", "Achieve 200 total completions", "200 დასრულება", "მიაღწიეთ 200 დასრულებას", "200 次完成", "累计达成 200 次习惯完成"),
     StandardTrophyOption("COMP_500", "COMPLETIONS", "COMP_500", "500 Abschlüsse", "500 Completions", "Insgesamt 500 Gewohnheits-Abschlüsse erreichen", "Achieve 500 total completions", "500 დასრულება", "მიაღწიეთ 500 დასრულებას", "500 次完成", "累计达成 500 次习惯完成"),
+    StandardTrophyOption("COMP_1000", "COMPLETIONS", "COMP_1000", "1000 Abschlüsse", "1000 Completions", "Insgesamt 1000 Gewohnheits-Abschlüsse erreichen", "Achieve 1000 total completions", "1000 დასრულება", "მიაღწიეთ 1000 დასრულებას", "1000 次完成", "累计达成 1000 次习惯完成"),
     StandardTrophyOption("WOOD", "STREAK", "WOOD", "7 Tage Serie (Holz)", "7-Day Streak (Wood)", "Eine 7-Tage-Serie erreichen", "Achieve a 7-day streak", "7-დღიანი სერია (ხე)", "მიაღწიეთ 7-დღიან სერიას", "7 天连续（木质）", "达成 7 天连续打卡"),
     StandardTrophyOption("BRONZE", "STREAK", "BRONZE", "14 Tage Serie (Bronze)", "14-Day Streak (Bronze)", "Eine 14-Tage-Serie erreichen", "Achieve a 14-day streak", "14-დღიანი სერია (ბრინჯაო)", "მიაღწიეთ 14-დღიან სერიას", "14 天连续（青铜）", "达成 14 天连续打卡"),
     StandardTrophyOption("SILVER", "STREAK", "SILVER", "30 Tage Serie (Silber)", "30-Day Streak (Silver)", "Eine 30-Tage-Serie erreichen", "Achieve a 30-day streak", "30-დღიანი სერია (ვერცხლი)", "მიაღწიეთ 30-დღიან სერიას", "30 天连续（白银）", "达成 30 天连续打卡"),
     StandardTrophyOption("GOLD", "STREAK", "GOLD", "100 Tage Serie (Gold)", "100-Day Streak (Gold)", "Eine 100-Tage-Serie erreichen", "Achieve a 100-day streak", "100-დღიანი სერია (ოქრო)", "მიაღწიეთ 100-დღიან სერიას", "100 天连续（黄金）", "达成 100 天连续打卡"),
+    StandardTrophyOption("DIAMOND", "STREAK", "DIAMOND", "365 Tage Serie (Diamant)", "365-Day Streak (Diamond)", "Eine 365-Tage-Serie erreichen", "Achieve a 365-day streak", "365-დღიანი სერია (ბრილიანტი)", "მიაღწიეთ 365-დღიან სერიას", "365 天连续（钻石）", "达成 365 天连续打卡"),
     StandardTrophyOption("PERF_7", "PERFECT_DAYS", "PERF_7", "7 perfekte Tage", "7 Perfect Days", "7 perfekte Tage am Stück", "7 consecutive perfect days", "7 სრულყოფილი დღე", "7 სრულყოფილი დღე ზედიზედ", "7 个完美天", "连续达成 7 个完美天"),
     StandardTrophyOption("PERF_30", "PERFECT_DAYS", "PERF_30", "30 perfekte Tage", "30 Perfect Days", "30 perfekte Tage am Stück", "30 consecutive perfect days", "30 სრულყოფილი დღე", "30 სრულყოფილი დღე ზედიზედ", "30 个完美天", "连续达成 30 个完美天"),
-    StandardTrophyOption("PERF_100", "PERFECT_DAYS", "PERF_100", "100 perfekte Tage", "100 Perfect Days", "100 perfekte Tage am Stück", "100 consecutive perfect days", "100 სრულყოფილი დღე", "100 სრულყოფილი დღე ზედიზედ", "100 个完美天", "连续达成 100 个完美天")
+    StandardTrophyOption("PERF_365", "PERFECT_DAYS", "PERF_365", "365 perfekte Tage", "365 Perfect Days", "365 perfekte Tage am Stück", "365 consecutive perfect days", "365 სრულყოფილი დღე", "365 სრულყოფილი დღე ზედიზედ", "365 个完美天", "连续达成 365 个完美天"),
+    StandardTrophyOption("PERF_1000", "PERFECT_DAYS", "PERF_1000", "1000 perfekte Tage", "1000 Perfect Days", "1000 perfekte Tage am Stück", "1000 consecutive perfect days", "1000 სრულყოფილი დღე", "1000 სრულყოფილი დღე ზედიზედ", "1000 个完美天", "连续达成 1000 个完美天")
 )
 
 @Composable
@@ -13332,6 +13278,7 @@ fun AddMilestoneRewardDialog(
     onAdd: (com.example.data.MilestoneReward) -> Unit
 ) {
     var rewardText by remember { mutableStateOf("") }
+    var rewardDesc by remember { mutableStateOf("") }
     var conditionType by remember { mutableStateOf("STREAK") }
     var conditionValueStr by remember { mutableStateOf("") }
     
@@ -13352,44 +13299,35 @@ fun AddMilestoneRewardDialog(
             )
         },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.verticalScroll(scrollState)) {
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.verticalScroll(scrollState)) {
                 
-                OutlinedTextField(
+                AppTextField(
                     value = rewardText,
                     onValueChange = { rewardText = it },
-                    label = { Text(tr(language, "Belohnung (z.B. Neues Buch)", "Reward (e.g., New Book)"), color = TextSecondary) },
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = PrimaryViolet,
-                        unfocusedBorderColor = AppBorder,
-                        focusedContainerColor = Color(0xFF3A3A44),
-                        unfocusedContainerColor = Color(0xFF3A3A44),
-                        focusedTextColor = TextPrimary,
-                        unfocusedTextColor = TextPrimary
-                    ),
+                    labelText = tr(language, "Name der Belohnung (z.B. Kino Abend)", "Reward Name (e.g. Cinema Night)"),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    singleLine = true
                 )
 
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(
-                        selected = mode == "TROPHY",
-                        onClick = { mode = "TROPHY" },
-                        label = { Text(tr(language, "Trophäe", "Trophy")) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = PrimaryViolet,
-                            selectedLabelColor = Color.White
-                        )
-                    )
-                    FilterChip(
-                        selected = mode == "CUSTOM",
-                        onClick = { mode = "CUSTOM" },
-                        label = { Text(tr(language, "Manuell", "Manual")) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = PrimaryViolet,
-                            selectedLabelColor = Color.White
-                        )
-                    )
-                }
+                AppTextField(
+                    value = rewardDesc,
+                    onValueChange = { rewardDesc = it },
+                    labelText = tr(language, "Details / Link (optional, z.B. https://...)", "Details / Link (optional, e.g. https://...)"),
+                    placeholderText = "https://...",
+                    modifier = Modifier.fillMaxWidth(),
+                    maxLines = 3,
+                    singleLine = false
+                )
+
+                AppSegmentedButton(
+                    options = listOf(
+                        tr(language, "Trophäe", "Trophy"),
+                        tr(language, "Manuell", "Manual")
+                    ),
+                    selectedIndex = if (mode == "TROPHY") 0 else 1,
+                    onOptionSelected = { index -> mode = if (index == 0) "TROPHY" else "CUSTOM" },
+                    testTagPrefix = "reward_mode_switch"
+                )
                 
                 if (mode == "CUSTOM") {
                     Text(
@@ -13398,42 +13336,23 @@ fun AddMilestoneRewardDialog(
                         fontWeight = FontWeight.Bold
                     )
                     
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(
-                            selected = conditionType == "STREAK",
-                            onClick = { conditionType = "STREAK" },
-                            label = { Text(tr(language, "Streak (Tage)", "Streak (Days)")) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = PrimaryViolet,
-                                selectedLabelColor = Color.White
-                            )
-                        )
-                        FilterChip(
-                            selected = conditionType == "COMPLETIONS",
-                            onClick = { conditionType = "COMPLETIONS" },
-                            label = { Text(tr(language, "Gesamt (Mal)", "Total (Times)")) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = PrimaryViolet,
-                                selectedLabelColor = Color.White
-                            )
-                        )
-                    }
+                    AppSegmentedButton(
+                        options = listOf(
+                            tr(language, "Streak (Tage)", "Streak (Days)"),
+                            tr(language, "Gesamt (Mal)", "Total (Times)")
+                        ),
+                        selectedIndex = if (conditionType == "STREAK") 0 else 1,
+                        onOptionSelected = { index -> conditionType = if (index == 0) "STREAK" else "COMPLETIONS" },
+                        testTagPrefix = "reward_condition_switch"
+                    )
                     
-                    OutlinedTextField(
+                    AppTextField(
                         value = conditionValueStr,
                         onValueChange = { conditionValueStr = it.filter { ch -> ch.isDigit() } },
-                        label = { Text(tr(language, "Ziel-Wert", "Target Value"), color = TextSecondary) },
+                        labelText = tr(language, "Ziel-Wert", "Target Value"),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = PrimaryViolet,
-                            unfocusedBorderColor = AppBorder,
-                            focusedContainerColor = Color(0xFF3A3A44),
-                            unfocusedContainerColor = Color(0xFF3A3A44),
-                            focusedTextColor = TextPrimary,
-                            unfocusedTextColor = TextPrimary
-                        ),
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
+                        singleLine = true
                     )
                 } else {
                     Text(
@@ -13453,7 +13372,7 @@ fun AddMilestoneRewardDialog(
                             val isSelected = selectedTrophyId == trophy.id
                             Card(
                                 colors = CardDefaults.cardColors(
-                                    containerColor = if (isSelected) PrimaryViolet.copy(alpha = 0.2f) else AppBg
+                                    containerColor = if (isSelected) PrimaryViolet.copy(alpha = 0.2f) else ProgressTrack
                                 ),
                                 border = BorderStroke(
                                     1.dp,
@@ -13514,6 +13433,7 @@ fun AddMilestoneRewardDialog(
                             onAdd(com.example.data.MilestoneReward(
                                 habitId = 0,
                                 rewardText = rewardText.trim(),
+                                description = rewardDesc.trim(),
                                 conditionType = conditionType,
                                 conditionValue = condVal
                             ))
@@ -13521,6 +13441,7 @@ fun AddMilestoneRewardDialog(
                             onAdd(com.example.data.MilestoneReward(
                                 habitId = 0,
                                 rewardText = rewardText.trim(),
+                                description = rewardDesc.trim(),
                                 conditionType = "TROPHY_COUPLED",
                                 conditionValue = 0,
                                 trophyId = selectedTrophyId
@@ -13589,7 +13510,7 @@ fun AddCustomReminderDialog(
                         color = TextSecondary,
                         modifier = Modifier.padding(bottom = 4.dp)
                     )
-                    OutlinedTextField(
+                    AppTextField(
                         value = hourStr,
                         onValueChange = { input ->
                             val filtered = input.filter { it.isDigit() }
@@ -13604,20 +13525,12 @@ fun AddCustomReminderDialog(
                                 }
                             }
                         },
-                        placeholder = { Text("12", color = TextSecondary.copy(alpha = 0.5f)) },
+                        placeholderText = "12",
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Number,
                             imeAction = ImeAction.Next
                         ),
-                        textStyle = MaterialTheme.typography.bodyLarge.copy(color = TextPrimary),
                         singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = PrimaryViolet,
-                            unfocusedBorderColor = AppBorder,
-                            focusedContainerColor = AppBg,
-                            unfocusedContainerColor = AppBg
-                        ),
-                        shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -13640,7 +13553,7 @@ fun AddCustomReminderDialog(
                         color = TextSecondary,
                         modifier = Modifier.padding(bottom = 4.dp)
                     )
-                    OutlinedTextField(
+                    AppTextField(
                         value = minuteStr,
                         onValueChange = { input ->
                             val filtered = input.filter { it.isDigit() }
@@ -13655,20 +13568,12 @@ fun AddCustomReminderDialog(
                                 }
                             }
                         },
-                        placeholder = { Text("00", color = TextSecondary.copy(alpha = 0.5f)) },
+                        placeholderText = "00",
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Number,
                             imeAction = ImeAction.Done
                         ),
-                        textStyle = MaterialTheme.typography.bodyLarge.copy(color = TextPrimary),
                         singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = PrimaryViolet,
-                            unfocusedBorderColor = AppBorder,
-                            focusedContainerColor = AppBg,
-                            unfocusedContainerColor = AppBg
-                        ),
-                        shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -14030,10 +13935,10 @@ fun HabitStreakAchievementCard(
     language: String
 ) {
     val context = LocalContext.current
-    val targets = listOf(7, 14, 30, 100)
-    val tiers = listOf("WOOD", "BRONZE", "SILVER", "GOLD")
-    val tierNamesDe = listOf("Holz-Streak", "Bronze-Streak", "Silber-Streak", "Gold-Streak")
-    val tierNamesEn = listOf("Wood Streak", "Bronze Streak", "Silver Streak", "Gold Streak")
+    val targets = listOf(7, 14, 30, 100, 365)
+    val tiers = listOf("WOOD", "BRONZE", "SILVER", "GOLD", "DIAMOND")
+    val tierNamesDe = listOf("Holz-Serie", "Bronze-Serie", "Silber-Serie", "Gold-Serie", "Diamant-Serie")
+    val tierNamesEn = listOf("Wood Streak", "Bronze Streak", "Silver Streak", "Gold Streak", "Diamond Streak")
 
     Card(
         colors = CardDefaults.cardColors(containerColor = AppCard),
@@ -14085,6 +13990,7 @@ fun HabitStreakAchievementCard(
                 longestStreak < 14 -> 1
                 longestStreak < 30 -> 2
                 longestStreak < 100 -> 3
+                longestStreak < 365 -> 4
                 else -> -1
             }
 
@@ -14092,13 +13998,13 @@ fun HabitStreakAchievementCard(
                 val prevTarget = if (nextTargetIndex == 0) 0 else targets[nextTargetIndex - 1]
                 val nextTarget = targets[nextTargetIndex]
                 val targetName = if (language == "de") {
-                    listOf("Holz-Serie", "Bronze-Serie", "Silber-Serie", "Gold-Serie")[nextTargetIndex]
+                    listOf("Holz-Serie", "Bronze-Serie", "Silber-Serie", "Gold-Serie", "Diamant-Serie")[nextTargetIndex]
                 } else if (language == "ka") {
-                    listOf("ხის სერია", "ბრინჯაოს სერია", "ვერცხლის სერია", "ოქროს სერია")[nextTargetIndex]
+                    listOf("ხის სერია", "ბრინჯაოს სერია", "ვერცხლის სერია", "ოქროს სერია", "ბრილიანტის სერია")[nextTargetIndex]
                 } else if (language == "zh") {
-                    listOf("木质连续", "青铜连续", "白银连续", "黄金连续")[nextTargetIndex]
+                    listOf("木质连续", "青铜连续", "白银连续", "黄金连续", "钻石连续")[nextTargetIndex]
                 } else {
-                    listOf("Wood Streak", "Bronze Streak", "Silver Streak", "Gold Streak")[nextTargetIndex]
+                    listOf("Wood Streak", "Bronze Streak", "Silver Streak", "Gold Streak", "Diamond Streak")[nextTargetIndex]
                 }
                 
                 val range = nextTarget - prevTarget
@@ -14116,11 +14022,13 @@ fun HabitStreakAchievementCard(
                 Triple(label, fraction, pct)
             } else {
                 val label = if (language == "de") {
-                    "Gold-Serie meisterhaft erreicht! 🎉"
+                    "Diamant-Serie meisterhaft erreicht! 🎉"
                 } else if (language == "ka") {
-                        "ოქროს ზოლი დაეუფლა! 🎉"
+                        "ბრილიანტის სერია დაეუფლა! 🎉"
+                    } else if (language == "zh") {
+                        "钻石连续完美达成！🎉"
                     } else {
-                        "Gold Streak mastered! 🎉"
+                        "Diamond Streak mastered! 🎉"
                     }
                 Triple(label, 1f, 100)
             }
@@ -14263,9 +14171,11 @@ fun GlobalAchievementCard(
         "COMP_50" -> Color(0xFF2196F3)
         "COMP_200" -> Color(0xFF9C27B0)
         "COMP_500" -> Color(0xFFFF5722)
+        "COMP_1000" -> Color(0xFFF44336)
         "PERF_7" -> Color(0xFF00BCD4)
         "PERF_30" -> Color(0xFFE91E63)
-        "PERF_100" -> Color(0xFFFFD700)
+        "PERF_365" -> Color(0xFFFF9800)
+        "PERF_1000" -> Color(0xFFFFD700)
         else -> Color(0xFFFFD700)
     }
 
@@ -14489,6 +14399,15 @@ fun ProfileScreen(
                 targetValue = 500,
                 currentValue = totalGlobalCompletions,
                 isUnlocked = totalGlobalCompletions >= 500
+            ),
+            Achievement(
+                type = "COMPLETIONS",
+                tier = "COMP_1000",
+                title = if (language == "de") "Meister der Beständigkeit" else if (language == "ka") "მიმდევრულობის ოსტატი" else if (language == "zh") "坚持大师" else "Master of Consistency",
+                description = if (language == "de") "Trage insgesamt 1000 Erledigungen ein." else if (language == "ka") "დაარეგისტრირეთ სულ 1000 დასრულება ყველა ჩვევაში." else if (language == "zh") "记录累计 1000 次完成。" else "Log a total of 1000 completions across all habits.",
+                targetValue = 1000,
+                currentValue = totalGlobalCompletions,
+                isUnlocked = totalGlobalCompletions >= 1000
             )
         )
     }
@@ -14516,11 +14435,29 @@ fun ProfileScreen(
             Achievement(
                 type = "PERFECT_DAYS",
                 tier = "PERF_100",
-                title = if (language == "de") "Perfektion" else if (language == "ka") "სრულყოფილება" else if (language == "zh") "完美极致" else "Perfection",
-                description = if (language == "de") "Erreiche eine Serie von 100 perfekten Tagen am Stück." else if (language == "ka") "მიაღწიეთ ზედიზედ 100 სრულყოფილი დღის სერიებს." else if (language == "zh") "连续达成 100 个完美天。" else "Achieve a streak of 100 consecutive perfect days.",
+                title = if (language == "de") "100 perfekte Tage" else if (language == "ka") "100 იდეალური დღე" else if (language == "zh") "100完美天" else "100 Perfect Days",
+                description = if (language == "de") "Erreiche eine Serie von 100 perfekten Tagen am Stück." else if (language == "ka") "მიაღწიეთ ზედიზედ 100 სრულყოფილი დღის სერიას." else if (language == "zh") "连续达成 100 个完美天。" else "Achieve a streak of 100 consecutive perfect days.",
                 targetValue = 100,
                 currentValue = if (perfectDaysStreak >= 100) 100 else currentPerfectStreak,
                 isUnlocked = perfectDaysStreak >= 100
+            ),
+            Achievement(
+                type = "PERFECT_DAYS",
+                tier = "PERF_365",
+                title = if (language == "de") "Perfektes Jahr" else if (language == "ka") "იდეალური წელი" else if (language == "zh") "完美年" else "Perfect Year",
+                description = if (language == "de") "Erreiche eine Serie von 365 perfekten Tagen am Stück." else if (language == "ka") "მიაღწიეთ ზედიზედ 365 სრულყოფილი დღის სერიებს." else if (language == "zh") "连续达成 365 个完美天。" else "Achieve a streak of 365 consecutive perfect days.",
+                targetValue = 365,
+                currentValue = if (perfectDaysStreak >= 365) 365 else currentPerfectStreak,
+                isUnlocked = perfectDaysStreak >= 365
+            ),
+            Achievement(
+                type = "PERFECT_DAYS",
+                tier = "PERF_1000",
+                title = if (language == "de") "Perfektion" else if (language == "ka") "სრულყოფილება" else if (language == "zh") "完美极致" else "Perfection",
+                description = if (language == "de") "Erreiche eine Serie von 1000 perfekten Tagen am Stück." else if (language == "ka") "მიაღწიეთ ზედიზედ 1000 სრულყოფილი დღის სერიებს." else if (language == "zh") "连续达成 1000 个完美天。" else "Achieve a streak of 1000 consecutive perfect days.",
+                targetValue = 1000,
+                currentValue = if (perfectDaysStreak >= 1000) 1000 else currentPerfectStreak,
+                isUnlocked = perfectDaysStreak >= 1000
             )
         )
     }
@@ -14740,39 +14677,14 @@ fun ProfileScreen(
 
             // Visual filter tabs to toggle: Freigeschaltet, Alle Erfolge
             item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    val tabs = if (language == "de") listOf("Freigeschaltet", "Alle Erfolge") else if (language == "ka") listOf("განბლოკილი", "ყველა მიღწევა") else if (language == "zh") listOf("已解锁", "所有成就") else listOf("Unlocked", "All Achievements")
-                    tabs.forEachIndexed { index, label ->
-                        val isSelected = selectedTab == index
-                        Surface(
-                            onClick = { selectedTab = index },
-                            shape = RoundedCornerShape(20.dp),
-                            color = if (isSelected) PrimaryViolet else AppCard,
-                            border = BorderStroke(1.dp, if (isSelected) PrimaryViolet else AppBorder),
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(42.dp)
-                                .testTag(if (index == 0) "tab_unlocked" else "tab_all_achievements")
-                        ) {
-                            Box(
-                                contentAlignment = Alignment.Center,
-                                modifier = Modifier.fillMaxSize()
-                            ) {
-                                Text(
-                                    text = label,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = if (isSelected) Color.White else TextSecondary,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                                )
-                            }
-                        }
-                    }
-                }
+                val tabs = if (language == "de") listOf("Freigeschaltet", "Alle Erfolge") else if (language == "ka") listOf("განბლოკილი", "ყველა მიღწევა") else if (language == "zh") listOf("已解锁", "所有成就") else listOf("Unlocked", "All Achievements")
+                AppSegmentedButton(
+                    options = tabs,
+                    selectedIndex = selectedTab,
+                    onOptionSelected = { selectedTab = it },
+                    modifier = Modifier.padding(vertical = 4.dp),
+                    testTagPrefix = "achievements_filter"
+                )
             }
 
 
@@ -14944,20 +14856,24 @@ fun ProfileScreen(
                                 thickness = 1.dp
                             )
                         }
-                        val explanationTitle = if (language == "de") "Perfekte Serien" else if (language == "ka") "იდეალური ზოლები" else if (language == "zh") "完美连续天数" else "Perfect Streaks"
+                        val explanationTitle = if (language == "de") "Perfekte Tage" else if (language == "ka") "იდეალური დღეები" else if (language == "zh") "完美日" else "Perfect Days"
                         val explanationText = if (language == "de") {
-                            "Perfekte Serien belohnen Tage, an denen du deine Disziplin zu 100% gehalten hast!\n\n" +
+                            "Perfekte Tage belohnen Tage, an denen du deine Disziplin zu 100% gehalten hast!\n\n" +
                             "Ein perfekter Tag ist ein Tag, an dem du alle deine für diesen Tag geplanten bzw. aktiven Gewohnheiten vollständig erledigt hast. Wenn du diese perfekten Tage hintereinander schaffst, erreichst du:\n\n" +
                             "• 📅 Perfekte Woche: 7 perfekte Tage am Stück\n" +
                             "• 🗓️ Perfekter Monat: 30 perfekte Tage am Stück\n" +
-                            "• 👑 Perfektion: 100 perfekte Tage am Stück"
+                            "• 💯 100 perfekte Tage: 100 perfekte Tage am Stück\n" +
+                            "• 📆 Perfektes Jahr: 365 perfekte Tage am Stück\n" +
+                            "• 👑 Perfektion: 1000 perfekte Tage am Stück"
                         } else if (language == "ka") {
-                        "Perfect Streaks აჯილდოვებს ზედიზედ დღეებს, სადაც თქვენ შეინარჩუნეთ 100%-იანი დისციპლინა!\n\nსრულყოფილი დღე არის დღე, როდესაც წარმატებით ასრულებთ თქვენს ყველა დაგეგმილ/აქტიურ ჩვევას. სრულყოფილი დღეების ერთად შეკრებით თქვენ მიაღწევთ:\n\n• 📅 იდეალური კვირა: ზედიზედ 7 სრულყოფილი დღე\n• 🗓️ იდეალური თვე: ზედიზედ 30 სრულყოფილი დღე\n• 👑 სრულყოფილება: ზედიზედ 100 სრულყოფილი დღე"
+                        "Perfect Days აჯილდოვებს ზედიზედ დღეებს, სადაც თქვენ შეინარჩუნეთ 100%-იანი დისციპლინა!\n\nსრულყოფილი დღე არის დღე, როდესაც წარმატებით ასრულებთ თქვენს ყველა დაგეგმილ/აქტიურ ჩვევას. სრულყოფილი დღეების ერთად შეკრებით თქვენ მიაღწევთ:\n\n• 📅 იდეალური კვირა: ზედიზედ 7 სრულყოფილი დღე\n• 🗓️ იდეალური თვე: ზედიზედ 30 სრულყოფილი დღე\n• 💯 100 იდეალური დღე: ზედიზედ 100 სრულყოფილი დღე\n• 📆 იდეალური წელი: ზედიზედ 365 სრულყოფილი დღე\n• 👑 სრულყოფილება: ზედიზედ 1000 სრულყოფილი დღე"
+                    } else if (language == "zh") {
+                        "完美日奖励连续保持 100% 纪律的天数！\n\n完美日是指您成功完成所有计划/活动习惯的一天。通过连续的完美天数，您将获得：\n\n• 📅 完美周：连续 7 个完美天\n• 🗓️ 完美月：连续 30 个完美天\n• 💯 100完美天：连续 100 个完美天\n• 📆 完美年：连续 365 个完美天\n• 👑 完美极致：连续 1000 个完美天"
                     } else {
-                        "Perfect Streaks reward consecutive days where you maintained 100% discipline!\n\nA perfect day is a day where you successfully complete all of your scheduled/active habits. By stringing perfect days together, you achieve:\n\n• 📅 Perfect Week: 7 consecutive perfect days\n• 🗓️ Perfect Month: 30 consecutive perfect days\n• 👑 Perfection: 100 consecutive perfect days"
+                        "Perfect Days reward consecutive days where you maintained 100% discipline!\n\nA perfect day is a day where you successfully complete all of your scheduled/active habits. By stringing perfect days together, you achieve:\n\n• 📅 Perfect Week: 7 consecutive perfect days\n• 🗓️ Perfect Month: 30 consecutive perfect days\n• 💯 100 Perfect Days: 100 consecutive perfect days\n• 📆 Perfect Year: 365 consecutive perfect days\n• 👑 Perfection: 1000 consecutive perfect days"
                     }
                         CategoryHeader(
-                            title = if (language == "de") "Perfekte Serien" else if (language == "ka") "იდეალური ზოლები" else if (language == "zh") "完美连续天数" else "Perfect Streaks",
+                            title = if (language == "de") "Perfekte Tage" else if (language == "ka") "იდეალური დღეები" else if (language == "zh") "完美日" else "Perfect Days",
                             icon = Icons.Default.WorkspacePremium,
                             color = SuccessGreen,
                             explanationTitle = explanationTitle,
@@ -15054,19 +14970,14 @@ fun ProfileScreen(
                             }
                         }
 
-                        OutlinedTextField(
+                        AppTextField(
                             value = tempUserName,
                             onValueChange = { tempUserName = it },
-                            label = { Text(if (language == "de") "Name" else if (language == "ka") "სახელი" else if (language == "zh") "名称" else "Name") },
-                            placeholder = { Text(if (language == "de") "Dein Name..." else if (language == "ka") "შენი სახელი..." else if (language == "zh") "你的名字..." else "Your name...") },
+                            labelText = if (language == "de") "Name" else if (language == "ka") "სახელი" else if (language == "zh") "名称" else "Name",
+                            placeholderText = if (language == "de") "Dein Name..." else if (language == "ka") "შენი სახელი..." else if (language == "zh") "你的名字..." else "Your name...",
                             singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = PrimaryViolet,
-                                unfocusedBorderColor = AppBorder,
-                                focusedTextColor = TextPrimary,
-                                unfocusedTextColor = TextPrimary
-                            )
+                            containerColor = AppCard,
+                            testTag = "edit_profile_name_input"
                         )
                     }
                 },
@@ -15419,6 +15330,7 @@ fun ExplanationDialog(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DailyNoteDialog(
     currentNote: String,
@@ -15436,76 +15348,63 @@ fun DailyNoteDialog(
         keyboardController?.show()
     }
 
-    AlertDialog(
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = if (language == "de") "Tägliche Notiz" else if (language == "ka") "ყოველდღიური შენიშვნა" else if (language == "zh") "每日随笔" else "Daily Note",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = TextPrimary,
-                    fontWeight = FontWeight.Bold
-                )
-                IconButton(onClick = onDismiss) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Close",
-                        tint = TextSecondary
-                    )
-                }
-            }
-        },
-        text = {
-            Column {
-                ClearFocusOnKeyboardDismiss()
-                OutlinedTextField(
+        sheetState = sheetState,
+        containerColor = AppCard,
+        contentColor = TextPrimary,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        dragHandle = { StandardSheetDragHandle() }
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 32.dp)
+                .fillMaxWidth()
+        ) {
+            Text(
+                text = if (language == "de") "Tägliche Notiz" else if (language == "ka") "ყოველდღიური შენიშვნა" else if (language == "zh") "每日随笔" else "Daily Note",
+                style = MaterialTheme.typography.titleLarge,
+                color = TextPrimary,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            ClearFocusOnKeyboardDismiss()
+            AppTextField(
                 value = noteText,
                 onValueChange = { noteText = it },
-                placeholder = {
-                    Text(
-                        text = if (language == "de") "Gedanken, Erfolge oder Notizen für diesen Tag..." else if (language == "ka") "აზრები, მიღწევები თუ ნოტები ამ დღისთვის..." else if (language == "zh") "这一天的心得体会、小成就或备忘..." else "Thoughts, achievements, or notes for this day...",
-                        color = TextSecondary.copy(alpha = 0.6f)
-                    )
-                },
-                textStyle = MaterialTheme.typography.bodyMedium.copy(color = TextPrimary),
+                placeholderText = if (language == "de") "Gedanken, Erfolge oder Notizen für diesen Tag..." else if (language == "ka") "აზრები, მიღწევები თუ ნოტები ამ დღისთვის..." else if (language == "zh") "这一天的心得体会、小成就 or 备忘..." else "Thoughts, achievements, or notes for this day...",
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 120.dp, max = 240.dp)
+                    .heightIn(min = 140.dp, max = 240.dp)
                     .focusRequester(focusRequester),
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = TextPrimary,
-                    unfocusedTextColor = TextPrimary,
-                    focusedBorderColor = PrimaryViolet,
-                    unfocusedBorderColor = AppBorder,
-                    focusedContainerColor = AppBg,
-                    unfocusedContainerColor = AppBg,
-                    cursorColor = PrimaryViolet
-                )
+                singleLine = false,
+                testTag = "daily_note_input"
             )
-        }
-    },
-        confirmButton = {
+
+            Spacer(modifier = Modifier.height(20.dp))
+
             Button(
                 onClick = { onSave(noteText) },
                 colors = ButtonDefaults.buttonColors(containerColor = PrimaryViolet),
-                shape = RoundedCornerShape(8.dp)
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
             ) {
                 Text(
                     text = if (language == "de") "Speichern" else if (language == "ka") "შენახვა" else if (language == "zh") "保存" else "Save",
                     color = Color.White,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMedium
                 )
             }
-        },
-        containerColor = AppCard,
-        shape = RoundedCornerShape(20.dp),
-        modifier = Modifier.border(1.dp, AppBorder, RoundedCornerShape(20.dp))
-    )
+        }
+    }
 }
 
 fun Modifier.saturationFilter(saturation: Float): Modifier = this.drawWithContent {
@@ -15745,8 +15644,7 @@ fun ConfettiCanvas(
 fun AchievementUnlockedOverlay(
     achievement: com.example.data.UnlockedAchievementInfo,
     language: String,
-    onDismiss: () -> Unit,
-    onRedeemReward: ((Int) -> Unit)? = null
+    onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
 
@@ -15969,48 +15867,23 @@ fun AchievementUnlockedOverlay(
                                 fontWeight = FontWeight.Bold,
                                 textAlign = TextAlign.Center
                             )
+                            if (!achievement.rewardDescription.isNullOrBlank()) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = achievement.rewardDescription,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = PrimaryViolet,
+                                    textAlign = TextAlign.Center,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = if (language == "de") "Du hast diese Belohnung freigeschaltet! Du kannst sie jetzt gleich einlösen oder später unter Meilenstein-Belohnungen finden." else if (language == "ka") "თქვენ განბლოკეთ ეს ჯილდო! შეგიძლიათ გამოისყიდოთ ის ახლავე ან მოგვიანებით." else if (language == "zh") "你解锁了这项奖励！你可以在此立即兑换，或稍后在里程碑奖励中查看。" else "You unlocked this reward! You can redeem it right now or manage it later in Milestone Rewards.",
+                                text = if (language == "de") "Du hast diese Belohnung freigeschaltet! Du kannst sie jederzeit in den Meilenstein-Belohnungen auf der Statistik-Seite einlösen." else if (language == "ka") "თქვენ განბლოკეთ ეს ჯილდო! შეგიძლიათ გამოისყიდოთ ის სტატისტიკის გვერდზე." else if (language == "zh") "你解锁了这项奖励！你可以在统计页面的里程碑奖励中查看与兑换。" else "You unlocked this reward! You can view and redeem it anytime in Milestone Rewards on the Statistics page.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = TextSecondary,
                                 textAlign = TextAlign.Center
                             )
-
-                            if (achievement.milestoneRewardId != null && onRedeemReward != null) {
-                                Spacer(modifier = Modifier.height(12.dp))
-                                var isRedeemedLocal by remember { mutableStateOf(false) }
-                                Button(
-                                    onClick = {
-                                        onRedeemReward(achievement.milestoneRewardId)
-                                        isRedeemedLocal = true
-                                    },
-                                    enabled = !isRedeemedLocal,
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (isRedeemedLocal) Color(0xFF10B981) else PrimaryViolet,
-                                        disabledContainerColor = Color(0xFF10B981)
-                                    ),
-                                    shape = RoundedCornerShape(12.dp),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Icon(
-                                        imageVector = if (isRedeemedLocal) Icons.Default.Check else Icons.Default.CardGiftcard,
-                                        contentDescription = null,
-                                        tint = Color.White,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = if (isRedeemedLocal) {
-                                            if (language == "de") "Eingelöst! ✓" else if (language == "ka") "გამოსყიდულია! ✓" else if (language == "zh") "已兑换！✓" else "Redeemed! ✓"
-                                        } else {
-                                            if (language == "de") "Belohnung jetzt einlösen" else if (language == "ka") "ჯილდოს გამოსყიდვა" else if (language == "zh") "立即兑换奖励" else "Redeem Reward Now"
-                                        },
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.White
-                                    )
-                                }
-                            }
                         }
                     }
                 }
@@ -16055,6 +15928,7 @@ fun AchievementBadge(
                 "COMP_50" -> 2
                 "COMP_200" -> 3
                 "COMP_500" -> 4
+                "COMP_1000" -> 5
                 else -> 1
             }
             TargetWithArrowsIcon(arrowCount = arrowCount, modifier = modifierWithAlpha)
@@ -16063,7 +15937,8 @@ fun AchievementBadge(
             val ringCount = when (tier) {
                 "PERF_7" -> 1
                 "PERF_30" -> 2
-                "PERF_100" -> 3
+                "PERF_365" -> 3
+                "PERF_1000" -> 4
                 else -> 1
             }
             CalendarWithRingsIcon(ringCount = ringCount, modifier = modifierWithAlpha)
@@ -17078,68 +16953,22 @@ private fun OnboardingStepPersonalize(language: String, viewModel: HabitsViewMod
 
         // Design Mode
         Text(
-            text = if (language == "de") "DESIGN THEME" else if (language == "ka") "დიზაინის თემა" else if (language == "zh") "设计主题" else "DESIGN THEME",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.Bold,
+            text = if (language == "de") "Design-Theme" else if (language == "ka") "დიზაინის თემა" else if (language == "zh") "设计主题" else "Design Theme",
+            style = MaterialTheme.typography.labelMedium,
+            color = TextSecondary,
+            fontWeight = FontWeight.SemiBold,
             modifier = Modifier.align(Alignment.Start)
         )
-        Spacer(modifier = Modifier.height(6.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Button(
-                onClick = { viewModel.setDarkModeEnabled(true) },
-                modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (darkModeEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
-                ),
-                shape = RoundedCornerShape(10.dp),
-                border = BorderStroke(1.dp, if (darkModeEnabled) Color.Transparent else MaterialTheme.colorScheme.outline)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.DarkMode,
-                        contentDescription = null,
-                        tint = if (darkModeEnabled) Color.White else MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = if (language == "de") "Dunkel" else if (language == "ka") "ბნელი" else if (language == "zh") "深色" else "Dark",
-                        color = if (darkModeEnabled) Color.White else MaterialTheme.colorScheme.onSurface,
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-            Button(
-                onClick = { viewModel.setDarkModeEnabled(false) },
-                modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (!darkModeEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
-                ),
-                shape = RoundedCornerShape(10.dp),
-                border = BorderStroke(1.dp, if (!darkModeEnabled) Color.Transparent else MaterialTheme.colorScheme.outline)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.LightMode,
-                        contentDescription = null,
-                        tint = if (!darkModeEnabled) Color.White else MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = if (language == "de") "Hell" else if (language == "ka") "სინათლე" else if (language == "zh") "浅色" else "Light",
-                        color = if (!darkModeEnabled) Color.White else MaterialTheme.colorScheme.onSurface,
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-        }
+        Spacer(modifier = Modifier.height(8.dp))
+        AppSegmentedButtonWithIcons(
+            options = listOf(
+                (if (language == "de") "Dunkel" else if (language == "ka") "ბნელი" else if (language == "zh") "深色" else "Dark") to Icons.Default.DarkMode,
+                (if (language == "de") "Hell" else if (language == "ka") "სინათლე" else if (language == "zh") "浅色" else "Light") to Icons.Default.LightMode
+            ),
+            selectedIndex = if (darkModeEnabled) 0 else 1,
+            onOptionSelected = { index -> viewModel.setDarkModeEnabled(index == 0) },
+            testTagPrefix = "customizer_theme_toggle"
+        )
 
         Spacer(modifier = Modifier.height(14.dp))
 
@@ -18667,6 +18496,7 @@ fun getDayOfWeekNameLocalized(dayOfWeek: Int, language: String): String {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReviewArchiveDialog(
     showReviewArchive: Boolean,
@@ -18683,88 +18513,66 @@ fun ReviewArchiveDialog(
     if (!showReviewArchive) return
 
     var selectedTabIndex by remember { mutableStateOf(0) } // 0 = Monthly, 1 = Yearly
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = AppCard,
+        contentColor = TextPrimary,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        dragHandle = { StandardSheetDragHandle() }
+    ) {
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 4.dp, vertical = 16.dp),
-            color = AppCard,
-            border = BorderStroke(1.dp, AppBorder),
-            shape = RoundedCornerShape(24.dp)
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 32.dp)
         ) {
-            Column(
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (language == "de") "Deine Rückblicke" else if (language == "ka") "თქვენი მიმოხილვები" else if (language == "zh") "你的回顾" else "Your Reviews",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = TextPrimary,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                IconButton(
+                    onClick = onShowReviewExplanation,
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = "Info",
+                        tint = PrimaryViolet,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            TimeframeSelectorPills(
+                selectedTimeframeIndex = selectedTabIndex,
+                onTimeframeSelected = { selectedTabIndex = it },
+                language = language,
+                customLabels = listOf(
+                    if (language == "de") "Monatlich (${availableMonths.size})" else if (language == "ka") "ყოველთვიური (${availableMonths.size})" else if (language == "zh") "月度回顾 (${availableMonths.size})" else "Monthly (${availableMonths.size})",
+                    if (language == "de") "Jährlich (${availableYears.size})" else if (language == "ka") "ყოველწლიურად (${availableYears.size})" else if (language == "zh") "年度回顾 (${availableYears.size})" else "Yearly (${availableYears.size})"
+                )
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp)
+                    .weight(1f, fill = false),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = if (language == "de") "Deine Rückblicke" else if (language == "ka") "თქვენი მიმოხილვები" else if (language == "zh") "你的回顾" else "Your Reviews",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = TextPrimary,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        IconButton(
-                            onClick = onShowReviewExplanation,
-                            modifier = Modifier.size(24.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Info,
-                                contentDescription = "Info",
-                                tint = PrimaryViolet,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    }
-                    IconButton(onClick = onDismiss) {
-                        Icon(imageVector = Icons.Default.Close, contentDescription = "Close", tint = TextSecondary)
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                TabRow(
-                    selectedTabIndex = selectedTabIndex,
-                    containerColor = Color.Transparent,
-                    contentColor = PrimaryViolet
-                ) {
-                    Tab(
-                        selected = selectedTabIndex == 0,
-                        onClick = { selectedTabIndex = 0 },
-                        text = { 
-                            Text(
-                                text = if (language == "de") "Monatlich (${availableMonths.size})" else if (language == "ka") "ყოველთვიური ( ${availableMonths.size} )" else if (language == "zh") "月度回顾 (${availableMonths.size})" else "Monthly (${availableMonths.size})", 
-                                color = if (selectedTabIndex == 0) PrimaryViolet else TextSecondary
-                            ) 
-                        }
-                    )
-                    Tab(
-                        selected = selectedTabIndex == 1,
-                        onClick = { selectedTabIndex = 1 },
-                        text = { 
-                            Text(
-                                text = if (language == "de") "Jährlich (${availableYears.size})" else if (language == "ka") "ყოველწლიურად ( ${availableYears.size} )" else if (language == "zh") "年度回顾 (${availableYears.size})" else "Yearly (${availableYears.size})", 
-                                color = if (selectedTabIndex == 1) PrimaryViolet else TextSecondary
-                            ) 
-                        }
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 420.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
                     if (selectedTabIndex == 0) {
                         if (availableMonths.isEmpty()) {
                             item {
@@ -18914,7 +18722,6 @@ fun ReviewArchiveDialog(
             }
         }
     }
-}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -21700,32 +21507,22 @@ fun TimeCapsuleSlide(
                         modifier = Modifier.padding(bottom = 12.dp)
                     )
 
-                    OutlinedTextField(
+                    AppTextField(
                         value = futureText,
                         onValueChange = { newValue ->
                             futureText = newValue
                             viewModel.saveTimeCapsuleNote(type, upcomingPeriod, newValue)
                         },
-                        placeholder = {
-                            Text(
-                                text = if (language == "de") "Liebes zukünftiges Ich..." else if (language == "ka") "ძვირფასო მომავალო..." else if (language == "zh") "亲爱的未来的我..." else "Dear future self...",
-                                color = Color.White.copy(alpha = 0.4f)
-                            )
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(130.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color(0xFFF59E0B),
-                            unfocusedBorderColor = Color.White.copy(alpha = 0.25f),
-                            focusedContainerColor = Color.Black.copy(alpha = 0.2f),
-                            unfocusedContainerColor = Color.Black.copy(alpha = 0.1f),
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White
-                        ),
+                        placeholderText = if (language == "de") "Liebes zukünftiges Ich..." else if (language == "ka") "ძვირფასო მომავალო..." else if (language == "zh") "亲爱的未来的我..." else "Dear future self...",
+                        modifier = Modifier.height(130.dp),
+                        containerColor = Color.Black.copy(alpha = 0.15f),
+                        accentColor = Color(0xFFF59E0B),
+                        unfocusedBorderColor = Color.White.copy(alpha = 0.25f),
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        singleLine = false,
                         maxLines = 5,
-                        textStyle = MaterialTheme.typography.bodyMedium
+                        testTag = "time_capsule_future_input"
                     )
 
                     Spacer(modifier = Modifier.height(10.dp))
@@ -21765,6 +21562,7 @@ fun RewardsOverviewSheet(
     language: String,
     onDismiss: () -> Unit
 ) {
+    val context = LocalContext.current
     val allRewards by viewModel.allMilestoneRewards.collectAsStateWithLifecycle(initialValue = emptyList())
     val allHabits by viewModel.allHabits.collectAsStateWithLifecycle(initialValue = emptyList())
     val profileStats by viewModel.profileStats.collectAsStateWithLifecycle(initialValue = com.example.data.ProfileStats())
@@ -21774,63 +21572,76 @@ fun RewardsOverviewSheet(
     val activeRewards = allRewards.filter { it.unlockedAt == 0L }
     val achievedRewards = allRewards.filter { it.unlockedAt > 0L }.sortedByDescending { it.unlockedAt }
 
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    fun openWebUrl(rawUrl: String) {
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(rawUrl))
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    fun extractUrl(text: String): String? {
+        if (text.isBlank()) return null
+        val pattern = java.util.regex.Pattern.compile("(https?://[\\w-]+(\\.[\\w-]+)+[/#?]?.*|www\\.[\\w-]+(\\.[\\w-]+)+[/#?]?.*)", java.util.regex.Pattern.CASE_INSENSITIVE)
+        val matcher = pattern.matcher(text)
+        if (matcher.find()) {
+            var url = matcher.group(0) ?: ""
+            if (!url.startsWith("http://") && !url.startsWith("https://")) {
+                url = "https://$url"
+            }
+            return url
+        }
+        return null
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = AppCard,
+        contentColor = TextPrimary,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        dragHandle = { StandardSheetDragHandle() }
+    ) {
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 4.dp, vertical = 16.dp),
-            color = AppCard,
-            border = BorderStroke(1.dp, AppBorder),
-            shape = RoundedCornerShape(24.dp)
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 32.dp)
         ) {
-            Column(
+            Text(
+                text = if (language == "de") "Meilenstein-Belohnungen" else if (language == "ka") "ეტაპობრივი ჯილდოები" else if (language == "zh") "里程碑奖励" else "Milestone Rewards",
+                style = MaterialTheme.typography.titleLarge,
+                color = TextPrimary,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.fillMaxWidth()
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+
+            val unredeemedCount = achievedRewards.count { !it.isRedeemed }
+
+            TimeframeSelectorPills(
+                selectedTimeframeIndex = selectedTabIndex,
+                onTimeframeSelected = { selectedTabIndex = it },
+                language = language,
+                customLabels = listOf(
+                    if (language == "de") "Aktiv (${activeRewards.size})" else if (language == "ka") "აქტიური (${activeRewards.size})" else if (language == "zh") "进行中 (${activeRewards.size})" else "Active (${activeRewards.size})",
+                    if (language == "de") "Freigeschaltet (${achievedRewards.size})" else if (language == "ka") "მიღწეული (${achievedRewards.size})" else if (language == "zh") "已解锁 (${achievedRewards.size})" else "Unlocked (${achievedRewards.size})"
+                ),
+                badges = listOf(0, unredeemedCount)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp)
+                    .weight(1f, fill = false),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = if (language == "de") "Meilenstein-Belohnungen" else if (language == "ka") "ეტაპობრივი ჯილდოები" else if (language == "zh") "里程碑奖励" else "Milestone Rewards",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = TextPrimary,
-                        fontWeight = FontWeight.Bold
-                    )
-                    IconButton(onClick = onDismiss) {
-                        Icon(imageVector = Icons.Default.Close, contentDescription = "Close", tint = TextSecondary)
-                    }
-                }
-                
-                Spacer(modifier = Modifier.height(12.dp))
-
-                TabRow(
-                    selectedTabIndex = selectedTabIndex,
-                    containerColor = Color.Transparent,
-                    contentColor = PrimaryViolet
-                ) {
-                    Tab(
-                        selected = selectedTabIndex == 0,
-                        onClick = { selectedTabIndex = 0 },
-                        text = { Text(if (language == "de") "Aktiv (${activeRewards.size})" else if (language == "ka") "აქტიური (${activeRewards.size})" else if (language == "zh") "进行中 (${activeRewards.size})" else "Active (${activeRewards.size})", color = if (selectedTabIndex == 0) PrimaryViolet else TextSecondary) }
-                    )
-                    Tab(
-                        selected = selectedTabIndex == 1,
-                        onClick = { selectedTabIndex = 1 },
-                        text = { Text(if (language == "de") "Freigeschaltet (${achievedRewards.size})" else if (language == "ka") "მიღწეული (${achievedRewards.size})" else if (language == "zh") "已解锁 (${achievedRewards.size})" else "Unlocked (${achievedRewards.size})", color = if (selectedTabIndex == 1) PrimaryViolet else TextSecondary) }
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 420.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
                     if (selectedTabIndex == 0) {
                         if (activeRewards.isEmpty()) {
                             item {
@@ -21855,19 +21666,23 @@ fun RewardsOverviewSheet(
                                             "BRONZE" -> streak to 14
                                             "SILVER" -> streak to 30
                                             "GOLD" -> streak to 100
+                                            "DIAMOND" -> streak to 365
                                             "COMP_10" -> profileStats.totalGlobalCompletions to 10
                                             "COMP_50" -> profileStats.totalGlobalCompletions to 50
                                             "COMP_200" -> profileStats.totalGlobalCompletions to 200
                                             "COMP_500" -> profileStats.totalGlobalCompletions to 500
+                                            "COMP_1000" -> profileStats.totalGlobalCompletions to 1000
                                             "PERF_7" -> profileStats.perfectDaysStreak to 7
                                             "PERF_30" -> profileStats.perfectDaysStreak to 30
-                                            "PERF_100" -> profileStats.perfectDaysStreak to 100
+                                            "PERF_365" -> profileStats.perfectDaysStreak to 365
+                                            "PERF_1000" -> profileStats.perfectDaysStreak to 1000
                                             else -> 0 to 1
                                         }
                                     }
                                     else -> 0 to 1
                                 }
                                 val progress = (currentValue.toFloat() / targetValue.toFloat()).coerceIn(0f, 1f)
+                                val extractedUrl = extractUrl("${reward.rewardText} ${reward.description}")
 
                                 Card(
                                     colors = CardDefaults.cardColors(containerColor = AppBg),
@@ -21895,6 +21710,34 @@ fun RewardsOverviewSheet(
                                                 color = TextPrimary,
                                                 fontWeight = FontWeight.Bold
                                             )
+                                        }
+                                        
+                                        if (reward.description.isNotBlank()) {
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                text = reward.description,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = TextSecondary
+                                            )
+                                        }
+
+                                        if (extractedUrl != null) {
+                                            Spacer(modifier = Modifier.height(6.dp))
+                                            OutlinedButton(
+                                                onClick = { openWebUrl(extractedUrl) },
+                                                colors = ButtonDefaults.outlinedButtonColors(contentColor = PrimaryViolet),
+                                                border = BorderStroke(1.dp, PrimaryViolet.copy(alpha = 0.5f)),
+                                                shape = RoundedCornerShape(8.dp),
+                                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp)
+                                            ) {
+                                                Icon(Icons.Default.OpenInNew, contentDescription = null, modifier = Modifier.size(14.dp))
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text(
+                                                    text = if (language == "de") "Link öffnen 🔗" else "Open Link 🔗",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
                                         }
                                         
                                         val habit = allHabits.find { it.id == reward.habitId }
@@ -21968,85 +21811,156 @@ fun RewardsOverviewSheet(
                         } else {
                             items(achievedRewards) { reward ->
                                 val trophy = if (reward.conditionType == "TROPHY_COUPLED") STANDARD_TROPHIES.find { it.id == reward.trophyId } else null
+                                val extractedUrl = extractUrl("${reward.rewardText} ${reward.description}")
+
                                 Card(
                                     colors = CardDefaults.cardColors(containerColor = if (reward.isRedeemed) AppBg else PrimaryViolet.copy(alpha = 0.12f)),
                                     border = if (reward.isRedeemed) BorderStroke(1.dp, AppBorder) else BorderStroke(1.dp, PrimaryViolet.copy(alpha = 0.5f)),
                                     modifier = Modifier.fillMaxWidth(),
                                     shape = RoundedCornerShape(12.dp)
                                 ) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth().padding(14.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
-                                            if (trophy != null) {
-                                                AchievementBadge(
-                                                    type = trophy.type,
-                                                    tier = trophy.tier,
-                                                    isUnlocked = true,
-                                                    modifier = Modifier.size(28.dp)
-                                                )
-                                                Spacer(modifier = Modifier.width(10.dp))
-                                            }
-                                            Column {
-                                                Text(
-                                                    text = reward.rewardText,
-                                                    style = MaterialTheme.typography.titleMedium,
-                                                    color = if (reward.isRedeemed) TextSecondary else TextPrimary,
-                                                    fontWeight = FontWeight.Bold,
-                                                    textDecoration = if (reward.isRedeemed) TextDecoration.LineThrough else TextDecoration.None
-                                                )
-                                                Text(
-                                                    text = if (reward.isRedeemed) {
-                                                        if (language == "de") "Eingelöst" else if (language == "ka") "გამოისყიდა" else if (language == "zh") "已兑换" else "Redeemed"
-                                                    } else {
-                                                        if (language == "de") "Bereit zum Einlösen!" else if (language == "ka") "მზად არის გამოსასყიდად!" else if (language == "zh") "可兑换！" else "Ready to redeem!"
-                                                    },
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = if (reward.isRedeemed) TextSecondary else PrimaryViolet
-                                                )
-                                                
-                                                val habit = allHabits.find { it.id == reward.habitId }
-                                                if (habit != null) {
-                                                    Spacer(modifier = Modifier.height(4.dp))
-                                                    Row(
-                                                        verticalAlignment = Alignment.CenterVertically,
-                                                        modifier = Modifier
-                                                            .background(
-                                                                parseHabitColor(habit.color).copy(alpha = 0.15f),
-                                                                RoundedCornerShape(6.dp)
-                                                            )
-                                                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                                                    ) {
-                                                        Icon(
-                                                            imageVector = HabitIconMapping.getIcon(habit.icon),
-                                                            contentDescription = null,
-                                                            tint = parseHabitColor(habit.color),
-                                                            modifier = Modifier.size(12.dp)
-                                                        )
-                                                        Spacer(modifier = Modifier.width(4.dp))
+                                    Column(modifier = Modifier.fillMaxWidth().padding(14.dp)) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.Top
+                                        ) {
+                                            Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                                                if (trophy != null) {
+                                                    AchievementBadge(
+                                                        type = trophy.type,
+                                                        tier = trophy.tier,
+                                                        isUnlocked = true,
+                                                        modifier = Modifier.size(32.dp)
+                                                    )
+                                                    Spacer(modifier = Modifier.width(10.dp))
+                                                } else {
+                                                    Icon(
+                                                        imageVector = Icons.Default.CardGiftcard,
+                                                        contentDescription = null,
+                                                        tint = if (reward.isRedeemed) TextSecondary else PrimaryViolet,
+                                                        modifier = Modifier.size(24.dp)
+                                                    )
+                                                    Spacer(modifier = Modifier.width(10.dp))
+                                                }
+                                                Column {
+                                                    Text(
+                                                        text = reward.rewardText,
+                                                        style = MaterialTheme.typography.titleMedium,
+                                                        color = if (reward.isRedeemed) TextSecondary else TextPrimary,
+                                                        fontWeight = FontWeight.Bold,
+                                                        textDecoration = if (reward.isRedeemed) TextDecoration.LineThrough else TextDecoration.None
+                                                    )
+                                                    if (reward.description.isNotBlank()) {
+                                                        Spacer(modifier = Modifier.height(2.dp))
                                                         Text(
-                                                            text = habit.name,
-                                                            style = MaterialTheme.typography.labelSmall,
-                                                            color = parseHabitColor(habit.color),
-                                                            fontWeight = FontWeight.SemiBold
+                                                            text = reward.description,
+                                                            style = MaterialTheme.typography.bodySmall,
+                                                            color = TextSecondary,
+                                                            textDecoration = if (reward.isRedeemed) TextDecoration.LineThrough else TextDecoration.None
                                                         )
                                                     }
                                                 }
                                             }
                                         }
-                                        if (!reward.isRedeemed) {
-                                            Button(
-                                                onClick = { viewModel.redeemMilestoneReward(reward.id) },
-                                                colors = ButtonDefaults.buttonColors(containerColor = PrimaryViolet),
-                                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+
+                                        val habit = allHabits.find { it.id == reward.habitId }
+                                        if (habit != null) {
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                modifier = Modifier
+                                                    .background(
+                                                        parseHabitColor(habit.color).copy(alpha = 0.15f),
+                                                        RoundedCornerShape(6.dp)
+                                                    )
+                                                    .padding(horizontal = 6.dp, vertical = 2.dp)
                                             ) {
-                                                Text(
-                                                    text = if (language == "de") "Einlösen" else if (language == "ka") "გამოისყიდე" else if (language == "zh") "兑换" else "Redeem",
-                                                    style = MaterialTheme.typography.labelMedium,
-                                                    fontWeight = FontWeight.Bold
+                                                Icon(
+                                                    imageVector = HabitIconMapping.getIcon(habit.icon),
+                                                    contentDescription = null,
+                                                    tint = parseHabitColor(habit.color),
+                                                    modifier = Modifier.size(12.dp)
                                                 )
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Text(
+                                                    text = habit.name,
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = parseHabitColor(habit.color),
+                                                    fontWeight = FontWeight.SemiBold
+                                                )
+                                            }
+                                        }
+
+                                        Spacer(modifier = Modifier.height(12.dp))
+
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            if (extractedUrl != null) {
+                                                OutlinedButton(
+                                                    onClick = { openWebUrl(extractedUrl) },
+                                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = PrimaryViolet),
+                                                    border = BorderStroke(1.dp, PrimaryViolet.copy(alpha = 0.6f)),
+                                                    shape = RoundedCornerShape(8.dp),
+                                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp)
+                                                ) {
+                                                    Icon(Icons.Default.OpenInNew, contentDescription = null, modifier = Modifier.size(14.dp))
+                                                    Spacer(modifier = Modifier.width(6.dp))
+                                                    Text(
+                                                        text = if (language == "de") "Link öffnen 🔗" else "Open Link 🔗",
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                }
+                                            } else {
+                                                Spacer(modifier = Modifier.width(1.dp))
+                                            }
+
+                                            if (!reward.isRedeemed) {
+                                                Button(
+                                                    onClick = { viewModel.toggleRedeemMilestoneReward(reward.id, true) },
+                                                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryViolet),
+                                                    shape = RoundedCornerShape(10.dp),
+                                                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+                                                ) {
+                                                    Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
+                                                    Spacer(modifier = Modifier.width(6.dp))
+                                                    Text(
+                                                        text = if (language == "de") "Als eingelöst markieren ✓" else if (language == "ka") "გამოისყიდე" else if (language == "zh") "标记为已兑换" else "Mark as Redeemed ✓",
+                                                        style = MaterialTheme.typography.labelMedium,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                }
+                                            } else {
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Surface(
+                                                        color = Color(0xFF10B981).copy(alpha = 0.2f),
+                                                        shape = RoundedCornerShape(8.dp),
+                                                        border = BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.5f))
+                                                    ) {
+                                                        Text(
+                                                            text = if (language == "de") "Eingelöst ✓" else if (language == "ka") "გამოისყიდა ✓" else if (language == "zh") "已兑换 ✓" else "Redeemed ✓",
+                                                            style = MaterialTheme.typography.labelSmall,
+                                                            color = Color(0xFF10B981),
+                                                            fontWeight = FontWeight.Bold,
+                                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                                        )
+                                                    }
+                                                    Spacer(modifier = Modifier.width(8.dp))
+                                                    TextButton(
+                                                        onClick = { viewModel.toggleRedeemMilestoneReward(reward.id, false) },
+                                                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                                                    ) {
+                                                        Text(
+                                                            text = if (language == "de") "Rückgängig" else "Undo",
+                                                            style = MaterialTheme.typography.labelSmall,
+                                                            color = TextSecondary
+                                                        )
+                                                    }
+                                                }
                                             }
                                         }
                                     }
@@ -22058,15 +21972,6 @@ fun RewardsOverviewSheet(
             }
         }
     }
-}
-
-
-
-
-
-
-
-
 
 
 fun Modifier.animatedGlowingBorder(

@@ -92,6 +92,7 @@ data class MilestoneReward(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     @ColumnInfo(index = true) val habitId: Int,
     val rewardText: String,
+    val description: String = "",
     val isRedeemed: Boolean = false,
     val unlockedAt: Long = 0L,
     val conditionType: String = "", // "STREAK", "COMPLETIONS", "TROPHY_COUPLED"
@@ -394,6 +395,7 @@ data class UnlockedAchievementInfo(
     val title: String,
     val description: String,
     val rewardText: String? = null,
+    val rewardDescription: String? = null,
     val habitName: String? = null,
     val habitColor: String? = null,
     val habitIcon: String? = null,

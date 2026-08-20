@@ -211,13 +211,21 @@ class HabitWidgetProvider : AppWidgetProvider() {
         pendingResult: BroadcastReceiver.PendingResult? = null,
         isFullUpdate: Boolean = true
     ) {
+        if (isFullUpdate) {
+            val now = System.currentTimeMillis()
+            if (now - lastUpdateAllTime < 1500L) {
+                try { pendingResult?.finish() } catch (e: Exception) {}
+                return
+            }
+            lastUpdateAllTime = now
+        }
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 updateAllWidgetsSuspend(context, appWidgetManager, appWidgetIds, isFullUpdate)
             } catch (e: Exception) {
                 e.printStackTrace()
             } finally {
-                pendingResult?.finish()
+                try { pendingResult?.finish() } catch (e: Exception) {}
             }
         }
     }

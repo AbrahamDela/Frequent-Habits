@@ -3121,6 +3121,7 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
             val matchingReward = rewards.find { it.conditionType == "TROPHY_COUPLED" && it.trophyId == ach.tier && (habitId == null || it.habitId == habitId) }
             ach.copy(
                 rewardText = matchingReward?.rewardText,
+                rewardDescription = matchingReward?.description,
                 milestoneRewardId = matchingReward?.id
             )
         }.toMutableList()
@@ -3147,6 +3148,7 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
                         habitColor = habitStat.habit.color,
                         habitIcon = habitStat.habit.icon,
                         rewardText = reward.rewardText,
+                        rewardDescription = reward.description,
                         milestoneRewardId = reward.id
                     ))
                 }
@@ -3188,12 +3190,16 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun redeemMilestoneReward(rewardId: Int) {
+        toggleRedeemMilestoneReward(rewardId, true)
+    }
+
+    fun toggleRedeemMilestoneReward(rewardId: Int, isRedeemed: Boolean) {
         viewModelScope.launch {
             try {
                 val rewards = repository.getAllMilestoneRewardsRaw()
                 val reward = rewards.find { it.id == rewardId }
                 if (reward != null) {
-                    repository.updateMilestoneReward(reward.copy(isRedeemed = true))
+                    repository.updateMilestoneReward(reward.copy(isRedeemed = isRedeemed))
                 }
             } catch (e: Exception) {
                 e.printStackTrace()

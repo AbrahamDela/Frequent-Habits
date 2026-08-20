@@ -43,6 +43,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.FileProvider
 import coil.compose.rememberAsyncImagePainter
+import com.example.ui.components.AppTextField
 import com.example.tr
 import com.example.data.Habit
 import com.example.data.HabitLog
@@ -171,6 +172,7 @@ fun shareBitmapImage(context: Context, bitmap: Bitmap, title: String, textSummar
 // ==========================================
 // HABIT SHARE DIALOG
 // ==========================================
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HabitShareDialog(
     habit: Habit,
@@ -229,50 +231,40 @@ fun HabitShareDialog(
 
     val currentTheme = habitShareThemes[selectedThemeIndex % habitShareThemes.size]
 
-    Dialog(
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+        sheetState = sheetState,
+        containerColor = Color(0xFF12121A),
+        contentColor = Color.White,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        dragHandle = { com.example.StandardSheetDragHandle(color = Color.White.copy(alpha = 0.35f)) }
     ) {
-        Surface(
+        Column(
             modifier = Modifier
-                .fillMaxWidth(0.92f)
-                .fillMaxHeight(0.9f)
-                .clip(RoundedCornerShape(24.dp)),
-            color = Color(0xFF12121A)
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 32.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(20.dp)
-            ) {
                 // Header Row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = null,
-                            tint = Color(0xFFA855F7),
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = if (language == "de") "Gewohnheit teilen" else if (language == "ka") "გაზიარება ჩვევა" else if (language == "zh") "分享习惯" else "Share Habit",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    IconButton(onClick = onDismiss) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Close",
-                            tint = Color.White.copy(alpha = 0.7f)
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Default.Share,
+                        contentDescription = null,
+                        tint = Color(0xFFA855F7),
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = if (language == "de") "Gewohnheit teilen" else if (language == "ka") "გაზიარება ჩვევა" else if (language == "zh") "分享习惯" else "Share Habit",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -485,19 +477,17 @@ fun HabitShareDialog(
 
                     // Editable Quote / Motto input field
                     if (showCustomMotto) {
-                        OutlinedTextField(
+                        AppTextField(
                             value = customMottoText,
                             onValueChange = { customMottoText = it },
-                            label = { Text(if (language == "de") "Persönliche Notiz / Motto" else if (language == "ka") "პირადი ციტატა" else if (language == "zh") "个人格言 / 寄语" else "Personal Quote") },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = currentTheme.accentColor,
-                                unfocusedBorderColor = Color.White.copy(alpha = 0.2f),
-                                focusedTextColor = Color.White,
-                                unfocusedTextColor = Color.White
-                            ),
+                            labelText = if (language == "de") "Persönliche Notiz / Motto" else if (language == "ka") "პირადი ციტატა" else if (language == "zh") "个人格言 / 寄语" else "Personal Quote",
+                            containerColor = Color.Black.copy(alpha = 0.2f),
+                            accentColor = currentTheme.accentColor,
+                            unfocusedBorderColor = Color.White.copy(alpha = 0.2f),
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
                             singleLine = true,
-                            shape = RoundedCornerShape(12.dp)
+                            testTag = "share_quote_input"
                         )
                     }
                 }
@@ -527,6 +517,7 @@ fun HabitShareDialog(
                             append("\nShared via Everyday Habits App")
                         }
                         shareBitmapImage(context, bitmap, habit.name, textSummary)
+                        onDismiss()
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -545,7 +536,6 @@ fun HabitShareDialog(
                         fontWeight = FontWeight.Bold
                     )
                 }
-            }
         }
     }
 }
@@ -553,6 +543,7 @@ fun HabitShareDialog(
 // ==========================================
 // PROFILE SHARE DIALOG
 // ==========================================
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileShareDialog(
     userName: String,
@@ -604,51 +595,41 @@ fun ProfileShareDialog(
         )
     }
 
-    Dialog(
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+        sheetState = sheetState,
+        containerColor = Color(0xFF12121A),
+        contentColor = Color.White,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        dragHandle = { com.example.StandardSheetDragHandle(color = Color.White.copy(alpha = 0.35f)) }
     ) {
-        Surface(
+        Column(
             modifier = Modifier
-                .fillMaxWidth(0.92f)
-                .wrapContentHeight()
-                .clip(RoundedCornerShape(24.dp)),
-            color = Color(0xFF12121A)
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
                 // Header Row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = null,
-                            tint = accentColor,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = if (language == "de") "Profilkarte teilen" else if (language == "ka") "პროფილის გაზიარება" else if (language == "zh") "分享个人主页" else "Share Profile",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    IconButton(onClick = onDismiss) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Close",
-                            tint = Color.White.copy(alpha = 0.7f)
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Default.Share,
+                        contentDescription = null,
+                        tint = accentColor,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = if (language == "de") "Profilkarte teilen" else if (language == "ka") "პროფილის გაზიარება" else if (language == "zh") "分享个人主页" else "Share Profile",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -676,6 +657,7 @@ fun ProfileShareDialog(
                         val title = if (language == "de") "Frequent Habits Profil" else if (language == "ka") "ხშირი ჩვევების პროფილი" else if (language == "zh") "Frequent Habits 习惯主页" else "Frequent Habits Profile"
                         val summaryText = getSocialShareText(language)
                         shareBitmapImage(context, bitmap, title, summaryText)
+                        onDismiss()
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -694,11 +676,11 @@ fun ProfileShareDialog(
                         fontWeight = FontWeight.Bold
                     )
                 }
-            }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MonthlyReviewShareDialog(
     year: Int,
@@ -720,51 +702,41 @@ fun MonthlyReviewShareDialog(
         )
     }
 
-    Dialog(
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+        sheetState = sheetState,
+        containerColor = Color(0xFF12121A),
+        contentColor = Color.White,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        dragHandle = { com.example.StandardSheetDragHandle(color = Color.White.copy(alpha = 0.35f)) }
     ) {
-        Surface(
+        Column(
             modifier = Modifier
-                .fillMaxWidth(0.92f)
-                .wrapContentHeight()
-                .clip(RoundedCornerShape(24.dp)),
-            color = Color(0xFF12121A)
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
                 // Header Row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = null,
-                            tint = accentColor,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = if (language == "de") "Monatsrückblick teilen" else if (language == "ka") "გააზიარეთ ყოველთვიური მიმოხილვა" else if (language == "zh") "分享月度回顾" else "Share Monthly Review",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    IconButton(onClick = onDismiss) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Close",
-                            tint = Color.White.copy(alpha = 0.7f)
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Default.Share,
+                        contentDescription = null,
+                        tint = accentColor,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = if (language == "de") "Monatsrückblick teilen" else if (language == "ka") "გააზიარეთ ყოველთვიური მიმოხილვა" else if (language == "zh") "分享月度回顾" else "Share Monthly Review",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -792,6 +764,7 @@ fun MonthlyReviewShareDialog(
                         val title = if (language == "de") "Monatsrückblick ${reviewData.monthName} $year" else if (language == "ka") "${reviewData.monthName} $year მიმოხილვა" else if (language == "zh") "${year}年${reviewData.monthName}月度回顾" else "${reviewData.monthName} $year Review"
                         val summaryText = getSocialShareText(language)
                         shareBitmapImage(context, bitmap, title, summaryText)
+                        onDismiss()
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -810,11 +783,11 @@ fun MonthlyReviewShareDialog(
                         fontWeight = FontWeight.Bold
                     )
                 }
-            }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun YearlyReviewShareDialog(
     year: Int,
@@ -836,51 +809,41 @@ fun YearlyReviewShareDialog(
         )
     }
 
-    Dialog(
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+        sheetState = sheetState,
+        containerColor = Color(0xFF12121A),
+        contentColor = Color.White,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        dragHandle = { com.example.StandardSheetDragHandle(color = Color.White.copy(alpha = 0.35f)) }
     ) {
-        Surface(
+        Column(
             modifier = Modifier
-                .fillMaxWidth(0.92f)
-                .wrapContentHeight()
-                .clip(RoundedCornerShape(24.dp)),
-            color = Color(0xFF12121A)
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
                 // Header Row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = null,
-                            tint = accentColor,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = if (language == "de") "Jahresrückblick teilen" else if (language == "ka") "წლიური მიმოხილვის გაზიარება" else if (language == "zh") "分享年度回顾" else "Share Yearly Review",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    IconButton(onClick = onDismiss) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Close",
-                            tint = Color.White.copy(alpha = 0.7f)
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Default.Share,
+                        contentDescription = null,
+                        tint = accentColor,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = if (language == "de") "Jahresrückblick teilen" else if (language == "ka") "წლიური მიმოხილვის გაზიარება" else if (language == "zh") "分享年度回顾" else "Share Yearly Review",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -908,6 +871,7 @@ fun YearlyReviewShareDialog(
                         val title = if (language == "de") "Jahresrückblick $year" else if (language == "ka") "$year მიმოხილვა" else if (language == "zh") "${year}年度回顾" else "$year Review"
                         val summaryText = getSocialShareText(language)
                         shareBitmapImage(context, bitmap, title, summaryText)
+                        onDismiss()
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -926,7 +890,6 @@ fun YearlyReviewShareDialog(
                         fontWeight = FontWeight.Bold
                     )
                 }
-            }
         }
     }
 }

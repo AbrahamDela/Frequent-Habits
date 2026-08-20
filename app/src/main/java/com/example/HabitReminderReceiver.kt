@@ -22,7 +22,10 @@ class HabitReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val habitId = intent.getIntExtra("habitId", -1)
         val habitName = intent.getStringExtra("habitName") ?: ""
+        val reminderHour = intent.getIntExtra("reminderHour", -1)
+        val reminderMinute = intent.getIntExtra("reminderMinute", -1)
 
+        val pendingResult = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val db = AppDatabase.getDatabase(context)
@@ -31,28 +34,32 @@ class HabitReminderReceiver : BroadcastReceiver() {
                 if (habitId != -1) {
                     // Individual Reminder Flow
                     val habit = db.habitDao().getHabitByIdSuspend(habitId)
-                    if (habit != null && isHabitActiveOnDate(habit, todayStr)) {
-                        val logs = db.habitDao().getLogsForHabitOnDate(habitId, todayStr)
-                        val log = logs.firstOrNull()
-                        val isCompleted = if (log != null) {
-                            when (log.value) {
-                                -1f -> false // Explicitly failed
-                                -2f -> true  // Explicitly succeeded
-                                else -> {
-                                    if (habit.type == "BINARY") {
-                                        if (habit.isNegative) false else true
-                                    } else {
-                                        if (habit.isNegative) log.value < habit.targetValue else log.value >= habit.targetValue
+                    if (habit != null && !habit.isArchived) {
+                        if (isHabitActiveOnDate(habit, todayStr)) {
+                            val logs = db.habitDao().getLogsForHabitOnDate(habitId, todayStr)
+                            val log = logs.firstOrNull()
+                            val isCompleted = if (log != null) {
+                                when (log.value) {
+                                    -1f -> false // Explicitly failed
+                                    -2f -> true  // Explicitly succeeded
+                                    else -> {
+                                        if (habit.type == "BINARY") {
+                                            if (habit.isNegative) false else true
+                                        } else {
+                                            if (habit.isNegative) log.value < habit.targetValue else log.value >= habit.targetValue
+                                        }
                                     }
                                 }
+                            } else {
+                                habit.isNegative // negative default is completed (success)
                             }
-                        } else {
-                            habit.isNegative // negative default is completed (success)
-                        }
 
-                        if (!isCompleted) {
-                            showIndividualNotification(context, habitId, habit.name)
+                            if (!isCompleted) {
+                                showIndividualNotification(context, habitId, habit.name)
+                            }
                         }
+                        // Reschedule alarm for next occurrence
+                        NotificationHelper.scheduleAllHabitReminders(context, habit)
                     }
                 } else {
                     // Fallback to General Reminder Flow
@@ -77,15 +84,26 @@ class HabitReminderReceiver : BroadcastReceiver() {
                         } else {
                             habit.isNegative
                         }
-                        !isCompleted && isHabitActiveOnDate(habit, todayStr)
+                        !isCompleted && !habit.isArchived && isHabitActiveOnDate(habit, todayStr)
                     }
 
                     if (pendingHabits.isNotEmpty()) {
                         showNotification(context, pendingHabits.size)
                     }
+
+                    // Reschedule general reminder for tomorrow
+                    val prefs = context.getSharedPreferences("habits_settings", Context.MODE_PRIVATE)
+                    val isGeneralEnabled = prefs.getBoolean("reminder_enabled", false)
+                    if (isGeneralEnabled) {
+                        val h = if (reminderHour != -1) reminderHour else prefs.getInt("reminder_hour", 20)
+                        val m = if (reminderMinute != -1) reminderMinute else prefs.getInt("reminder_minute", 0)
+                        NotificationHelper.scheduleReminder(context, h, m)
+                    }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
+            } finally {
+                pendingResult.finish()
             }
         }
     }
@@ -98,9 +116,10 @@ class HabitReminderReceiver : BroadcastReceiver() {
             val channel = NotificationChannel(
                 channelId,
                 "Gewohnheiten Erinnerung",
-                NotificationManager.IMPORTANCE_DEFAULT
+                NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "Erinnert an noch nicht erledigte Gewohnheiten"
+                enableVibration(true)
             }
             notificationManager.createNotificationChannel(channel)
         }
@@ -124,7 +143,9 @@ class HabitReminderReceiver : BroadcastReceiver() {
             .setContentText(text)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .build()
 
         notificationManager.notify(habitId, notification)
@@ -138,9 +159,10 @@ class HabitReminderReceiver : BroadcastReceiver() {
             val channel = NotificationChannel(
                 channelId,
                 "Gewohnheiten Erinnerung",
-                NotificationManager.IMPORTANCE_DEFAULT
+                NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "Erinnert an noch nicht erledigte Gewohnheiten"
+                enableVibration(true)
             }
             notificationManager.createNotificationChannel(channel)
         }
@@ -164,7 +186,9 @@ class HabitReminderReceiver : BroadcastReceiver() {
             .setContentText(text)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .build()
 
         notificationManager.notify(101, notification)
