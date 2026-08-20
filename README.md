@@ -38,7 +38,7 @@
 <br>
 
 > [!IMPORTANT]
-> ✉️ **A Personal Welcome**
+> ✉️ **A Personal Message**
 > 
 > Hey, I just wanted to welcome you personally! This is Frequent Habits—the habit tracker I built after searching high and low for an app with the exact feature set I wanted. As you can probably guess, I never found one. But I’m actually glad I didn't! It gave me the chance to build my very first app, and it has been an absolute blast.
 > 
