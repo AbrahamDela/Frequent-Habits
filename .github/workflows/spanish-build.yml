@@ -38,13 +38,11 @@ jobs:
           vm.write_text(v,encoding='utf-8')
           m=Path('app/src/main/java/com/example/MainActivity.kt')
           x=m.read_text(encoding='utf-8')
-          # Add Spanish branch to compact language conditionals that fall back to a literal English string.
           pat=re.compile(r'(?P<prefix>if \(language == "de"\).*?else if \(language == "zh"\)\s*"(?:[^"\\]|\\.)*"\s*)else\s*"(?P<en>(?:[^"\\]|\\.)*)"')
           def repl(q):
               en=q.group('en')
               return q.group('prefix')+'else if (language == "es") tr("es", "", "'+en+'") else "'+en+'"'
           x=pat.sub(repl,x)
-          # Make Spanish visible in common language-option list shapes when found.
           x=x.replace('"English" to "en"', '"English" to "en", "Español" to "es"')
           x=x.replace('Pair("English", "en")', 'Pair("English", "en"), Pair("Español", "es")')
           m.write_text(x,encoding='utf-8')
@@ -55,6 +53,8 @@ jobs:
           git add app/src/main/java/com/example/Translations.kt app/src/main/java/com/example/ui/HabitsViewModel.kt app/src/main/java/com/example/MainActivity.kt
           git commit -m "feat: add Spanish localization" || true
           git push || true
+      - name: Make Gradle wrapper executable
+        run: chmod +x gradlew
       - name: Build debug APK
         run: ./gradlew assembleDebug --stacktrace
       - uses: actions/upload-artifact@v4
