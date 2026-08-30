@@ -202,7 +202,7 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
     private val _selectedDate = MutableStateFlow(getTodayDateString())
     val selectedDate: StateFlow<String> = _selectedDate.asStateFlow()
 
-    private val _language = MutableStateFlow(sharedPrefs.getString("language", "en") ?: "en")
+    private val _language = MutableStateFlow(sharedPrefs.getString("language", "es") ?: "es")
     val language: StateFlow<String> = _language.asStateFlow()
 
     private val _accentColorName = MutableStateFlow(sharedPrefs.getString("accent_color_name", "PURPLE") ?: "PURPLE")
@@ -335,6 +335,7 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
                 "de" -> Locale.GERMANY
                 "ka" -> Locale.forLanguageTag("ka")
                 "zh" -> Locale.SIMPLIFIED_CHINESE
+                "es" -> Locale.forLanguageTag("es")
                 else -> Locale.US
             }
             val dayNameFormatter = DateTimeFormatter.ofPattern("E", loc)
@@ -357,6 +358,7 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
                     "de" -> "Heute"
                     "ka" -> "დღეს"
                     "zh" -> "今天"
+                    "es" -> "Hoy"
                     else -> "Today"
                 }
             } else {
@@ -371,6 +373,7 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
                     "de" -> "d. MMMM"
                     "ka" -> "d MMMM"
                     "zh" -> "M月d日"
+                    "es" -> "d 'de' MMMM"
                     else -> "MMMM d"
                 }
                 val formatter = DateTimeFormatter.ofPattern(pattern, loc)
@@ -1228,6 +1231,7 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
                 "de" -> Locale.GERMANY
                 "ka" -> Locale.forLanguageTag("ka")
                 "zh" -> Locale.SIMPLIFIED_CHINESE
+                "es" -> Locale.forLanguageTag("es")
                 else -> Locale.US
             }
             val pattern = when (lang) {
@@ -2320,7 +2324,7 @@ class HabitsViewModel(application: Application) : AndroidViewModel(application) 
             else -> pUri
         }
         _smartInsightDismissedDate.value = sharedPrefs.getString("smart_insight_dismissed_date", "") ?: ""
-        _language.value = sharedPrefs.getString("language", "en") ?: "en"
+        _language.value = sharedPrefs.getString("language", "es") ?: "es"
         _accentColorName.value = sharedPrefs.getString("accent_color_name", "PURPLE") ?: "PURPLE"
         _darkModeEnabled.value = sharedPrefs.getBoolean("dark_mode_enabled", true)
         _vibrationEnabled.value = sharedPrefs.getBoolean("vibration_enabled", true)

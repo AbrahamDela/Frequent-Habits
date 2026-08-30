@@ -2,6 +2,7 @@ package com.example
 
 fun tr(lang: String, de: String, en: String): String {
     if (lang == "de") return de
+    if (lang == "es") return translateDynamicSpanish(en)
     if (lang == "ka") {
         return GEORGIAN_TRANSLATIONS[en]
             ?: GEORGIAN_TRANSLATIONS[de]
@@ -20,9 +21,48 @@ fun tr(lang: String, de: String, ka: String, zh: String, en: String): String {
         "de" -> de
         "ka" -> ka
         "zh" -> zh
+        "es" -> translateDynamicSpanish(en)
         else -> en
     }
 }
+
+private fun translateDynamicSpanish(en: String): String {
+    val exact = SPANISH_TRANSLATIONS[en]
+    if (exact != null) return exact
+    var s = en
+    val words = listOf(
+        "Habits" to "Hábitos", "Habit" to "Hábito", "Today" to "Hoy", "Yesterday" to "Ayer", "Tomorrow" to "Mañana",
+        "Profile" to "Perfil", "Stats" to "Estadísticas", "Statistics" to "Estadísticas", "Settings" to "Ajustes",
+        "Achievements" to "Logros", "Achievement" to "Logro", "Progress" to "Progreso", "Streak" to "Racha",
+        "Save" to "Guardar", "Cancel" to "Cancelar", "Delete" to "Eliminar", "Edit" to "Editar", "Add" to "Añadir",
+        "Done" to "Listo", "Next" to "Siguiente", "Back" to "Atrás", "Language" to "Idioma", "Appearance" to "Apariencia",
+        "Notifications" to "Notificaciones", "Reminder" to "Recordatorio", "Reminders" to "Recordatorios", "Daily" to "Diario",
+        "Weekly" to "Semanal", "Monthly" to "Mensual", "Yearly" to "Anual", "Calendar" to "Calendario", "History" to "Historial",
+        "Goal" to "Meta", "Goals" to "Metas", "Reward" to "Recompensa", "Rewards" to "Recompensas", "Timer" to "Temporizador",
+        "Notes" to "Notas", "Note" to "Nota", "Category" to "Categoría", "Name" to "Nombre", "Description" to "Descripción",
+        "Support" to "Soporte", "Email" to "Correo", "Search" to "Buscar", "Import" to "Importar", "Export" to "Exportar",
+        "Backup" to "Copia de seguridad", "Restore" to "Restaurar", "Active" to "Activo", "Archived" to "Archivado",
+        "Complete" to "Completar", "Completed" to "Completado", "Completions" to "Completados", "Days" to "Días", "Day" to "Día"
+    )
+    for ((a,b) in words) s=s.replace(a,b)
+    return s
+}
+
+val SPANISH_TRANSLATIONS: Map<String,String> = mapOf(
+    "Today" to "Hoy", "Profile" to "Perfil", "Stats" to "Estadísticas", "Habits" to "Hábitos",
+    "Habit Hero" to "Héroe de hábitos", "MY PROFILE" to "MI PERFIL", "Total Completions" to "Total completado",
+    "Total Check-ins" to "Total de registros", "Total Check-Ins" to "Total de registros", "Active Habits" to "Hábitos activos",
+    "Days Longest Streak" to "Días de la racha más larga", "MONTHLY REVIEW" to "RESUMEN MENSUAL", "YEAR IN REVIEW" to "RESUMEN ANUAL",
+    "Active Days" to "Días activos", "Top Habit" to "Mejor hábito", "Best Month" to "Mejor mes", "Best Streak" to "Mejor racha",
+    "Profile & Account" to "Perfil y cuenta", "Appearance & Language" to "Apariencia e idioma", "Notifications & Reviews" to "Notificaciones y resúmenes",
+    "Edit profile picture & name" to "Editar foto de perfil y nombre", "Haptic feedback & Archived habits" to "Vibración y hábitos archivados",
+    "Habit updated!" to "¡Hábito actualizado!", "Habit added!" to "¡Hábito añadido!", "Create a habit first to view statistics." to "Crea primero un hábito para ver las estadísticas.",
+    "Focus Audio Soundscapes" to "Sonidos para concentrarse", "Select & manage sounds" to "Seleccionar y administrar sonidos", "Search sound..." to "Buscar sonido...",
+    "No Sound (Mute)" to "Sin sonido (silencio)", "No matching audio files found." to "No se encontraron archivos de audio.",
+    "Import new audio (.mp3, .wav, .m4a)" to "Importar audio nuevo (.mp3, .wav, .m4a)", "Done" to "Listo",
+    "Delete" to "Eliminar", "Edit" to "Editar", "Save" to "Guardar", "Cancel" to "Cancelar", "Add" to "Añadir", "Next" to "Siguiente", "Back" to "Atrás",
+    "Language" to "Idioma", "Settings" to "Ajustes", "Statistics" to "Estadísticas", "Achievements" to "Logros", "Progress" to "Progreso", "Streak" to "Racha"
+)
 
 private fun translateDynamicGeorgian(en: String, de: String): String {
     var str = en

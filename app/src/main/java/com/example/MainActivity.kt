@@ -407,7 +407,7 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
                         if (tab == "STATS" && allHabitsForPopup.none { !it.isArchived }) {
                             Toast.makeText(
                                 context,
-                                if (language == "de") "Erstelle zuerst eine Gewohnheit, um Statistiken zu sehen." else if (language == "ka") "შექმენით ჩვევა ჯერ სტატისტიკის სანახავად." else if (language == "zh") "请先创建一个习惯以查看统计数据。" else "Create a habit first to view statistics.",
+                                if (language == "de") "Erstelle zuerst eine Gewohnheit, um Statistiken zu sehen." else if (language == "ka") "შექმენით ჩვევა ჯერ სტატისტიკის სანახავად." else if (language == "zh") "请先创建一个习惯以查看统计数据。" else if (language == "es") tr("es", "", "Create a habit first to view statistics.") else "Create a habit first to view statistics.",
                                 Toast.LENGTH_SHORT
                             ).show()
                         } else {
@@ -593,14 +593,14 @@ fun MainAppScreen(viewModel: HabitsViewModel) {
                                 editingHabit = null
                                 Toast.makeText(
                                     context,
-                                    if (language == "de") "Gewohnheit aktualisiert!" else if (language == "ka") "ჩვევა განახლებულია!" else if (language == "zh") "习惯已更新！" else "Habit updated!",
+                                    if (language == "de") "Gewohnheit aktualisiert!" else if (language == "ka") "ჩვევა განახლებულია!" else if (language == "zh") "习惯已更新！" else if (language == "es") tr("es", "", "Habit updated!") else "Habit updated!",
                                     Toast.LENGTH_SHORT
                                 ).show()
                             } else {
                                 viewModel.addHabit(name, cat, icon, color, isNeg, type, unit, target, freq, start, specDays, remEnabled, remHour, remMin, customReminders, description, clickIncrement, milestoneRewards)
                                 Toast.makeText(
                                     context,
-                                    if (language == "de") "Gewohnheit hinzugefügt!" else if (language == "ka") "ჩვევა დაემატა!" else if (language == "zh") "习惯已添加！" else "Habit added!",
+                                    if (language == "de") "Gewohnheit hinzugefügt!" else if (language == "ka") "ჩვევა დაემატა!" else if (language == "zh") "习惯已添加！" else if (language == "es") tr("es", "", "Habit added!") else "Habit added!",
                                     Toast.LENGTH_SHORT
                                 ).show()
                             }
@@ -961,13 +961,13 @@ fun AudioSoundscapeDialog(
                 Spacer(modifier = Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = if (language == "de") "Fokus-Audio Bibliothek" else if (language == "ka") "აუდიო ბგერების ფოკუსირება" else if (language == "zh") "专注背景白噪音" else "Focus Audio Soundscapes",
+                        text = if (language == "de") "Fokus-Audio Bibliothek" else if (language == "ka") "აუდიო ბგერების ფოკუსირება" else if (language == "zh") "专注背景白噪音" else if (language == "es") tr("es", "", "Focus Audio Soundscapes") else "Focus Audio Soundscapes",
                         style = MaterialTheme.typography.titleMedium,
                         color = TextPrimary,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = if (language == "de") "Sound auswählen & verwalten" else if (language == "ka") "აირჩიეთ და მართეთ ხმები" else if (language == "zh") "选择与管理声音" else "Select & manage sounds",
+                        text = if (language == "de") "Sound auswählen & verwalten" else if (language == "ka") "აირჩიეთ და მართეთ ხმები" else if (language == "zh") "选择与管理声音" else if (language == "es") tr("es", "", "Select & manage sounds") else "Select & manage sounds",
                         style = MaterialTheme.typography.bodySmall,
                         color = TextSecondary
                     )
@@ -993,7 +993,7 @@ fun AudioSoundscapeDialog(
                 AppTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    placeholderText = if (language == "de") "Sound suchen..." else if (language == "ka") "ხმის ძებნა..." else if (language == "zh") "搜索白噪音..." else "Search sound...",
+                    placeholderText = if (language == "de") "Sound suchen..." else if (language == "ka") "ხმის ძებნა..." else if (language == "zh") "搜索白噪音..." else if (language == "es") tr("es", "", "Search sound...") else "Search sound...",
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(22.dp)) },
                     trailingIcon = {
                         if (searchQuery.isNotEmpty()) {
@@ -1083,7 +1083,7 @@ fun AudioSoundscapeDialog(
                                     )
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Text(
-                                        text = if (language == "de") "Kein Sound (Stumm)" else if (language == "ka") "ხმა არ არის (დადუმება)" else if (language == "zh") "静音（无声音）" else "No Sound (Mute)",
+                                        text = if (language == "de") "Kein Sound (Stumm)" else if (language == "ka") "ხმა არ არის (დადუმება)" else if (language == "zh") "静音（无声音）" else if (language == "es") tr("es", "", "No Sound (Mute)") else "No Sound (Mute)",
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = TextPrimary,
                                         fontWeight = if (isNoSoundSelected) FontWeight.Bold else FontWeight.Normal
@@ -1117,7 +1117,7 @@ fun AudioSoundscapeDialog(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = if (language == "de") "Keine passenden Audio-Dateien gefunden." else if (language == "ka") "შესაბამისი აუდიო ფაილები ვერ მოიძებნა." else if (language == "zh") "未找到匹配的音频文件。" else "No matching audio files found.",
+                                    text = if (language == "de") "Keine passenden Audio-Dateien gefunden." else if (language == "ka") "შესაბამისი აუდიო ფაილები ვერ მოიძებნა." else if (language == "zh") "未找到匹配的音频文件。" else if (language == "es") tr("es", "", "No matching audio files found.") else "No matching audio files found.",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = TextSecondary,
                                     textAlign = TextAlign.Center
@@ -1253,7 +1253,7 @@ fun AudioSoundscapeDialog(
                     Icon(imageVector = Icons.Default.AddCircle, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (language == "de") "Neues Audio importieren (.mp3, .wav, .m4a)" else if (language == "ka") "ახალი აუდიოს იმპორტი (.mp3, .wav, .m4a)" else if (language == "zh") "导入新音频 (.mp3, .wav, .m4a)" else "Import new audio (.mp3, .wav, .m4a)",
+                        text = if (language == "de") "Neues Audio importieren (.mp3, .wav, .m4a)" else if (language == "ka") "ახალი აუდიოს იმპორტი (.mp3, .wav, .m4a)" else if (language == "zh") "导入新音频 (.mp3, .wav, .m4a)" else if (language == "es") tr("es", "", "Import new audio (.mp3, .wav, .m4a)") else "Import new audio (.mp3, .wav, .m4a)",
                         color = Color.White,
                         fontWeight = FontWeight.Bold
                     )
@@ -1276,7 +1276,7 @@ fun AudioSoundscapeDialog(
                     shape = RoundedCornerShape(14.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(if (language == "de") "Fertig" else if (language == "ka") "შესრულებულია" else if (language == "zh") "完成" else "Done", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text(if (language == "de") "Fertig" else if (language == "ka") "შესრულებულია" else if (language == "zh") "完成" else if (language == "es") tr("es", "", "Done") else "Done", color = Color.White, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -1456,7 +1456,7 @@ fun WidgetAddValueDialog(
 
                     android.widget.Toast.makeText(
                         context,
-                        if (language == "de") "Timer beendet! $minutesToLog Min. wurden eingetragen." else if (language == "ka") "ტაიმერი დასრულდა! $minutesToLog წთ შესულია." else if (language == "zh") "计时完成！已记录 $minutesToLog 分钟。" else "Timer finished! $minutesToLog min logged.",
+                        if (language == "de") "Timer beendet! $minutesToLog Min. wurden eingetragen." else if (language == "ka") "ტაიმერი დასრულდა! $minutesToLog წთ შესულია." else if (language == "zh") "计时完成！已记录 $minutesToLog 分钟。" else if (language == "es") tr("es", "", "Timer finished! $minutesToLog min logged.") else "Timer finished! $minutesToLog min logged.",
                         android.widget.Toast.LENGTH_LONG
                     ).show()
 
@@ -1522,7 +1522,7 @@ fun WidgetAddValueDialog(
                     .padding(bottom = 32.dp)
             ) {
                 Text(
-                    text = if (language == "de") "Eintrag: ${habitToLog!!.name}" else if (language == "ka") "ჟურნალი: ${habitToLog!!.name}" else if (language == "zh") "记录：${habitToLog!!.name}" else "Log: ${habitToLog!!.name}",
+                    text = if (language == "de") "Eintrag: ${habitToLog!!.name}" else if (language == "ka") "ჟურნალი: ${habitToLog!!.name}" else if (language == "zh") "记录：${habitToLog!!.name}" else if (language == "es") tr("es", "", "Log: ${habitToLog!!.name}") else "Log: ${habitToLog!!.name}",
                     color = TextPrimary,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
@@ -1851,14 +1851,14 @@ fun WidgetAddValueDialog(
                                                 viewModel.logNumericalHabit(habitToLog!!.id, selectedDate, currentValue + minutesToLog)
                                                 android.widget.Toast.makeText(
                                                     context,
-                                                    if (language == "de") "$minutesToLog Min. wurden eingetragen!" else if (language == "ka") "$minutesToLog წუთი შესულია!" else if (language == "zh") "已记录 $minutesToLog 分钟！" else "$minutesToLog min logged!",
+                                                    if (language == "de") "$minutesToLog Min. wurden eingetragen!" else if (language == "ka") "$minutesToLog წუთი შესულია!" else if (language == "zh") "已记录 $minutesToLog 分钟！" else if (language == "es") tr("es", "", "$minutesToLog min logged!") else "$minutesToLog min logged!",
                                                     android.widget.Toast.LENGTH_SHORT
                                                 ).show()
                                             } else {
                                                 viewModel.logNumericalHabit(habitToLog!!.id, selectedDate, -1f)
                                                 android.widget.Toast.makeText(
                                                     context,
-                                                    if (language == "de") "Unter 30 Sek. vergangen. Als fehlgeschlagen markiert." else if (language == "ka") "30 წლამდე გავიდა. მონიშნულია წარუმატებლად." else if (language == "zh") "未满 30 秒，已标记为失败。" else "Under 30s elapsed. Marked as failed.",
+                                                    if (language == "de") "Unter 30 Sek. vergangen. Als fehlgeschlagen markiert." else if (language == "ka") "30 წლამდე გავიდა. მონიშნულია წარუმატებლად." else if (language == "zh") "未满 30 秒，已标记为失败。" else if (language == "es") tr("es", "", "Under 30s elapsed. Marked as failed.") else "Under 30s elapsed. Marked as failed.",
                                                     android.widget.Toast.LENGTH_SHORT
                                                 ).show()
                                             }
@@ -1888,7 +1888,7 @@ fun WidgetAddValueDialog(
                                 verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 Text(
-                                    text = if (language == "de") "Hintergrund-Audio" else if (language == "ka") "ფონის აუდიო" else if (language == "zh") "背景音频" else "Background Audio",
+                                    text = if (language == "de") "Hintergrund-Audio" else if (language == "ka") "ფონის აუდიო" else if (language == "zh") "背景音频" else if (language == "es") tr("es", "", "Background Audio") else "Background Audio",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = TextSecondary,
                                     fontWeight = FontWeight.SemiBold
@@ -1937,7 +1937,7 @@ fun WidgetAddValueDialog(
                                             Spacer(modifier = Modifier.width(10.dp))
                                             Column {
                                                 Text(
-                                                    text = if (isActive) selectedAudioFile!!.nameWithoutExtension else (if (language == "de") "Kein Sound (Stumm)" else if (language == "ka") "ხმა არ არის (დადუმებული)" else if (language == "zh") "静音（已静音）" else "No Sound (Muted)"),
+                                                    text = if (isActive) selectedAudioFile!!.nameWithoutExtension else (if (language == "de") "Kein Sound (Stumm)" else if (language == "ka") "ხმა არ არის (დადუმებული)" else if (language == "zh") "静音（已静音）" else if (language == "es") tr("es", "", "No Sound (Muted)") else "No Sound (Muted)"),
                                                     style = MaterialTheme.typography.bodyMedium,
                                                     color = TextPrimary,
                                                     fontWeight = FontWeight.Bold,
@@ -1945,7 +1945,7 @@ fun WidgetAddValueDialog(
                                                     overflow = TextOverflow.Ellipsis
                                                 )
                                                 Text(
-                                                    text = if (isActive) (if (language == "de") "Aktiver Timer-Sound" else if (language == "ka") "აქტიური ტაიმერის ხმა" else if (language == "zh") "当前计时器声音" else "Active Timer Sound") else (if (language == "de") "Stummgeschaltet" else if (language == "ka") "დადუმდა" else if (language == "zh") "已静音" else "Muted"),
+                                                    text = if (isActive) (if (language == "de") "Aktiver Timer-Sound" else if (language == "ka") "აქტიური ტაიმერის ხმა" else if (language == "zh") "当前计时器声音" else if (language == "es") tr("es", "", "Active Timer Sound") else "Active Timer Sound") else (if (language == "de") "Stummgeschaltet" else if (language == "ka") "დადუმდა" else if (language == "zh") "已静音" else if (language == "es") tr("es", "", "Muted") else "Muted"),
                                                     style = MaterialTheme.typography.labelSmall,
                                                     color = TextSecondary
                                                 )
@@ -1969,7 +1969,7 @@ fun WidgetAddValueDialog(
                                             ) {
                                                 Icon(
                                                     imageVector = Icons.Default.Close,
-                                                    contentDescription = if (language == "de") "Sound stummschalten" else if (language == "ka") "ხმის დადუმება" else if (language == "zh") "静音声音" else "Mute sound",
+                                                    contentDescription = if (language == "de") "Sound stummschalten" else if (language == "ka") "ხმის დადუმება" else if (language == "zh") "静音声音" else if (language == "es") tr("es", "", "Mute sound") else "Mute sound",
                                                     tint = Color(0xFFEF4444),
                                                     modifier = Modifier.size(18.dp)
                                                 )
@@ -1989,7 +1989,7 @@ fun WidgetAddValueDialog(
                                             audioSearchQuery = it
                                             isAudioPickerExpanded = true
                                         },
-                                        placeholderText = if (language == "de") "Sound suchen..." else if (language == "ka") "ხმის ძებნა..." else if (language == "zh") "搜索白噪音..." else "Search sound...",
+                                        placeholderText = if (language == "de") "Sound suchen..." else if (language == "ka") "ხმის ძებნა..." else if (language == "zh") "搜索白噪音..." else if (language == "es") tr("es", "", "Search sound...") else "Search sound...",
                                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(18.dp)) },
                                         trailingIcon = {
                                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -2031,7 +2031,7 @@ fun WidgetAddValueDialog(
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.Add,
-                                            contentDescription = if (language == "de") "Sound hochladen" else if (language == "ka") "ატვირთეთ ხმა" else if (language == "zh") "上传声音" else "Upload sound",
+                                            contentDescription = if (language == "de") "Sound hochladen" else if (language == "ka") "ატვირთეთ ხმა" else if (language == "zh") "上传声音" else if (language == "es") tr("es", "", "Upload sound") else "Upload sound",
                                             tint = TextPrimary,
                                             modifier = Modifier.size(22.dp)
                                         )
@@ -2068,14 +2068,14 @@ fun WidgetAddValueDialog(
                                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                                             ) {
                                                 Text(
-                                                    text = if (language == "de") "Noch keine eigenen Sounds hinzugefügt." else if (language == "ka") "მორგებული ხმები ჯერ არ არის დამატებული." else if (language == "zh") "尚未添加自定义声音。" else "No custom sounds added yet.",
+                                                    text = if (language == "de") "Noch keine eigenen Sounds hinzugefügt." else if (language == "ka") "მორგებული ხმები ჯერ არ არის დამატებული." else if (language == "zh") "尚未添加自定义声音。" else if (language == "es") tr("es", "", "No custom sounds added yet.") else "No custom sounds added yet.",
                                                     color = TextPrimary,
                                                     fontWeight = FontWeight.SemiBold,
                                                     fontSize = 13.sp,
                                                     textAlign = TextAlign.Center
                                                 )
                                                 Text(
-                                                    text = if (language == "de") "Du kannst eigene MP3, WAV oder M4A Dateien hochladen oder in den Einstellungen verwalten." else if (language == "ka") "შეგიძლიათ ატვირთოთ MP3, WAV ან M4A ფაილები ან მართოთ ისინი პარამეტრებში." else if (language == "zh") "你可以上传 MP3、WAV 或 M4A 文件，或在设置中进行管理。" else "You can upload MP3, WAV or M4A files or manage them in Settings.",
+                                                    text = if (language == "de") "Du kannst eigene MP3, WAV oder M4A Dateien hochladen oder in den Einstellungen verwalten." else if (language == "ka") "შეგიძლიათ ატვირთოთ MP3, WAV ან M4A ფაილები ან მართოთ ისინი პარამეტრებში." else if (language == "zh") "你可以上传 MP3、WAV 或 M4A 文件，或在设置中进行管理。" else if (language == "es") tr("es", "", "You can upload MP3, WAV or M4A files or manage them in Settings.") else "You can upload MP3, WAV or M4A files or manage them in Settings.",
                                                     color = TextSecondary,
                                                     fontSize = 11.sp,
                                                     textAlign = TextAlign.Center
@@ -2083,7 +2083,7 @@ fun WidgetAddValueDialog(
                                             }
                                         } else if (filteredList.isEmpty()) {
                                             Text(
-                                                text = if (language == "de") "Kein passender Sound gefunden" else if (language == "ka") "შესატყვისი ხმები ვერ მოიძებნა" else if (language == "zh") "未找到匹配的声音" else "No matching sounds found",
+                                                text = if (language == "de") "Kein passender Sound gefunden" else if (language == "ka") "შესატყვისი ხმები ვერ მოიძებნა" else if (language == "zh") "未找到匹配的声音" else if (language == "es") tr("es", "", "No matching sounds found") else "No matching sounds found",
                                                 color = TextSecondary,
                                                 fontSize = 12.sp,
                                                 modifier = Modifier.padding(8.dp)
@@ -2200,7 +2200,7 @@ fun WidgetAddValueDialog(
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
-                            text = if (language == "de") "Manuell eintragen (${habitToLog!!.unit}):" else if (language == "ka") "სახელმძღვანელო ჟურნალი ( ${habitToLog!!.unit} ):" else if (language == "zh") "手动记录 (${habitToLog!!.unit})：" else "Manual log (${habitToLog!!.unit}):",
+                            text = if (language == "de") "Manuell eintragen (${habitToLog!!.unit}):" else if (language == "ka") "სახელმძღვანელო ჟურნალი ( ${habitToLog!!.unit} ):" else if (language == "zh") "手动记录 (${habitToLog!!.unit})：" else if (language == "es") tr("es", "", "Manual log (${habitToLog!!.unit}):") else "Manual log (${habitToLog!!.unit}):",
                             color = TextSecondary,
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.SemiBold
@@ -2289,7 +2289,7 @@ fun WidgetAddValueDialog(
                                     .testTag("dialog_reset_button")
                             ) {
                                 Text(
-                                    text = if (language == "de") "Reset" else if (language == "ka") "გადატვირთვა" else if (language == "zh") "重置" else "Reset",
+                                    text = if (language == "de") "Reset" else if (language == "ka") "გადატვირთვა" else if (language == "zh") "重置" else if (language == "es") tr("es", "", "Reset") else "Reset",
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 13.sp,
                                     maxLines = 1,
@@ -2311,7 +2311,7 @@ fun WidgetAddValueDialog(
                                     .testTag("dialog_fail_button")
                             ) {
                                 Text(
-                                    text = if (language == "de") "Fehlgeschlagen" else if (language == "ka") "ვერ მოხერხდა" else if (language == "zh") "未达成" else "Failed",
+                                    text = if (language == "de") "Fehlgeschlagen" else if (language == "ka") "ვერ მოხერხდა" else if (language == "zh") "未达成" else if (language == "es") tr("es", "", "Failed") else "Failed",
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 13.sp,
                                     maxLines = 1,
@@ -2338,7 +2338,7 @@ fun WidgetAddValueDialog(
                                 .testTag("dialog_save_button")
                         ) {
                             Text(
-                                text = if (language == "de") "Speichern" else if (language == "ka") "შენახვა" else if (language == "zh") "保存" else "Save",
+                                text = if (language == "de") "Speichern" else if (language == "ka") "შენახვა" else if (language == "zh") "保存" else if (language == "es") tr("es", "", "Save") else "Save",
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp,
@@ -2679,7 +2679,7 @@ fun SmartInsightCard(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = if (language == "de") "Smart Insights freischalten" else if (language == "ka") "განბლოკეთ Smart Insights" else if (language == "zh") "解锁智能洞察" else "Unlock Smart Insights",
+                            text = if (language == "de") "Smart Insights freischalten" else if (language == "ka") "განბლოკეთ Smart Insights" else if (language == "zh") "解锁智能洞察" else if (language == "es") tr("es", "", "Unlock Smart Insights") else "Unlock Smart Insights",
                             style = MaterialTheme.typography.labelMedium,
                             color = SecondaryViolet,
                             fontWeight = FontWeight.Bold
@@ -2853,13 +2853,13 @@ fun SmartInsightCard(
             }
             if (maxDayIndex != -1 && maxCount > 0) {
                 val dayName = when (maxDayIndex) {
-                    Calendar.MONDAY -> if (language == "de") "Montag" else if (language == "ka") "ორშაბათი" else if (language == "zh") "周一" else "Monday"
-                    Calendar.TUESDAY -> if (language == "de") "Dienstag" else if (language == "ka") "სამშაბათი" else if (language == "zh") "周二" else "Tuesday"
-                    Calendar.WEDNESDAY -> if (language == "de") "Mittwoch" else if (language == "ka") "ოთხშაბათი" else if (language == "zh") "周三" else "Wednesday"
-                    Calendar.THURSDAY -> if (language == "de") "Donnerstag" else if (language == "ka") "ხუთშაბათი" else if (language == "zh") "周四" else "Thursday"
-                    Calendar.FRIDAY -> if (language == "de") "Freitag" else if (language == "ka") "პარასკევი" else if (language == "zh") "周五" else "Friday"
-                    Calendar.SATURDAY -> if (language == "de") "Samstag" else if (language == "ka") "შაბათი" else if (language == "zh") "周六" else "Saturday"
-                    Calendar.SUNDAY -> if (language == "de") "Sonntag" else if (language == "ka") "კვირა" else if (language == "zh") "周日" else "Sunday"
+                    Calendar.MONDAY -> if (language == "de") "Montag" else if (language == "ka") "ორშაბათი" else if (language == "zh") "周一" else if (language == "es") tr("es", "", "Monday") else "Monday"
+                    Calendar.TUESDAY -> if (language == "de") "Dienstag" else if (language == "ka") "სამშაბათი" else if (language == "zh") "周二" else if (language == "es") tr("es", "", "Tuesday") else "Tuesday"
+                    Calendar.WEDNESDAY -> if (language == "de") "Mittwoch" else if (language == "ka") "ოთხშაბათი" else if (language == "zh") "周三" else if (language == "es") tr("es", "", "Wednesday") else "Wednesday"
+                    Calendar.THURSDAY -> if (language == "de") "Donnerstag" else if (language == "ka") "ხუთშაბათი" else if (language == "zh") "周四" else if (language == "es") tr("es", "", "Thursday") else "Thursday"
+                    Calendar.FRIDAY -> if (language == "de") "Freitag" else if (language == "ka") "პარასკევი" else if (language == "zh") "周五" else if (language == "es") tr("es", "", "Friday") else "Friday"
+                    Calendar.SATURDAY -> if (language == "de") "Samstag" else if (language == "ka") "შაბათი" else if (language == "zh") "周六" else if (language == "es") tr("es", "", "Saturday") else "Saturday"
+                    Calendar.SUNDAY -> if (language == "de") "Sonntag" else if (language == "ka") "კვირა" else if (language == "zh") "周日" else if (language == "es") tr("es", "", "Sunday") else "Sunday"
                     else -> ""
                 }
                 if (dayName.isNotEmpty()) {
@@ -3260,7 +3260,7 @@ fun SmartInsightCard(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = if (language == "de") "Smart Insight" else if (language == "ka") "ჭკვიანი ინსაითი" else if (language == "zh") "智能洞察" else "Smart Insight",
+                            text = if (language == "de") "Smart Insight" else if (language == "ka") "ჭკვიანი ინსაითი" else if (language == "zh") "智能洞察" else if (language == "es") tr("es", "", "Smart Insight") else "Smart Insight",
                             style = MaterialTheme.typography.labelMedium,
                             color = iconColor,
                             fontWeight = FontWeight.Bold
@@ -3825,7 +3825,7 @@ fun TodayScreen(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
-                                            text = if (language == "de") "Tagesfortschritt" else if (language == "ka") "ყოველდღიური პროგრესი" else if (language == "zh") "今日进度" else "Daily Progress",
+                                            text = if (language == "de") "Tagesfortschritt" else if (language == "ka") "ყოველდღიური პროგრესი" else if (language == "zh") "今日进度" else if (language == "es") tr("es", "", "Daily Progress") else "Daily Progress",
                                             style = MaterialTheme.typography.labelLarge,
                                             fontWeight = FontWeight.Bold,
                                             color = progressTextColor
@@ -3928,7 +3928,7 @@ fun TodayScreen(
                                 modifier = Modifier.size(22.dp)
                             )
                             Text(
-                                text = if (language == "de") "Reihenfolge anpassen" else if (language == "ka") "ჩვევების გადაკვეთა" else if (language == "zh") "调整习惯排序" else "Reorder Habits",
+                                text = if (language == "de") "Reihenfolge anpassen" else if (language == "ka") "ჩვევების გადაკვეთა" else if (language == "zh") "调整习惯排序" else if (language == "es") tr("es", "", "Reorder Habits") else "Reorder Habits",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = TextPrimary,
@@ -3961,7 +3961,7 @@ fun TodayScreen(
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = if (language == "de") "Abbrechen" else if (language == "ka") "გაუქმება" else if (language == "zh") "取消" else "Cancel",
+                                    text = if (language == "de") "Abbrechen" else if (language == "ka") "გაუქმება" else if (language == "zh") "取消" else if (language == "es") tr("es", "", "Cancel") else "Cancel",
                                     fontWeight = FontWeight.Bold,
                                     style = MaterialTheme.typography.bodyMedium
                                 )
@@ -3984,7 +3984,7 @@ fun TodayScreen(
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = if (language == "de") "Fertig" else if (language == "ka") "შესრულებულია" else if (language == "zh") "完成" else "Done",
+                                    text = if (language == "de") "Fertig" else if (language == "ka") "შესრულებულია" else if (language == "zh") "完成" else if (language == "es") tr("es", "", "Done") else "Done",
                                     fontWeight = FontWeight.Bold,
                                     style = MaterialTheme.typography.bodyMedium
                                 )
@@ -4014,7 +4014,7 @@ fun TodayScreen(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = if (language == "de") "Noch keine Habits angelegt." else if (language == "ka") "ჯერ არ არის ჩვევები." else if (language == "zh") "尚未创建习惯。" else "No habits yet.",
+                            text = if (language == "de") "Noch keine Habits angelegt." else if (language == "ka") "ჯერ არ არის ჩვევები." else if (language == "zh") "尚未创建习惯。" else if (language == "es") tr("es", "", "No habits yet.") else "No habits yet.",
                             style = MaterialTheme.typography.titleMedium,
                             color = TextPrimary,
                             fontWeight = FontWeight.Bold,
@@ -4172,9 +4172,9 @@ fun TodayScreen(
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = if (isPausedOnSelectedDate) {
-                                if (language == "de") "Skippen beenden" else if (language == "ka") "განაახლეთ ჩვევა" else if (language == "zh") "恢复打卡" else "Resume Habit"
+                                if (language == "de") "Skippen beenden" else if (language == "ka") "განაახლეთ ჩვევა" else if (language == "zh") "恢复打卡" else if (language == "es") tr("es", "", "Resume Habit") else "Resume Habit"
                             } else {
-                                if (language == "de") "Heute skippen" else if (language == "ka") "გამოტოვეთ დღეს" else if (language == "zh") "今日跳过" else "Skip today"
+                                if (language == "de") "Heute skippen" else if (language == "ka") "გამოტოვეთ დღეს" else if (language == "zh") "今日跳过" else if (language == "es") tr("es", "", "Skip today") else "Skip today"
                             },
                             fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.bodyLarge
@@ -4202,7 +4202,7 @@ fun TodayScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = if (language == "de") "Bearbeiten" else if (language == "ka") "რედაქტირება" else if (language == "zh") "编辑" else "Edit",
+                            text = if (language == "de") "Bearbeiten" else if (language == "ka") "რედაქტირება" else if (language == "zh") "编辑" else if (language == "es") tr("es", "", "Edit") else "Edit",
                             fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.bodyLarge
                         )
@@ -4230,7 +4230,7 @@ fun TodayScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = if (language == "de") "Reihenfolge ändern" else if (language == "ka") "გადააკეთეთ ჩვევები" else if (language == "zh") "调整习惯排序" else "Reorder habits",
+                            text = if (language == "de") "Reihenfolge ändern" else if (language == "ka") "გადააკეთეთ ჩვევები" else if (language == "zh") "调整习惯排序" else if (language == "es") tr("es", "", "Reorder habits") else "Reorder habits",
                             fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.bodyLarge
                         )
@@ -4257,7 +4257,7 @@ fun TodayScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = if (language == "de") "Archivieren" else if (language == "ka") "არქივი" else if (language == "zh") "归档" else "Archive",
+                            text = if (language == "de") "Archivieren" else if (language == "ka") "არქივი" else if (language == "zh") "归档" else if (language == "es") tr("es", "", "Archive") else "Archive",
                             fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.bodyLarge
                         )
@@ -4284,7 +4284,7 @@ fun TodayScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = if (language == "de") "Unwiderruflich löschen" else if (language == "ka") "სამუდამოდ წაშლა" else if (language == "zh") "永久删除" else "Delete permanently",
+                            text = if (language == "de") "Unwiderruflich löschen" else if (language == "ka") "სამუდამოდ წაშლა" else if (language == "zh") "永久删除" else if (language == "es") tr("es", "", "Delete permanently") else "Delete permanently",
                             fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.bodyLarge
                         )
@@ -4299,8 +4299,8 @@ fun TodayScreen(
         AlertDialog(
             onDismissRequest = { showDeleteConfirmHabit = null },
             containerColor = AppCard,
-            title = { Text(text = if (language == "de") "Habit löschen?" else if (language == "ka") "წაშალოთ ჩვევა?" else if (language == "zh") "删除习惯？" else "Delete Habit?") },
-            text = { Text(text = if (language == "de") "Möchtest du diese Gewohnheit wirklich unwiderruflich löschen?" else if (language == "ka") "დარწმუნებული ხართ, რომ გსურთ სამუდამოდ წაშალოთ ეს ჩვევა?" else if (language == "zh") "确定要永久删除该习惯吗？" else "Are you sure you want to delete this habit permanently?") },
+            title = { Text(text = if (language == "de") "Habit löschen?" else if (language == "ka") "წაშალოთ ჩვევა?" else if (language == "zh") "删除习惯？" else if (language == "es") tr("es", "", "Delete Habit?") else "Delete Habit?") },
+            text = { Text(text = if (language == "de") "Möchtest du diese Gewohnheit wirklich unwiderruflich löschen?" else if (language == "ka") "დარწმუნებული ხართ, რომ გსურთ სამუდამოდ წაშალოთ ეს ჩვევა?" else if (language == "zh") "确定要永久删除该习惯吗？" else if (language == "es") tr("es", "", "Are you sure you want to delete this habit permanently?") else "Are you sure you want to delete this habit permanently?") },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -4309,17 +4309,17 @@ fun TodayScreen(
                         showDeleteConfirmHabit = null
                         Toast.makeText(
                             context,
-                            if (language == "de") "Gewohnheit gelöscht" else if (language == "ka") "ჩვევა წაშლილია" else if (language == "zh") "习惯已删除" else "Habit deleted",
+                            if (language == "de") "Gewohnheit gelöscht" else if (language == "ka") "ჩვევა წაშლილია" else if (language == "zh") "习惯已删除" else if (language == "es") tr("es", "", "Habit deleted") else "Habit deleted",
                             Toast.LENGTH_SHORT
                         ).show()
                     }
                 ) {
-                    Text(if (language == "de") "Löschen" else if (language == "ka") "წაშლა" else if (language == "zh") "删除" else "Delete", color = ErrorRed)
+                    Text(if (language == "de") "Löschen" else if (language == "ka") "წაშლა" else if (language == "zh") "删除" else if (language == "es") tr("es", "", "Delete") else "Delete", color = ErrorRed)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirmHabit = null }) {
-                    Text(if (language == "de") "Abbrechen" else if (language == "ka") "გაუქმება" else if (language == "zh") "取消" else "Cancel", color = TextSecondary)
+                    Text(if (language == "de") "Abbrechen" else if (language == "ka") "გაუქმება" else if (language == "zh") "取消" else if (language == "es") tr("es", "", "Cancel") else "Cancel", color = TextSecondary)
                 }
             }
         )
@@ -4329,8 +4329,8 @@ fun TodayScreen(
         AlertDialog(
             onDismissRequest = { showArchiveConfirmHabit = null },
             containerColor = AppCard,
-            title = { Text(text = if (language == "de") "Gewohnheit archivieren?" else if (language == "ka") "არქივის ჩვევა?" else if (language == "zh") "归档习惯？" else "Archive Habit?") },
-            text = { Text(text = if (language == "de") "Möchtest du diese Gewohnheit archivieren? Sie wird vom Dashboard und den Statistiken ausgeblendet, kann aber in den Einstellungen jederzeit wieder reaktiviert werden." else if (language == "ka") "გსურთ დაარქივოთ ეს ჩვევა? ის დამალული იქნება საინფორმაციო დაფისა და სტატისტიკისგან, მაგრამ მისი ხელახალი გააქტიურება ნებისმიერ დროს შესაძლებელია პარამეტრებში." else if (language == "zh") "确定要归档此习惯吗？归档后将从总览和统计中隐藏，但随时可在设置中重新启用。" else "Do you want to archive this habit? It will be hidden from the dashboard and stats, but can be reactivated at any time in settings.") },
+            title = { Text(text = if (language == "de") "Gewohnheit archivieren?" else if (language == "ka") "არქივის ჩვევა?" else if (language == "zh") "归档习惯？" else if (language == "es") tr("es", "", "Archive Habit?") else "Archive Habit?") },
+            text = { Text(text = if (language == "de") "Möchtest du diese Gewohnheit archivieren? Sie wird vom Dashboard und den Statistiken ausgeblendet, kann aber in den Einstellungen jederzeit wieder reaktiviert werden." else if (language == "ka") "გსურთ დაარქივოთ ეს ჩვევა? ის დამალული იქნება საინფორმაციო დაფისა და სტატისტიკისგან, მაგრამ მისი ხელახალი გააქტიურება ნებისმიერ დროს შესაძლებელია პარამეტრებში." else if (language == "zh") "确定要归档此习惯吗？归档后将从总览和统计中隐藏，但随时可在设置中重新启用。" else if (language == "es") tr("es", "", "Do you want to archive this habit? It will be hidden from the dashboard and stats, but can be reactivated at any time in settings.") else "Do you want to archive this habit? It will be hidden from the dashboard and stats, but can be reactivated at any time in settings.") },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -4339,17 +4339,17 @@ fun TodayScreen(
                         showArchiveConfirmHabit = null
                         Toast.makeText(
                             context,
-                            if (language == "de") "Gewohnheit archiviert" else if (language == "ka") "ჩვევა დაარქივებულია" else if (language == "zh") "习惯已归档" else "Habit archived",
+                            if (language == "de") "Gewohnheit archiviert" else if (language == "ka") "ჩვევა დაარქივებულია" else if (language == "zh") "习惯已归档" else if (language == "es") tr("es", "", "Habit archived") else "Habit archived",
                             Toast.LENGTH_SHORT
                         ).show()
                     }
                 ) {
-                    Text(if (language == "de") "Archivieren" else if (language == "ka") "არქივი" else if (language == "zh") "归档" else "Archive", color = HabitOrange)
+                    Text(if (language == "de") "Archivieren" else if (language == "ka") "არქივი" else if (language == "zh") "归档" else if (language == "es") tr("es", "", "Archive") else "Archive", color = HabitOrange)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showArchiveConfirmHabit = null }) {
-                    Text(if (language == "de") "Abbrechen" else if (language == "ka") "გაუქმება" else if (language == "zh") "取消" else "Cancel", color = TextSecondary)
+                    Text(if (language == "de") "Abbrechen" else if (language == "ka") "გაუქმება" else if (language == "zh") "取消" else if (language == "es") tr("es", "", "Cancel") else "Cancel", color = TextSecondary)
                 }
             }
         )
@@ -4422,7 +4422,7 @@ fun TodayScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            text = if (language == "de") "Schließen ❤️" else if (language == "ka") "დახურეთ ❤️" else if (language == "zh") "关闭 ❤️" else "Close ❤️",
+                            text = if (language == "de") "Schließen ❤️" else if (language == "ka") "დახურეთ ❤️" else if (language == "zh") "关闭 ❤️" else if (language == "es") tr("es", "", "Close ❤️") else "Close ❤️",
                             color = Color.White,
                             fontWeight = FontWeight.Bold
                         )
@@ -4487,7 +4487,7 @@ fun CreateFirstHabitArrowHint(
                     horizontalAlignment = Alignment.Start
                 ) {
                     Text(
-                        text = if (language == "de") "Erstelle deine erste Gewohnheit!" else if (language == "ka") "შექმენი შენი პირველი ჩვევა!" else if (language == "zh") "创建你的第一个习惯！" else "Create your first habit!",
+                        text = if (language == "de") "Erstelle deine erste Gewohnheit!" else if (language == "ka") "შექმენი შენი პირველი ჩვევა!" else if (language == "zh") "创建你的第一个习惯！" else if (language == "es") tr("es", "", "Create your first habit!") else "Create your first habit!",
                         style = MaterialTheme.typography.titleSmall,
                         color = Color.White,
                         fontWeight = FontWeight.Bold
@@ -4496,7 +4496,7 @@ fun CreateFirstHabitArrowHint(
                     Spacer(modifier = Modifier.height(4.dp))
 
                     Text(
-                        text = if (language == "de") "Tippe oben rechts auf das '+'-Symbol" else if (language == "ka") "შეეხეთ \"+\" ხატულას ზედა მარჯვენა კუთხეში" else if (language == "zh") "点击右上角的“+”图标" else "Tap the '+' icon at the top right",
+                        text = if (language == "de") "Tippe oben rechts auf das '+'-Symbol" else if (language == "ka") "შეეხეთ \"+\" ხატულას ზედა მარჯვენა კუთხეში" else if (language == "zh") "点击右上角的“+”图标" else if (language == "es") tr("es", "", "Tap the '+' icon at the top right") else "Tap the '+' icon at the top right",
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.White.copy(alpha = 0.9f)
                     )
@@ -4856,9 +4856,9 @@ fun HabitItemRow(
                     )
 
                     val subtitleText = if (isPaused) {
-                        if (language == "de") "Skipped" else if (language == "ka") "გამოტოვებული" else if (language == "zh") "已跳过" else "Skipped"
+                        if (language == "de") "Skipped" else if (language == "ka") "გამოტოვებული" else if (language == "zh") "已跳过" else if (language == "es") tr("es", "", "Skipped") else "Skipped"
                     } else if (habit.frequency == "TIMES_WEEKLY") {
-                        "$weeklyLoggedCount/$weeklyTargetCount " + (if (language == "de") "in 7 Tagen" else if (language == "ka") "7 დღეში" else if (language == "zh") "7 天内" else "in 7 days")
+                        "$weeklyLoggedCount/$weeklyTargetCount " + (if (language == "de") "in 7 Tagen" else if (language == "ka") "7 დღეში" else if (language == "zh") "7 天内" else if (language == "es") tr("es", "", "in 7 days") else "in 7 days")
                     } else if (isNumerical) {
                         val displayValue = if (isFailed) 0f else currentValue
                         val formattedVal = if (displayValue % 1f == 0f) displayValue.toInt().toString() else displayValue.toString()
@@ -4867,9 +4867,9 @@ fun HabitItemRow(
                         "$formattedVal / $formattedTarget$unitStr"
                     } else {
                         if (isCompleted) {
-                            if (language == "de") "Erledigt" else if (language == "ka") "დასრულებული" else if (language == "zh") "已完成" else "Completed"
+                            if (language == "de") "Erledigt" else if (language == "ka") "დასრულებული" else if (language == "zh") "已完成" else if (language == "es") tr("es", "", "Completed") else "Completed"
                         } else if (isFailed) {
-                            if (language == "de") "Fehlgeschlagen" else if (language == "ka") "ვერ მოხერხდა" else if (language == "zh") "未达成" else "Failed"
+                            if (language == "de") "Fehlgeschlagen" else if (language == "ka") "ვერ მოხერხდა" else if (language == "zh") "未达成" else if (language == "es") tr("es", "", "Failed") else "Failed"
                         } else {
                             ""
                         }
@@ -5266,7 +5266,7 @@ fun StatsScreen(
                     }
 
                     Text(
-                        text = if (language == "de") "Statistiken" else if (language == "ka") "სტატისტიკა" else if (language == "zh") "统计" else "Statistics",
+                        text = if (language == "de") "Statistiken" else if (language == "ka") "სტატისტიკა" else if (language == "zh") "统计" else if (language == "es") tr("es", "", "Statistics") else "Statistics",
                         style = MaterialTheme.typography.displayLarge,
                         color = TextPrimary,
                         fontWeight = FontWeight.Bold,
@@ -5296,7 +5296,7 @@ fun StatsScreen(
             // Subheading: Overall Statistiken
             item {
                 Text(
-                    text = if (language == "de") "Overall Statistiken" else if (language == "ka") "საერთო სტატისტიკა" else if (language == "zh") "综合统计" else "Overall Statistics",
+                    text = if (language == "de") "Overall Statistiken" else if (language == "ka") "საერთო სტატისტიკა" else if (language == "zh") "综合统计" else if (language == "es") tr("es", "", "Overall Statistics") else "Overall Statistics",
                     style = MaterialTheme.typography.titleMedium,
                     color = TextPrimary,
                     fontWeight = FontWeight.Bold,
@@ -5447,7 +5447,7 @@ fun StatsScreen(
             // Subheading 2: Habits im Detail
             item {
                 Text(
-                    text = if (language == "de") "Habits im Detail" else if (language == "ka") "ჩვევები დეტალურად" else if (language == "zh") "习惯明细" else "Habits in Detail",
+                    text = if (language == "de") "Habits im Detail" else if (language == "ka") "ჩვევები დეტალურად" else if (language == "zh") "习惯明细" else if (language == "es") tr("es", "", "Habits in Detail") else "Habits in Detail",
                     style = MaterialTheme.typography.titleMedium,
                     color = TextPrimary,
                     fontWeight = FontWeight.Bold,
@@ -5465,7 +5465,7 @@ fun StatsScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = if (language == "de") "Keine Gewohnheiten verfügbar" else if (language == "ka") "არ არის ხელმისაწვდომი ჩვევები" else if (language == "zh") "暂无可用习惯" else "No habits available",
+                            text = if (language == "de") "Keine Gewohnheiten verfügbar" else if (language == "ka") "არ არის ხელმისაწვდომი ჩვევები" else if (language == "zh") "暂无可用习惯" else if (language == "es") tr("es", "", "No habits available") else "No habits available",
                             style = MaterialTheme.typography.bodyLarge,
                             color = TextSecondary,
                             textAlign = TextAlign.Center
@@ -5485,7 +5485,7 @@ fun StatsScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = if (language == "de") "Gewohnheit erstellen" else if (language == "ka") "შექმენი ჩვევა" else if (language == "zh") "创建习惯" else "Create Habit",
+                                text = if (language == "de") "Gewohnheit erstellen" else if (language == "ka") "შექმენი ჩვევა" else if (language == "zh") "创建习惯" else if (language == "es") tr("es", "", "Create Habit") else "Create Habit",
                                 style = MaterialTheme.typography.labelLarge,
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold
@@ -5563,7 +5563,7 @@ fun StatsScreen(
 
         if (showReviewExplanation) {
             ExplanationDialog(
-                title = if (language == "de") "Rückblicke & Berichte" else if (language == "ka") "მიმოხილვები და ანგარიშები" else if (language == "zh") "回顾与报告" else "Reviews & Reports",
+                title = if (language == "de") "Rückblicke & Berichte" else if (language == "ka") "მიმოხილვები და ანგარიშები" else if (language == "zh") "回顾与报告" else if (language == "es") tr("es", "", "Reviews & Reports") else "Reviews & Reports",
                 explanation = if (language == "de") 
                     """Rückblicke sind Zusammenfassungen deiner Gewohnheiten.
 
@@ -5670,7 +5670,7 @@ fun HabitStatItem(
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = if (language == "de") "Stärke: $strength" else if (language == "ka") "სიძლიერე: $strength" else if (language == "zh") "稳固度：$strength" else "Strength: $strength",
+                            text = if (language == "de") "Stärke: $strength" else if (language == "ka") "სიძლიერე: $strength" else if (language == "zh") "稳固度：$strength" else if (language == "es") tr("es", "", "Strength: $strength") else "Strength: $strength",
                             style = MaterialTheme.typography.bodyMedium,
                             color = TextSecondary
                         )
@@ -5826,7 +5826,7 @@ fun HabitDetailScreen(
                 ) {
                     Box(modifier = Modifier.align(Alignment.TopEnd)) {
                         InfoIconButton(
-                            title = if (language == "de") "Stärke-Wert" else if (language == "ka") "სიძლიერის ქულა" else if (language == "zh") "稳固度评分" else "Strength Score",
+                            title = if (language == "de") "Stärke-Wert" else if (language == "ka") "სიძლიერის ქულა" else if (language == "zh") "稳固度评分" else if (language == "es") tr("es", "", "Strength Score") else "Strength Score",
                             explanation = if (language == "de") {
                                 "Die gewichtete Stärke dieser Gewohnheit (0-100) basierend auf den letzten 30 Tagen. Neuere Einträge werden etwas stärker gewichtet, sodass sich dein Score schneller erholen kann. Ausstehende Aufgaben für den heutigen Tag reduzieren den Score nicht, solange sie unmarkiert bleiben."
                             } else {
@@ -5883,7 +5883,7 @@ fun HabitDetailScreen(
                             verticalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
                             Text(
-                                text = if (language == "de") "GEWOHNHEITS-STÄRKE" else if (language == "ka") "ჩვევის სიძლიერე" else if (language == "zh") "习惯稳固度" else "HABIT STRENGTH",
+                                text = if (language == "de") "GEWOHNHEITS-STÄRKE" else if (language == "ka") "ჩვევის სიძლიერე" else if (language == "zh") "习惯稳固度" else if (language == "es") tr("es", "", "HABIT STRENGTH") else "HABIT STRENGTH",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = TextSecondary,
                                 fontWeight = FontWeight.Bold,
@@ -5930,7 +5930,7 @@ fun HabitDetailScreen(
                                 )
                             }
                             Text(
-                                text = if (language == "de") "BESCHREIBUNG" else if (language == "ka") "აღწერა" else if (language == "zh") "描述说明" else "DESCRIPTION",
+                                text = if (language == "de") "BESCHREIBUNG" else if (language == "ka") "აღწერა" else if (language == "zh") "描述说明" else if (language == "es") tr("es", "", "DESCRIPTION") else "DESCRIPTION",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = TextSecondary,
                                 fontWeight = FontWeight.Bold,
@@ -6021,7 +6021,7 @@ fun HabitDetailScreen(
                         // Info icon placed in the top right corner
                         Box(modifier = Modifier.align(Alignment.TopEnd)) {
                             InfoIconButton(
-                                title = if (language == "de") "Aktueller Streak" else if (language == "ka") "მიმდინარე სტრიქონი" else if (language == "zh") "当前连续" else "Current Streak",
+                                title = if (language == "de") "Aktueller Streak" else if (language == "ka") "მიმდინარე სტრიქონი" else if (language == "zh") "当前连续" else if (language == "es") tr("es", "", "Current Streak") else "Current Streak",
                                 explanation = currentStreakExplanation,
                                 onClick = { t, e -> activeExplanation = t to e }
                             )
@@ -6049,7 +6049,7 @@ fun HabitDetailScreen(
                             }
                             
                             Text(
-                                text = if (language == "de") "Aktuelle Serie" else if (language == "ka") "მიმდინარე სერი" else if (language == "zh") "当前连续" else "Current streak",
+                                text = if (language == "de") "Aktuelle Serie" else if (language == "ka") "მიმდინარე სერი" else if (language == "zh") "当前连续" else if (language == "es") tr("es", "", "Current streak") else "Current streak",
                                 style = MaterialTheme.typography.labelLarge,
                                 color = TextSecondary,
                                 fontWeight = FontWeight.Bold,
@@ -6086,7 +6086,7 @@ fun HabitDetailScreen(
                         // Info icon placed in the top right corner
                         Box(modifier = Modifier.align(Alignment.TopEnd)) {
                             InfoIconButton(
-                                title = if (language == "de") "Längster Streak" else if (language == "ka") "ყველაზე გრძელი სერია" else if (language == "zh") "最长连续" else "Longest Streak",
+                                title = if (language == "de") "Längster Streak" else if (language == "ka") "ყველაზე გრძელი სერია" else if (language == "zh") "最长连续" else if (language == "es") tr("es", "", "Longest Streak") else "Longest Streak",
                                 explanation = longestStreakExplanation,
                                 onClick = { t, e -> activeExplanation = t to e }
                             )
@@ -6114,7 +6114,7 @@ fun HabitDetailScreen(
                             }
                             
                             Text(
-                                text = if (language == "de") "Beste Serie" else if (language == "ka") "საუკეთესო სერია" else if (language == "zh") "最高连续" else "Best streak",
+                                text = if (language == "de") "Beste Serie" else if (language == "ka") "საუკეთესო სერია" else if (language == "zh") "最高连续" else if (language == "es") tr("es", "", "Best streak") else "Best streak",
                                 style = MaterialTheme.typography.labelLarge,
                                 color = TextSecondary,
                                 fontWeight = FontWeight.Bold,
@@ -6176,14 +6176,14 @@ fun HabitDetailScreen(
                         }
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = if (language == "de") "KALENDER" else if (language == "ka") "კალენდარი" else if (language == "zh") "日历" else "CALENDAR",
+                            text = if (language == "de") "KALENDER" else if (language == "ka") "კალენდარი" else if (language == "zh") "日历" else if (language == "es") tr("es", "", "CALENDAR") else "CALENDAR",
                             style = MaterialTheme.typography.labelSmall,
                             color = TextSecondary,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         InfoIconButton(
-                            title = if (language == "de") "Kalender-Historie" else if (language == "ka") "კალენდრის ისტორია" else if (language == "zh") "日历历史" else "Calendar History",
+                            title = if (language == "de") "Kalender-Historie" else if (language == "ka") "კალენდრის ისტორია" else if (language == "zh") "日历历史" else if (language == "es") tr("es", "", "Calendar History") else "Calendar History",
                             explanation = if (language == "de") {
                                 "Bietet eine vollständige Monatsübersicht deiner Abschlüsse. Grün steht für erfolgreiche Tage, Rot für fehlgeschlagene Tage, Gelb für ausstehende Tage und Dunkelgrau für inaktive Tage oder Pausen."
                             } else if (language == "ka") {
@@ -6206,7 +6206,7 @@ fun HabitDetailScreen(
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = if (language == "de") "Interaktiv" else if (language == "ka") "ინტერაქტიული" else if (language == "zh") "交互式" else "Interactive",
+                                text = if (language == "de") "Interaktiv" else if (language == "ka") "ინტერაქტიული" else if (language == "zh") "交互式" else if (language == "es") tr("es", "", "Interactive") else "Interactive",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = TextSecondary.copy(alpha = 0.7f),
                                 fontWeight = FontWeight.Medium
@@ -6246,13 +6246,13 @@ fun HabitDetailScreen(
             }
 
             SuccessRateCard(
-                title = if (language == "de") "Erfolgsquote" else if (language == "ka") "წარმატების მაჩვენებელი" else if (language == "zh") "成功率" else "Success Rate",
+                title = if (language == "de") "Erfolgsquote" else if (language == "ka") "წარმატების მაჩვენებელი" else if (language == "zh") "成功率" else if (language == "es") tr("es", "", "Success Rate") else "Success Rate",
                 doneCount = stats.doneCount,
                 missedCount = stats.missedCount,
                 skippedCount = stats.skippedCount,
                 pendingCount = stats.pendingCount,
                 language = language,
-                infoTitle = if (language == "de") "Erfolgsquote" else if (language == "ka") "წარმატების მაჩვენებელი" else if (language == "zh") "成功率" else "Success Rate",
+                infoTitle = if (language == "de") "Erfolgsquote" else if (language == "ka") "წარმატების მაჩვენებელი" else if (language == "zh") "成功率" else if (language == "es") tr("es", "", "Success Rate") else "Success Rate",
                 infoExplanation = if (language == "de") {
                     "Aufschlüsselung aller aktiven Tage im gewählten Zeitraum nach Status: Erreicht, Gescheitert, Skipped und Ausstehend."
                 } else if (language == "ka") {
@@ -6308,8 +6308,8 @@ fun HabitDetailScreen(
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
-            title = { Text(text = if (language == "de") "Habit löschen?" else if (language == "ka") "წაშალოთ ჩვევა?" else if (language == "zh") "删除习惯？" else "Delete Habit?") },
-            text = { Text(text = if (language == "de") "Möchtest du diese Gewohnheit wirklich unwiderruflich löschen?" else if (language == "ka") "დარწმუნებული ხართ, რომ გსურთ სამუდამოდ წაშალოთ ეს ჩვევა?" else if (language == "zh") "确定要永久删除该习惯吗？" else "Are you sure you want to delete this habit permanently?") },
+            title = { Text(text = if (language == "de") "Habit löschen?" else if (language == "ka") "წაშალოთ ჩვევა?" else if (language == "zh") "删除习惯？" else if (language == "es") tr("es", "", "Delete Habit?") else "Delete Habit?") },
+            text = { Text(text = if (language == "de") "Möchtest du diese Gewohnheit wirklich unwiderruflich löschen?" else if (language == "ka") "დარწმუნებული ხართ, რომ გსურთ სამუდამოდ წაშალოთ ეს ჩვევა?" else if (language == "zh") "确定要永久删除该习惯吗？" else if (language == "es") tr("es", "", "Are you sure you want to delete this habit permanently?") else "Are you sure you want to delete this habit permanently?") },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -6317,18 +6317,18 @@ fun HabitDetailScreen(
                         showDeleteConfirm = false
                         Toast.makeText(
                             context,
-                            if (language == "de") "Gewohnheit gelöscht" else if (language == "ka") "ჩვევა წაშლილია" else if (language == "zh") "习惯已删除" else "Habit deleted",
+                            if (language == "de") "Gewohnheit gelöscht" else if (language == "ka") "ჩვევა წაშლილია" else if (language == "zh") "习惯已删除" else if (language == "es") tr("es", "", "Habit deleted") else "Habit deleted",
                             Toast.LENGTH_SHORT
                         ).show()
                     },
                     colors = ButtonDefaults.textButtonColors(contentColor = ErrorRed)
                 ) {
-                    Text(if (language == "de") "Löschen" else if (language == "ka") "წაშლა" else if (language == "zh") "删除" else "Delete")
+                    Text(if (language == "de") "Löschen" else if (language == "ka") "წაშლა" else if (language == "zh") "删除" else if (language == "es") tr("es", "", "Delete") else "Delete")
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirm = false }) {
-                    Text(text = if (language == "de") "Abbrechen" else if (language == "ka") "გაუქმება" else if (language == "zh") "取消" else "Cancel")
+                    Text(text = if (language == "de") "Abbrechen" else if (language == "ka") "გაუქმება" else if (language == "zh") "取消" else if (language == "es") tr("es", "", "Cancel") else "Cancel")
                 }
             }
         )
@@ -6426,14 +6426,14 @@ fun WeekdayFrequencySection(
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = if (language == "de") "WOCHENTAGS-FREQUENZ" else if (language == "ka") "კვირის სიხშირე" else if (language == "zh") "星期频率统计" else "WEEKDAY FREQUENCY",
+                    text = if (language == "de") "WOCHENTAGS-FREQUENZ" else if (language == "ka") "კვირის სიხშირე" else if (language == "zh") "星期频率统计" else if (language == "es") tr("es", "", "WEEKDAY FREQUENCY") else "WEEKDAY FREQUENCY",
                     style = MaterialTheme.typography.labelSmall,
                     color = TextSecondary,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 InfoIconButton(
-                    title = if (language == "de") "Wochentags-Frequenz" else if (language == "ka") "სამუშაო დღეების სიხშირე" else if (language == "zh") "星期频率统计" else "Weekday Frequency",
+                    title = if (language == "de") "Wochentags-Frequenz" else if (language == "ka") "სამუშაო დღეების სიხშირე" else if (language == "zh") "星期频率统计" else if (language == "es") tr("es", "", "Weekday Frequency") else "Weekday Frequency",
                     explanation = if (language == "de") {
                         "Zeigt, an welchen Wochentagen du diese Gewohnheit historisch am häufigsten abgeschlossen hast. Je heller der Kreis, desto höher die Erfolgsquote."
                     } else {
@@ -6497,7 +6497,7 @@ fun WeekdayFrequencySection(
 
             // 2. Git-style Weekly Heatmap (Last 15 Weeks)
             Text(
-                text = if (language == "de") "AKTIVITÄT (LETZTE 15 WOCHEN)" else if (language == "ka") "აქტივობა (ბოლო 15 კვირა)" else if (language == "zh") "近期活动（最近 15 周）" else "ACTIVITY (LAST 15 WEEKS)",
+                text = if (language == "de") "AKTIVITÄT (LETZTE 15 WOCHEN)" else if (language == "ka") "აქტივობა (ბოლო 15 კვირა)" else if (language == "zh") "近期活动（最近 15 周）" else if (language == "es") tr("es", "", "ACTIVITY (LAST 15 WEEKS)") else "ACTIVITY (LAST 15 WEEKS)",
                 style = MaterialTheme.typography.labelSmall,
                 color = TextSecondary,
                 fontWeight = FontWeight.Bold,
@@ -6656,7 +6656,7 @@ fun HabitTargetSection(
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = if (language == "de") "ZIERLEISTUNG (ZIEL)" else if (language == "ka") "მიზნობრივი შესრულება" else if (language == "zh") "目标达成表现" else "TARGET PERFORMANCE",
+                    text = if (language == "de") "ZIERLEISTUNG (ZIEL)" else if (language == "ka") "მიზნობრივი შესრულება" else if (language == "zh") "目标达成表现" else if (language == "es") tr("es", "", "TARGET PERFORMANCE") else "TARGET PERFORMANCE",
                     style = MaterialTheme.typography.labelSmall,
                     color = TextSecondary,
                     fontWeight = FontWeight.Bold
@@ -6770,7 +6770,7 @@ fun TargetProgressRow(
                         if (diff % 1f == 0f) diff.toInt().toString() else String.format(Locale.US, "%.1f", diff)
                     }
                     val targetLabel = remember(language, formattedTarget, unitSuffix) {
-                        if (language == "de") " / Ziel: $formattedTarget$unitSuffix" else if (language == "ka") "/ სამიზნე: $formattedTarget $unitSuffix" else if (language == "zh") " / 目标：$formattedTarget$unitSuffix" else " / Target: $formattedTarget$unitSuffix"
+                        if (language == "de") " / Ziel: $formattedTarget$unitSuffix" else if (language == "ka") "/ სამიზნე: $formattedTarget $unitSuffix" else if (language == "zh") " / 目标：$formattedTarget$unitSuffix" else if (language == "es") tr("es", "", " / Target: $formattedTarget$unitSuffix") else " / Target: $formattedTarget$unitSuffix"
                     }
 
                     Text(
@@ -6789,7 +6789,7 @@ fun TargetProgressRow(
                     )
                 } else {
                     Text(
-                        text = if (language == "de") " (Kein Ziel)" else if (language == "ka") "(სამიზნე არ არის)" else if (language == "zh") "（无目标）" else " (No Target)",
+                        text = if (language == "de") " (Kein Ziel)" else if (language == "ka") "(სამიზნე არ არის)" else if (language == "zh") "（无目标）" else if (language == "es") tr("es", "", " (No Target)") else " (No Target)",
                         style = MaterialTheme.typography.bodySmall,
                         color = TextSecondary,
                         fontWeight = FontWeight.Normal,
@@ -7309,14 +7309,14 @@ fun HabitScoreTrendCard(
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = if (language == "de") "HABIT SCORE TREND" else if (language == "ka") "ჩვევების ქულის ტენდენცია" else if (language == "zh") "习惯得分趋势" else "HABIT SCORE TREND",
+                    text = if (language == "de") "HABIT SCORE TREND" else if (language == "ka") "ჩვევების ქულის ტენდენცია" else if (language == "zh") "习惯得分趋势" else if (language == "es") tr("es", "", "HABIT SCORE TREND") else "HABIT SCORE TREND",
                     style = MaterialTheme.typography.labelSmall,
                     color = TextSecondary,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 InfoIconButton(
-                    title = if (language == "de") "Habit Score Trend" else if (language == "ka") "ჩვევების ქულის ტენდენცია" else if (language == "zh") "习惯得分趋势" else "Habit Score Trend",
+                    title = if (language == "de") "Habit Score Trend" else if (language == "ka") "ჩვევების ქულის ტენდენცია" else if (language == "zh") "习惯得分趋势" else if (language == "es") tr("es", "", "Habit Score Trend") else "Habit Score Trend",
                     explanation = if (language == "de") {
                         "Zeigt die historische Entwicklung deines Gewohnheits-Scores (0–100) im gewählten Zeitraum."
                     } else {
@@ -7337,7 +7337,7 @@ fun HabitScoreTrendCard(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = if (language == "de") "Interaktiv" else if (language == "ka") "ინტერაქტიული" else if (language == "zh") "交互式" else "Interactive",
+                        text = if (language == "de") "Interaktiv" else if (language == "ka") "ინტერაქტიული" else if (language == "zh") "交互式" else if (language == "es") tr("es", "", "Interactive") else "Interactive",
                         style = MaterialTheme.typography.labelSmall,
                         color = TextSecondary.copy(alpha = 0.7f),
                         fontWeight = FontWeight.Medium
@@ -7406,14 +7406,14 @@ fun HabitVolumeProgressionCard(
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = if (language == "de") "ABSCHLUSS-VOLUMEN" else if (language == "ka") "დასრულების მოცულობა" else if (language == "zh") "完成量统计" else "COMPLETION VOLUME",
+                    text = if (language == "de") "ABSCHLUSS-VOLUMEN" else if (language == "ka") "დასრულების მოცულობა" else if (language == "zh") "完成量统计" else if (language == "es") tr("es", "", "COMPLETION VOLUME") else "COMPLETION VOLUME",
                     style = MaterialTheme.typography.labelSmall,
                     color = TextSecondary,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 InfoIconButton(
-                    title = if (language == "de") "Abschluss-Volumen" else if (language == "ka") "დასრულების მოცულობა" else if (language == "zh") "完成量统计" else "Completion Volume",
+                    title = if (language == "de") "Abschluss-Volumen" else if (language == "ka") "დასრულების მოცულობა" else if (language == "zh") "完成量统计" else if (language == "es") tr("es", "", "Completion Volume") else "Completion Volume",
                     explanation = if (language == "de") {
                         "Zeigt die absoluten erfolgreichen Gewohnheitsabschlüsse pro Periode."
                     } else {
@@ -7434,7 +7434,7 @@ fun HabitVolumeProgressionCard(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = if (language == "de") "Interaktiv" else if (language == "ka") "ინტერაქტიული" else if (language == "zh") "交互式" else "Interactive",
+                        text = if (language == "de") "Interaktiv" else if (language == "ka") "ინტერაქტიული" else if (language == "zh") "交互式" else if (language == "es") tr("es", "", "Interactive") else "Interactive",
                         style = MaterialTheme.typography.labelSmall,
                         color = TextSecondary.copy(alpha = 0.7f),
                         fontWeight = FontWeight.Medium
@@ -7786,14 +7786,14 @@ fun OverallScoreTrendCard(
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = if (language == "de") "GESAMT SCORE TREND" else if (language == "ka") "საერთო ქულის ტენდენცია" else if (language == "zh") "综合得分趋势" else "OVERALL SCORE TREND",
+                    text = if (language == "de") "GESAMT SCORE TREND" else if (language == "ka") "საერთო ქულის ტენდენცია" else if (language == "zh") "综合得分趋势" else if (language == "es") tr("es", "", "OVERALL SCORE TREND") else "OVERALL SCORE TREND",
                     style = MaterialTheme.typography.labelSmall,
                     color = TextSecondary,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 InfoIconButton(
-                    title = if (language == "de") "Gesamt Score Trend" else if (language == "ka") "საერთო ქულის ტენდენცია" else if (language == "zh") "综合得分趋势" else "Overall Score Trend",
+                    title = if (language == "de") "Gesamt Score Trend" else if (language == "ka") "საერთო ქულის ტენდენცია" else if (language == "zh") "综合得分趋势" else if (language == "es") tr("es", "", "Overall Score Trend") else "Overall Score Trend",
                     explanation = if (language == "de") {
                         "Zeigt die historische Entwicklung deines Gesamt-Konto-Scores (0–100) über alle Gewohnheiten."
                     } else {
@@ -7814,7 +7814,7 @@ fun OverallScoreTrendCard(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = if (language == "de") "Interaktiv" else if (language == "ka") "ინტერაქტიული" else if (language == "zh") "交互式" else "Interactive",
+                        text = if (language == "de") "Interaktiv" else if (language == "ka") "ინტერაქტიული" else if (language == "zh") "交互式" else if (language == "es") tr("es", "", "Interactive") else "Interactive",
                         style = MaterialTheme.typography.labelSmall,
                         color = TextSecondary.copy(alpha = 0.7f),
                         fontWeight = FontWeight.Medium
@@ -7884,14 +7884,14 @@ fun OverallVolumeProgressionCard(
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = if (language == "de") "GESAMT-VOLUMEN" else if (language == "ka") "მთლიანი მოცულობის პროგრესი" else if (language == "zh") "累计完成量走势" else "TOTAL VOLUME PROGRESSION",
+                    text = if (language == "de") "GESAMT-VOLUMEN" else if (language == "ka") "მთლიანი მოცულობის პროგრესი" else if (language == "zh") "累计完成量走势" else if (language == "es") tr("es", "", "TOTAL VOLUME PROGRESSION") else "TOTAL VOLUME PROGRESSION",
                     style = MaterialTheme.typography.labelSmall,
                     color = TextSecondary,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 InfoIconButton(
-                    title = if (language == "de") "Gesamt-Volumen" else if (language == "ka") "მთლიანი მოცულობის პროგრესი" else if (language == "zh") "累计完成量走势" else "Total Volume Progression",
+                    title = if (language == "de") "Gesamt-Volumen" else if (language == "ka") "მთლიანი მოცულობის პროგრესი" else if (language == "zh") "累计完成量走势" else if (language == "es") tr("es", "", "Total Volume Progression") else "Total Volume Progression",
                     explanation = if (language == "de") {
                         "Zeigt die absolute Anzahl aller erfolgreich absolvierten Abschlüsse im ausgewählten Zeitraum."
                     } else {
@@ -7912,7 +7912,7 @@ fun OverallVolumeProgressionCard(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = if (language == "de") "Interaktiv" else if (language == "ka") "ინტერაქტიული" else if (language == "zh") "交互式" else "Interactive",
+                        text = if (language == "de") "Interaktiv" else if (language == "ka") "ინტერაქტიული" else if (language == "zh") "交互式" else if (language == "es") tr("es", "", "Interactive") else "Interactive",
                         style = MaterialTheme.typography.labelSmall,
                         color = TextSecondary.copy(alpha = 0.7f),
                         fontWeight = FontWeight.Medium
@@ -8067,7 +8067,7 @@ fun OverallStatsScreen(
                                         shape = CircleShape
                                     ) {
                                         Text(
-                                            text = "✨ " + (if (language == "de") "RÜCKBLICK $currentYear" else if (language == "ka") "$currentYear მიმოხილვა" else if (language == "zh") "$currentYear 年度回顾" else "$currentYear REVIEW"),
+                                            text = "✨ " + (if (language == "de") "RÜCKBLICK $currentYear" else if (language == "ka") "$currentYear მიმოხილვა" else if (language == "zh") "$currentYear 年度回顾" else if (language == "es") tr("es", "", "$currentYear REVIEW") else "$currentYear REVIEW"),
                                             style = MaterialTheme.typography.labelSmall,
                                             color = Color.White,
                                             fontWeight = FontWeight.Bold,
@@ -8077,14 +8077,14 @@ fun OverallStatsScreen(
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text = if (language == "de") "Dein Jahresrückblick $currentYear" else if (language == "ka") "თქვენი $currentYear ამბავი" else if (language == "zh") "你的 $currentYear 年度故事" else "Your $currentYear Story",
+                                    text = if (language == "de") "Dein Jahresrückblick $currentYear" else if (language == "ka") "თქვენი $currentYear ამბავი" else if (language == "zh") "你的 $currentYear 年度故事" else if (language == "es") tr("es", "", "Your $currentYear Story") else "Your $currentYear Story",
                                     style = MaterialTheme.typography.titleLarge,
                                     color = Color.White,
                                     fontWeight = FontWeight.ExtraBold
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = if (language == "de") "Highlights, Statistiken & Star-Gewohnheiten entdecken" else if (language == "ka") "აღმოაჩინეთ თქვენი მაჩვენებლები, სტატისტიკა და ვარსკვლავების ჩვევები" else if (language == "zh") "探索你的高光时刻、数据统计与明星习惯" else "Discover your highlights, stats & star habits",
+                                    text = if (language == "de") "Highlights, Statistiken & Star-Gewohnheiten entdecken" else if (language == "ka") "აღმოაჩინეთ თქვენი მაჩვენებლები, სტატისტიკა და ვარსკვლავების ჩვევები" else if (language == "zh") "探索你的高光时刻、数据统计与明星习惯" else if (language == "es") tr("es", "", "Discover your highlights, stats & star habits") else "Discover your highlights, stats & star habits",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = Color.White.copy(alpha = 0.85f)
                                 )
@@ -8109,7 +8109,7 @@ fun OverallStatsScreen(
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = if (language == "de") "Starten" else if (language == "ka") "თამაში" else if (language == "zh") "开始体验" else "Play",
+                                    text = if (language == "de") "Starten" else if (language == "ka") "თამაში" else if (language == "zh") "开始体验" else if (language == "es") tr("es", "", "Play") else "Play",
                                     fontWeight = FontWeight.Bold,
                                     color = PrimaryViolet
                                 )
@@ -8166,7 +8166,7 @@ fun OverallStatsScreen(
                     ) {
                         Spacer(modifier = Modifier.width(32.dp))
                         Text(
-                            text = if (language == "de") "GESAMT-STÄRKE" else if (language == "ka") "საერთო სიძლიერე" else if (language == "zh") "综合稳固度" else "OVERALL STRENGTH",
+                            text = if (language == "de") "GESAMT-STÄRKE" else if (language == "ka") "საერთო სიძლიერე" else if (language == "zh") "综合稳固度" else if (language == "es") tr("es", "", "OVERALL STRENGTH") else "OVERALL STRENGTH",
                             style = MaterialTheme.typography.labelSmall,
                             color = TextSecondary,
                             fontWeight = FontWeight.Bold,
@@ -8174,7 +8174,7 @@ fun OverallStatsScreen(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         InfoIconButton(
-                            title = if (language == "de") "Gesamt-Stärke Score" else if (language == "ka") "სიძლიერის საერთო ქულა" else if (language == "zh") "综合稳固度评分" else "Overall Strength Score",
+                            title = if (language == "de") "Gesamt-Stärke Score" else if (language == "ka") "სიძლიერის საერთო ქულა" else if (language == "zh") "综合稳固度评分" else if (language == "es") tr("es", "", "Overall Strength Score") else "Overall Strength Score",
                             explanation = if (language == "de") {
                                 "Der Durchschnitt der Stärke-Scores (0-100) all deiner aktiven Gewohnheiten. Der Score jeder Gewohnheit basiert auf den letzten 30 Tagen, wobei jüngere Einträge leicht höher gewichtet werden und heute noch ausstehende Aufgaben den Score nicht reduzieren."
                             } else {
@@ -8289,14 +8289,14 @@ fun OverallStatsScreen(
                                 }
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = if (language == "de") "PERFEKTE TAGE" else if (language == "ka") "იდეალური დღეები" else if (language == "zh") "完美天数" else "PERFECT DAYS",
+                                    text = if (language == "de") "PERFEKTE TAGE" else if (language == "ka") "იდეალური დღეები" else if (language == "zh") "完美天数" else if (language == "es") tr("es", "", "PERFECT DAYS") else "PERFECT DAYS",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = TextSecondary,
                                     fontWeight = FontWeight.Bold
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 InfoIconButton(
-                                    title = if (language == "de") "Perfekte Tage" else if (language == "ka") "იდეალური დღეები" else if (language == "zh") "完美天数" else "Perfect Days",
+                                    title = if (language == "de") "Perfekte Tage" else if (language == "ka") "იდეალური დღეები" else if (language == "zh") "完美天数" else if (language == "es") tr("es", "", "Perfect Days") else "Perfect Days",
                                     explanation = if (language == "de") {
                                         "Übersicht über deine perfekten Tage, an denen du alle aktiven Gewohnheiten erfolgreich abgeschlossen hast."
                                     } else if (language == "ka") {
@@ -8327,7 +8327,7 @@ fun OverallStatsScreen(
                                     )
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
-                                        text = if (language == "de") "Gesamt" else if (language == "ka") "სულ" else if (language == "zh") "累计" else "Total",
+                                        text = if (language == "de") "Gesamt" else if (language == "ka") "სულ" else if (language == "zh") "累计" else if (language == "es") tr("es", "", "Total") else "Total",
                                         style = MaterialTheme.typography.labelMedium,
                                         color = TextSecondary
                                     )
@@ -8345,7 +8345,7 @@ fun OverallStatsScreen(
                                     )
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
-                                        text = if (language == "de") "Aktueller Streak" else if (language == "ka") "მიმდინარე სტრიქონი" else if (language == "zh") "当前连续" else "Current Streak",
+                                        text = if (language == "de") "Aktueller Streak" else if (language == "ka") "მიმდინარე სტრიქონი" else if (language == "zh") "当前连续" else if (language == "es") tr("es", "", "Current Streak") else "Current Streak",
                                         style = MaterialTheme.typography.labelMedium,
                                         color = TextSecondary
                                     )
@@ -8363,7 +8363,7 @@ fun OverallStatsScreen(
                                     )
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
-                                        text = if (language == "de") "Längster Streak" else if (language == "ka") "საუკეთესო სერია" else if (language == "zh") "最高连续" else "Best Streak",
+                                        text = if (language == "de") "Längster Streak" else if (language == "ka") "საუკეთესო სერია" else if (language == "zh") "最高连续" else if (language == "es") tr("es", "", "Best Streak") else "Best Streak",
                                         style = MaterialTheme.typography.labelMedium,
                                         color = TextSecondary
                                     )
@@ -8411,14 +8411,14 @@ fun OverallStatsScreen(
                                 }
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = if (language == "de") "AKTIVITÄTS-HEATMAP" else if (language == "ka") "აქტივობა სითბოს რუკა" else if (language == "zh") "打卡热力图" else "ACTIVITY HEATMAP",
+                                    text = if (language == "de") "AKTIVITÄTS-HEATMAP" else if (language == "ka") "აქტივობა სითბოს რუკა" else if (language == "zh") "打卡热力图" else if (language == "es") tr("es", "", "ACTIVITY HEATMAP") else "ACTIVITY HEATMAP",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = TextSecondary,
                                     fontWeight = FontWeight.Bold
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 InfoIconButton(
-                                    title = if (language == "de") "Aktivitäts-Heatmap" else if (language == "ka") "აქტივობის სითბოს რუკა" else if (language == "zh") "打卡热力图" else "Activity Heatmap",
+                                    title = if (language == "de") "Aktivitäts-Heatmap" else if (language == "ka") "აქტივობის სითბოს რუკა" else if (language == "zh") "打卡热力图" else if (language == "es") tr("es", "", "Activity Heatmap") else "Activity Heatmap",
                                     explanation = if (language == "de") {
                                         "Zeigt deinen täglichen Gewohnheitsfortschritt für den ausgewählten Zeitraum, ähnlich wie das GitHub-Beitragssystem. Dunklere grüne Felder stehen für eine höhere Anzahl an abgeschlossenen Gewohnheiten an dem Tag."
                                     } else if (language == "ka") {
@@ -8441,7 +8441,7 @@ fun OverallStatsScreen(
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(
-                                        text = if (language == "de") "Interaktiv" else if (language == "ka") "ინტერაქტიული" else if (language == "zh") "交互式" else "Interactive",
+                                        text = if (language == "de") "Interaktiv" else if (language == "ka") "ინტერაქტიული" else if (language == "zh") "交互式" else if (language == "es") tr("es", "", "Interactive") else "Interactive",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = TextSecondary.copy(alpha = 0.7f),
                                         fontWeight = FontWeight.Medium
@@ -8595,7 +8595,7 @@ fun OverallStatsScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = if (language == "de") "Weniger " else if (language == "ka") "ნაკლები" else if (language == "zh") "少 " else "Less ",
+                                text = if (language == "de") "Weniger " else if (language == "ka") "ნაკლები" else if (language == "zh") "少 " else if (language == "es") tr("es", "", "Less ") else "Less ",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = TextSecondary,
                                 fontSize = 11.sp
@@ -8617,7 +8617,7 @@ fun OverallStatsScreen(
                             }
                             
                             Text(
-                                text = if (language == "de") " Mehr" else if (language == "ka") "მეტი" else if (language == "zh") " 更多" else " More",
+                                text = if (language == "de") " Mehr" else if (language == "ka") "მეტი" else if (language == "zh") " 更多" else if (language == "es") tr("es", "", " More") else " More",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = TextSecondary,
                                 fontSize = 11.sp
@@ -8647,10 +8647,10 @@ fun OverallStatsScreen(
                                     Spacer(modifier = Modifier.height(2.dp))
                                     val statusText = when {
                                         cell.isFuture -> {
-                                            if (language == "de") "Zukünftiger Tag" else if (language == "ka") "მომავლის დღე" else if (language == "zh") "未来日期" else "Future day"
+                                            if (language == "de") "Zukünftiger Tag" else if (language == "ka") "მომავლის დღე" else if (language == "zh") "未来日期" else if (language == "es") tr("es", "", "Future day") else "Future day"
                                         }
                                         cell.total == 0 -> {
-                                            if (language == "de") "Keine Gewohnheiten an diesem Tag" else if (language == "ka") "არანაირი აქტიური ჩვევა ამ დღეს" else if (language == "zh") "这一天没有活跃习惯" else "No habits active on this day"
+                                            if (language == "de") "Keine Gewohnheiten an diesem Tag" else if (language == "ka") "არანაირი აქტიური ჩვევა ამ დღეს" else if (language == "zh") "这一天没有活跃习惯" else if (language == "es") tr("es", "", "No habits active on this day") else "No habits active on this day"
                                         }
                                         else -> {
                                             val pct = (cell.completed.toFloat() / cell.total.toFloat() * 100).toInt()
@@ -8691,7 +8691,7 @@ fun OverallStatsScreen(
                                         colors = ButtonDefaults.textButtonColors(contentColor = PrimaryViolet)
                                     ) {
                                         Text(
-                                            text = if (language == "de") "Anzeigen" else if (language == "ka") "ხედი" else if (language == "zh") "查看" else "View",
+                                            text = if (language == "de") "Anzeigen" else if (language == "ka") "ხედი" else if (language == "zh") "查看" else if (language == "es") tr("es", "", "View") else "View",
                                             fontWeight = FontWeight.Bold,
                                             style = MaterialTheme.typography.bodyMedium
                                         )
@@ -8766,7 +8766,7 @@ fun OverallStatsScreen(
                                 }
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = if (language == "de") "Läuft super" else if (language == "ka") "მშვენივრად აკეთებს" else if (language == "zh") "表现出色" else "Doing great",
+                                    text = if (language == "de") "Läuft super" else if (language == "ka") "მშვენივრად აკეთებს" else if (language == "zh") "表现出色" else if (language == "es") tr("es", "", "Doing great") else "Doing great",
                                     style = MaterialTheme.typography.labelSmall,
                                     fontSize = 11.sp,
                                     color = TextSecondary,
@@ -8776,7 +8776,7 @@ fun OverallStatsScreen(
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 InfoIconButton(
-                                    title = if (language == "de") "Läuft super" else if (language == "ka") "მშვენივრად აკეთებს" else if (language == "zh") "表现出色" else "Doing great",
+                                    title = if (language == "de") "Läuft super" else if (language == "ka") "მშვენივრად აკეთებს" else if (language == "zh") "表现出色" else if (language == "es") tr("es", "", "Doing great") else "Doing great",
                                     explanation = if (language == "de") {
                                         "Deine 2 Gewohnheiten mit der höchsten historischen Erfolgsquote (Stärke)."
                                     } else if (language == "ka") {
@@ -8790,7 +8790,7 @@ fun OverallStatsScreen(
                             Spacer(modifier = Modifier.height(12.dp))
                             if (topHabits.isEmpty()) {
                                 Text(
-                                    text = if (language == "de") "Keine Daten" else if (language == "ka") "მონაცემები არ არის" else if (language == "zh") "暂无数据" else "No data",
+                                    text = if (language == "de") "Keine Daten" else if (language == "ka") "მონაცემები არ არის" else if (language == "zh") "暂无数据" else if (language == "es") tr("es", "", "No data") else "No data",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = TextSecondary
                                 )
@@ -8869,7 +8869,7 @@ fun OverallStatsScreen(
                                 }
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = if (language == "de") "Braucht Fokus" else if (language == "ka") "ფოკუსირება სჭირდება" else if (language == "zh") "需要关注" else "Needs focus",
+                                    text = if (language == "de") "Braucht Fokus" else if (language == "ka") "ფოკუსირება სჭირდება" else if (language == "zh") "需要关注" else if (language == "es") tr("es", "", "Needs focus") else "Needs focus",
                                     style = MaterialTheme.typography.labelSmall,
                                     fontSize = 11.sp,
                                     color = TextSecondary,
@@ -8879,7 +8879,7 @@ fun OverallStatsScreen(
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 InfoIconButton(
-                                    title = if (language == "de") "Braucht Fokus" else if (language == "ka") "ფოკუსირება სჭირდება" else if (language == "zh") "需要关注" else "Needs focus",
+                                    title = if (language == "de") "Braucht Fokus" else if (language == "ka") "ფოკუსირება სჭირდება" else if (language == "zh") "需要关注" else if (language == "es") tr("es", "", "Needs focus") else "Needs focus",
                                     explanation = if (language == "de") {
                                         "Deine Gewohnheiten unter 100%, die noch Aufmerksamkeit benötigen."
                                     } else if (language == "ka") {
@@ -8893,7 +8893,7 @@ fun OverallStatsScreen(
                             Spacer(modifier = Modifier.height(12.dp))
                             if (bottomHabits.isEmpty()) {
                                 Text(
-                                    text = if (language == "de") "Alles im grünen Bereich! 🎉" else if (language == "ka") "ყველა გზაზეა! 🎉" else if (language == "zh") "一切尽在掌握！🎉" else "All on track! 🎉",
+                                    text = if (language == "de") "Alles im grünen Bereich! 🎉" else if (language == "ka") "ყველა გზაზეა! 🎉" else if (language == "zh") "一切尽在掌握！🎉" else if (language == "es") tr("es", "", "All on track! 🎉") else "All on track! 🎉",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = TextSecondary
                                 )
@@ -8953,13 +8953,13 @@ fun OverallStatsScreen(
                 }
 
                 SuccessRateCard(
-                    title = if (language == "de") "Gesamt-Erfolgsquote" else if (language == "ka") "საერთო წარმატების მაჩვენებელი" else if (language == "zh") "综合成功率" else "Overall Success Rate",
+                    title = if (language == "de") "Gesamt-Erfolgsquote" else if (language == "ka") "საერთო წარმატების მაჩვენებელი" else if (language == "zh") "综合成功率" else if (language == "es") tr("es", "", "Overall Success Rate") else "Overall Success Rate",
                     doneCount = overallStats.doneCount,
                     missedCount = overallStats.missedCount,
                     skippedCount = overallStats.skippedCount,
                     pendingCount = overallStats.pendingCount,
                     language = language,
-                    infoTitle = if (language == "de") "Gesamt-Erfolgsquote" else if (language == "ka") "საერთო წარმატების მაჩვენებელი" else if (language == "zh") "综合成功率" else "Overall Success Rate",
+                    infoTitle = if (language == "de") "Gesamt-Erfolgsquote" else if (language == "ka") "საერთო წარმატების მაჩვენებელი" else if (language == "zh") "综合成功率" else if (language == "es") tr("es", "", "Overall Success Rate") else "Overall Success Rate",
                     infoExplanation = if (language == "de") {
                         "Gesamte Aufschlüsselung aller absolvierten Gewohnheitstage nach Status: Erreicht, Gescheitert, Skipped und Ausstehend."
                     } else if (language == "ka") {
@@ -9030,7 +9030,7 @@ fun OverallStatsScreen(
 
         if (showReviewExplanation) {
             ExplanationDialog(
-                title = if (language == "de") "Rückblicke & Berichte" else if (language == "ka") "მიმოხილვები და ანგარიშები" else if (language == "zh") "回顾与报告" else "Reviews & Reports",
+                title = if (language == "de") "Rückblicke & Berichte" else if (language == "ka") "მიმოხილვები და ანგარიშები" else if (language == "zh") "回顾与报告" else if (language == "es") tr("es", "", "Reviews & Reports") else "Reviews & Reports",
                 explanation = if (language == "de") 
                     """Rückblicke sind Zusammenfassungen deiner Gewohnheiten.
 
@@ -9093,7 +9093,7 @@ fun OverallStatsScreen(
                 ModernBackButton(onClick = onBack)
                 Spacer(modifier = Modifier.width(16.dp))
                 Text(
-                    text = if (language == "de") "Gesamt-Statistiken" else if (language == "ka") "საერთო სტატისტიკა" else if (language == "zh") "综合统计" else "Overall Statistics",
+                    text = if (language == "de") "Gesamt-Statistiken" else if (language == "ka") "საერთო სტატისტიკა" else if (language == "zh") "综合统计" else if (language == "es") tr("es", "", "Overall Statistics") else "Overall Statistics",
                     style = MaterialTheme.typography.displayMedium,
                     color = TextPrimary,
                     fontWeight = FontWeight.Bold,
@@ -9429,7 +9429,7 @@ fun SuccessRateCard(
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = if (language == "de") "$doneCount von $totalCount" else if (language == "ka") "$doneCount $totalCount -დან" else if (language == "zh") "$doneCount / $totalCount" else "$doneCount of $totalCount",
+                        text = if (language == "de") "$doneCount von $totalCount" else if (language == "ka") "$doneCount $totalCount -დან" else if (language == "zh") "$doneCount / $totalCount" else if (language == "es") tr("es", "", "$doneCount of $totalCount") else "$doneCount of $totalCount",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = TextSecondary
@@ -9452,7 +9452,7 @@ fun SuccessRateCard(
                     bgColor = SuccessGreen.copy(alpha = 0.12f),
                     value = "$donePct%",
                     count = doneCount,
-                    label = if (language == "de") "Erreicht" else if (language == "ka") "შესრულებულია" else if (language == "zh") "完成" else "Done"
+                    label = if (language == "de") "Erreicht" else if (language == "ka") "შესრულებულია" else if (language == "zh") "完成" else if (language == "es") tr("es", "", "Done") else "Done"
                 )
 
                 // 2. Missed
@@ -9463,7 +9463,7 @@ fun SuccessRateCard(
                     bgColor = HabitRed.copy(alpha = 0.12f),
                     value = "$missedPct%",
                     count = missedCount,
-                    label = if (language == "de") "Gescheitert" else if (language == "ka") "გაუშვა" else if (language == "zh") "未达成" else "Missed"
+                    label = if (language == "de") "Gescheitert" else if (language == "ka") "გაუშვა" else if (language == "zh") "未达成" else if (language == "es") tr("es", "", "Missed") else "Missed"
                 )
 
                 // 3. Skipped
@@ -9474,7 +9474,7 @@ fun SuccessRateCard(
                     bgColor = Color(0xFFF97316).copy(alpha = 0.12f),
                     value = "$skippedPct%",
                     count = skippedCount,
-                    label = if (language == "de") "Skipped" else if (language == "ka") "გამოტოვებული" else if (language == "zh") "已跳过" else "Skipped"
+                    label = if (language == "de") "Skipped" else if (language == "ka") "გამოტოვებული" else if (language == "zh") "已跳过" else if (language == "es") tr("es", "", "Skipped") else "Skipped"
                 )
 
                 // 4. Pending
@@ -9485,7 +9485,7 @@ fun SuccessRateCard(
                     bgColor = Color(0xFFFACC15).copy(alpha = 0.12f),
                     value = "$pendingPct%",
                     count = pendingCount,
-                    label = if (language == "de") "Ausstehend" else if (language == "ka") "მომლოდინე" else if (language == "zh") "待完成" else "Pending"
+                    label = if (language == "de") "Ausstehend" else if (language == "ka") "მომლოდინე" else if (language == "zh") "待完成" else if (language == "es") tr("es", "", "Pending") else "Pending"
                 )
             }
         }
@@ -9723,7 +9723,7 @@ fun CalendarMonthGrid(
                             .background(SuccessGreen)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = if (language == "de") "Erreicht" else if (language == "ka") "დასრულებული" else if (language == "zh") "已完成" else "Completed", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
+                    Text(text = if (language == "de") "Erreicht" else if (language == "ka") "დასრულებული" else if (language == "zh") "已完成" else if (language == "es") tr("es", "", "Completed") else "Completed", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
                 }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -9737,7 +9737,7 @@ fun CalendarMonthGrid(
                             .background(ErrorRed)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = if (language == "de") "Gescheitert" else if (language == "ka") "ვერ მოხერხდა" else if (language == "zh") "未达成" else "Failed", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
+                    Text(text = if (language == "de") "Gescheitert" else if (language == "ka") "ვერ მოხერხდა" else if (language == "zh") "未达成" else if (language == "es") tr("es", "", "Failed") else "Failed", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
                 }
             }
             Row(
@@ -9757,7 +9757,7 @@ fun CalendarMonthGrid(
                             .background(HabitYellow)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = if (language == "de") "Ausstehend" else if (language == "ka") "მომლოდინე" else if (language == "zh") "待完成" else "Pending", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
+                    Text(text = if (language == "de") "Ausstehend" else if (language == "ka") "მომლოდინე" else if (language == "zh") "待完成" else if (language == "es") tr("es", "", "Pending") else "Pending", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
                 }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -9771,7 +9771,7 @@ fun CalendarMonthGrid(
                             .background(HabitOrange)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = if (language == "de") "Skipped" else if (language == "ka") "გამოტოვებული" else if (language == "zh") "已跳过" else "Skipped", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
+                    Text(text = if (language == "de") "Skipped" else if (language == "ka") "გამოტოვებული" else if (language == "zh") "已跳过" else if (language == "es") tr("es", "", "Skipped") else "Skipped", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
                 }
             }
         }
@@ -9847,13 +9847,13 @@ fun MilestoneBadge(milestone: MilestoneItem, language: String) {
                             showConfetti = true
                             Toast.makeText(
                                 context,
-                                if (language == "de") "Erreicht: $rankName!" else if (language == "ka") "განბლოკილია: $rankName !" else if (language == "zh") "已解锁：$rankName！" else "Unlocked: $rankName!",
+                                if (language == "de") "Erreicht: $rankName!" else if (language == "ka") "განბლოკილია: $rankName !" else if (language == "zh") "已解锁：$rankName！" else if (language == "es") tr("es", "", "Unlocked: $rankName!") else "Unlocked: $rankName!",
                                 Toast.LENGTH_SHORT
                             ).show()
                         } else {
                             Toast.makeText(
                                 context,
-                                if (language == "de") "Noch gesperrt: $rankName (${milestone.target} Tage)" else if (language == "ka") "ჩაკეტილი: $rankName ( ${milestone.target} დღე)" else if (language == "zh") "未解锁：$rankName（需达成 ${milestone.target} 天）" else "Locked: $rankName (${milestone.target} days)",
+                                if (language == "de") "Noch gesperrt: $rankName (${milestone.target} Tage)" else if (language == "ka") "ჩაკეტილი: $rankName ( ${milestone.target} დღე)" else if (language == "zh") "未解锁：$rankName（需达成 ${milestone.target} 天）" else if (language == "es") tr("es", "", "Locked: $rankName (${milestone.target} days)") else "Locked: $rankName (${milestone.target} days)",
                                 Toast.LENGTH_SHORT
                             ).show()
                         }
@@ -9949,7 +9949,7 @@ fun StreakMilestonesCard(longestStreak: Int, language: String) {
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = if (language == "de") "ERFOLGSSTRÄHNE" else if (language == "ka") "სტრიქის ეტაპები" else if (language == "zh") "连续里程碑" else "STREAK MILESTONES",
+                    text = if (language == "de") "ERFOLGSSTRÄHNE" else if (language == "ka") "სტრიქის ეტაპები" else if (language == "zh") "连续里程碑" else if (language == "es") tr("es", "", "STREAK MILESTONES") else "STREAK MILESTONES",
                     style = MaterialTheme.typography.labelSmall,
                     color = TextSecondary,
                     fontWeight = FontWeight.Bold
@@ -10027,7 +10027,7 @@ fun SettingsScreen(
                 viewModel.updateProfileImageUri(android.net.Uri.fromFile(file).toString())
                 Toast.makeText(
                     context,
-                    if (language == "de") "Profilbild aktualisiert" else if (language == "ka") "პროფილის სურათი განახლდა" else if (language == "zh") "头像已更新" else "Profile picture updated",
+                    if (language == "de") "Profilbild aktualisiert" else if (language == "ka") "პროფილის სურათი განახლდა" else if (language == "zh") "头像已更新" else if (language == "es") tr("es", "", "Profile picture updated") else "Profile picture updated",
                     Toast.LENGTH_SHORT
                 ).show()
             } catch (e: Exception) {
@@ -10154,7 +10154,7 @@ fun SettingsScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = if (language == "de") "Keine archivierten Gewohnheiten." else if (language == "ka") "არქივირებული ჩვევები." else if (language == "zh") "暂无已归档习惯。" else "No archived habits.",
+                                text = if (language == "de") "Keine archivierten Gewohnheiten." else if (language == "ka") "არქივირებული ჩვევები." else if (language == "zh") "暂无已归档习惯。" else if (language == "es") tr("es", "", "No archived habits.") else "No archived habits.",
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = TextSecondary,
                                 textAlign = TextAlign.Center
@@ -10221,7 +10221,7 @@ fun SettingsScreen(
                                             viewModel.unarchiveHabit(habit)
                                             Toast.makeText(
                                                 context,
-                                                if (language == "de") "${habit.name} reaktiviert" else if (language == "ka") "${habit.name} ხელახლა გააქტიურებულია" else if (language == "zh") "已重新启用 ${habit.name}" else "${habit.name} reactivated",
+                                                if (language == "de") "${habit.name} reaktiviert" else if (language == "ka") "${habit.name} ხელახლა გააქტიურებულია" else if (language == "zh") "已重新启用 ${habit.name}" else if (language == "es") tr("es", "", "${habit.name} reactivated") else "${habit.name} reactivated",
                                                 Toast.LENGTH_SHORT
                                             ).show()
                                         },
@@ -10288,7 +10288,7 @@ fun SettingsScreen(
                     )
                     Spacer(modifier = Modifier.width(16.dp))
                     Text(
-                        text = if (language == "de") "Archiv" else if (language == "ka") "არქივი" else if (language == "zh") "归档" else "Archive",
+                        text = if (language == "de") "Archiv" else if (language == "ka") "არქივი" else if (language == "zh") "归档" else if (language == "es") tr("es", "", "Archive") else "Archive",
                         style = MaterialTheme.typography.displayMedium,
                         color = TextPrimary,
                         fontWeight = FontWeight.Bold
@@ -10301,8 +10301,8 @@ fun SettingsScreen(
             AlertDialog(
                 onDismissRequest = { showDeleteConfirmInArchive = null },
                 containerColor = AppCard,
-                title = { Text(text = if (language == "de") "Gewohnheit endgültig löschen?" else if (language == "ka") "სამუდამოდ წაშალოთ ჩვევა?" else if (language == "zh") "永久删除习惯？" else "Delete Habit Permanently?") },
-                text = { Text(text = if (language == "de") "Möchtest du '${showDeleteConfirmInArchive?.name}' wirklich unwiderruflich löschen? Alle Verlaufsdaten gehen verloren." else if (language == "ka") "დარწმუნებული ხართ, რომ გსურთ სამუდამოდ წაშალოთ \" ${showDeleteConfirmInArchive?.name} \"? ყველა თვალთვალის ისტორია დაიკარგება." else if (language == "zh") "确定要永久删除“${showDeleteConfirmInArchive?.name}”吗？所有历史数据都将丢失。" else "Are you sure you want to delete '${showDeleteConfirmInArchive?.name}' permanently? All tracking history will be lost.") },
+                title = { Text(text = if (language == "de") "Gewohnheit endgültig löschen?" else if (language == "ka") "სამუდამოდ წაშალოთ ჩვევა?" else if (language == "zh") "永久删除习惯？" else if (language == "es") tr("es", "", "Delete Habit Permanently?") else "Delete Habit Permanently?") },
+                text = { Text(text = if (language == "de") "Möchtest du '${showDeleteConfirmInArchive?.name}' wirklich unwiderruflich löschen? Alle Verlaufsdaten gehen verloren." else if (language == "ka") "დარწმუნებული ხართ, რომ გსურთ სამუდამოდ წაშალოთ \" ${showDeleteConfirmInArchive?.name} \"? ყველა თვალთვალის ისტორია დაიკარგება." else if (language == "zh") "确定要永久删除“${showDeleteConfirmInArchive?.name}”吗？所有历史数据都将丢失。" else if (language == "es") tr("es", "", "Are you sure you want to delete '${showDeleteConfirmInArchive?.name}' permanently? All tracking history will be lost.") else "Are you sure you want to delete '${showDeleteConfirmInArchive?.name}' permanently? All tracking history will be lost.") },
                 confirmButton = {
                     TextButton(
                         onClick = {
@@ -10311,17 +10311,17 @@ fun SettingsScreen(
                             showDeleteConfirmInArchive = null
                             Toast.makeText(
                                 context,
-                                if (language == "de") "Gewohnheit gelöscht" else if (language == "ka") "ჩვევა წაშლილია" else if (language == "zh") "习惯已删除" else "Habit deleted",
+                                if (language == "de") "Gewohnheit gelöscht" else if (language == "ka") "ჩვევა წაშლილია" else if (language == "zh") "习惯已删除" else if (language == "es") tr("es", "", "Habit deleted") else "Habit deleted",
                                 Toast.LENGTH_SHORT
                             ).show()
                         }
                     ) {
-                        Text(if (language == "de") "Löschen" else if (language == "ka") "წაშლა" else if (language == "zh") "删除" else "Delete", color = ErrorRed)
+                        Text(if (language == "de") "Löschen" else if (language == "ka") "წაშლა" else if (language == "zh") "删除" else if (language == "es") tr("es", "", "Delete") else "Delete", color = ErrorRed)
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { showDeleteConfirmInArchive = null }) {
-                        Text(if (language == "de") "Abbrechen" else if (language == "ka") "გაუქმება" else if (language == "zh") "取消" else "Cancel", color = TextSecondary)
+                        Text(if (language == "de") "Abbrechen" else if (language == "ka") "გაუქმება" else if (language == "zh") "取消" else if (language == "es") tr("es", "", "Cancel") else "Cancel", color = TextSecondary)
                     }
                 }
             )
@@ -10394,7 +10394,7 @@ fun SettingsScreen(
                         Triple("profile", tr(language, "Profil & Konto", "Profile & Account"), if (userName.isNotBlank()) userName else tr(language, "Profilbild & Nutzername bearbeiten", "Edit profile picture & name")) to Pair(Icons.Default.Person, Color(0xFF783CFA)),
                         Triple("appearance", tr(language, "Erscheinungsbild & Sprache", "Appearance & Language"), tr(language, "Sprache, Infokarten, Haptik & Einführung", "Language, Info Cards, Haptics & Intro")) to Pair(Icons.Default.Palette, HabitOrange),
                         Triple("notifications", tr(language, "Benachrichtigungen & Rückblicke", "Notifications & Reviews"), tr(language, "Monats- & Jahresrückblick Einstellungen", "Monthly & Yearly Review settings")) to Pair(Icons.Default.NotificationsActive, SuccessGreen),
-                        Triple("audio", tr(language, "Töne & Entspannung", "Audio & Soundscapes"), if (language == "de") "${importedAudios.size} Soundscapes & Fokus-Audio" else if (language == "ka") "${importedAudios.size} ხმოვანი გარემო და ფოკუსის აუდიო" else if (language == "zh") "${importedAudios.size} 个白噪音与专注音频" else "${importedAudios.size} soundscapes & focus audio") to Pair(Icons.Default.LibraryMusic, Color(0xFF783CFA)),
+                        Triple("audio", tr(language, "Töne & Entspannung", "Audio & Soundscapes"), if (language == "de") "${importedAudios.size} Soundscapes & Fokus-Audio" else if (language == "ka") "${importedAudios.size} ხმოვანი გარემო და ფოკუსის აუდიო" else if (language == "zh") "${importedAudios.size} 个白噪音与专注音频" else if (language == "es") tr("es", "", "${importedAudios.size} soundscapes & focus audio") else "${importedAudios.size} soundscapes & focus audio") to Pair(Icons.Default.LibraryMusic, Color(0xFF783CFA)),
                         Triple("data", tr(language, "Daten, Sicherung & Archiv", "Data, Backup & Archive"), tr(language, "Sicherung, Wiederherstellung & Archivierte Gewohnheiten", "Backup, Restore & Archived habits")) to Pair(Icons.Default.Backup, ErrorRed)
                     )
 
@@ -10582,7 +10582,7 @@ fun SettingsScreen(
                                         Icon(Icons.Default.BugReport, contentDescription = "Bugs", modifier = Modifier.size(18.dp), tint = ErrorRed)
                                         Spacer(modifier = Modifier.width(6.dp))
                                         Text(
-                                            text = if (language == "de") "Bug melden" else if (language == "ka") "ხარვეზის მოხსენება" else if (language == "zh") "反馈问题" else "Report Bug",
+                                            text = if (language == "de") "Bug melden" else if (language == "ka") "ხარვეზის მოხსენება" else if (language == "zh") "反馈问题" else if (language == "es") tr("es", "", "Report Bug") else "Report Bug",
                                             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
@@ -10601,7 +10601,7 @@ fun SettingsScreen(
                                         Icon(Icons.Default.AutoAwesome, contentDescription = "Features", modifier = Modifier.size(18.dp), tint = HabitOrange)
                                         Spacer(modifier = Modifier.width(6.dp))
                                         Text(
-                                            text = if (language == "de") "Feature anfordern" else if (language == "ka") "ფუნქციის მოთხოვნა" else if (language == "zh") "提出新功能建议" else "Request Feature",
+                                            text = if (language == "de") "Feature anfordern" else if (language == "ka") "ფუნქციის მოთხოვნა" else if (language == "zh") "提出新功能建议" else if (language == "es") tr("es", "", "Request Feature") else "Request Feature",
                                             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
@@ -11197,7 +11197,7 @@ fun SettingsScreen(
                                     ) {
                                         Icon(imageVector = Icons.Default.AddCircle, contentDescription = null, tint = SuccessGreen, modifier = Modifier.size(18.dp))
                                         Spacer(modifier = Modifier.width(4.dp))
-                                        Text(if (language == "de") "Import" else if (language == "ka") "იმპორტი" else if (language == "zh") "导入" else "Import", color = SuccessGreen, fontWeight = FontWeight.Bold)
+                                        Text(if (language == "de") "Import" else if (language == "ka") "იმპორტი" else if (language == "zh") "导入" else if (language == "es") tr("es", "", "Import") else "Import", color = SuccessGreen, fontWeight = FontWeight.Bold)
                                     }
                                 }
                             }
@@ -11301,7 +11301,7 @@ fun SettingsScreen(
                                         Spacer(modifier = Modifier.width(12.dp))
                                         Column {
                                             Text(
-                                                text = if (language == "de") "Smart Insights" else if (language == "ka") "Smart Insights" else if (language == "zh") "智能洞察" else "Smart Insights",
+                                                text = if (language == "de") "Smart Insights" else if (language == "ka") "Smart Insights" else if (language == "zh") "智能洞察" else if (language == "es") tr("es", "", "Smart Insights") else "Smart Insights",
                                                 style = MaterialTheme.typography.titleMedium,
                                                 color = TextPrimary,
                                                 fontWeight = FontWeight.Bold
@@ -11831,8 +11831,8 @@ fun SettingsScreen(
     if (showWipeConfirm) {
         AlertDialog(
             onDismissRequest = { showWipeConfirm = false },
-            title = { Text(text = if (language == "de") "ALLE DATEN LÖSCHEN?" else if (language == "ka") "წაშალოთ ყველა მონაცემი?" else if (language == "zh") "确定清空所有数据？" else "WIPE ALL DATA?") },
-            text = { Text(text = if (language == "de") "Möchtest du wirklich alle angelegten Gewohnheiten und Log-Einträge restlos entfernen? Das kann nicht rückgängig gemacht werden!" else if (language == "ka") "დარწმუნებული ხართ, რომ გსურთ სამუდამოდ გაასუფთავოთ ყველა ჩვევა და ისტორიული პროგრესი? ამ მოქმედების გაუქმება შეუძლებელია!" else if (language == "zh") "你确定要彻底清除所有习惯和历史打卡记录吗？此操作不可撤销！" else "Are you sure you want to clear all habits and historic progress permanently? This action cannot be undone!") },
+            title = { Text(text = if (language == "de") "ALLE DATEN LÖSCHEN?" else if (language == "ka") "წაშალოთ ყველა მონაცემი?" else if (language == "zh") "确定清空所有数据？" else if (language == "es") tr("es", "", "WIPE ALL DATA?") else "WIPE ALL DATA?") },
+            text = { Text(text = if (language == "de") "Möchtest du wirklich alle angelegten Gewohnheiten und Log-Einträge restlos entfernen? Das kann nicht rückgängig gemacht werden!" else if (language == "ka") "დარწმუნებული ხართ, რომ გსურთ სამუდამოდ გაასუფთავოთ ყველა ჩვევა და ისტორიული პროგრესი? ამ მოქმედების გაუქმება შეუძლებელია!" else if (language == "zh") "你确定要彻底清除所有习惯和历史打卡记录吗？此操作不可撤销！" else if (language == "es") tr("es", "", "Are you sure you want to clear all habits and historic progress permanently? This action cannot be undone!") else "Are you sure you want to clear all habits and historic progress permanently? This action cannot be undone!") },
             confirmButton = {
                 Button(
                     onClick = {
@@ -11840,18 +11840,18 @@ fun SettingsScreen(
                         showWipeConfirm = false
                         Toast.makeText(
                             context,
-                            if (language == "de") "Alle Daten gelöscht" else if (language == "ka") "ყველა მონაცემი წაშლილია" else if (language == "zh") "所有数据已清空" else "All data wiped",
+                            if (language == "de") "Alle Daten gelöscht" else if (language == "ka") "ყველა მონაცემი წაშლილია" else if (language == "zh") "所有数据已清空" else if (language == "es") tr("es", "", "All data wiped") else "All data wiped",
                             Toast.LENGTH_SHORT
                         ).show()
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = ErrorRed)
                 ) {
-                    Text(if (language == "de") "Ja, Löschen" else if (language == "ka") "დიახ, Wipe" else if (language == "zh") "是的，清空" else "Yes, Wipe")
+                    Text(if (language == "de") "Ja, Löschen" else if (language == "ka") "დიახ, Wipe" else if (language == "zh") "是的，清空" else if (language == "es") tr("es", "", "Yes, Wipe") else "Yes, Wipe")
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showWipeConfirm = false }) {
-                    Text(if (language == "de") "Abbrechen" else if (language == "ka") "გაუქმება" else if (language == "zh") "取消" else "Cancel")
+                    Text(if (language == "de") "Abbrechen" else if (language == "ka") "გაუქმება" else if (language == "zh") "取消" else if (language == "es") tr("es", "", "Cancel") else "Cancel")
                 }
             }
         )
@@ -11915,25 +11915,25 @@ fun CreateHabitScreen(
     var nameError by remember(editingHabit?.id) { mutableStateOf(false) }
     val scrollState = rememberScrollState()
     val coroutineScope = rememberCoroutineScope()
-    var category by remember(editingHabit?.id) { mutableStateOf(editingHabit?.category ?: (if (language == "de") "Allgemein" else if (language == "ka") "გენერალი" else if (language == "zh") "常规" else "General")) }
+    var category by remember(editingHabit?.id) { mutableStateOf(editingHabit?.category ?: (if (language == "de") "Allgemein" else if (language == "ka") "გენერალი" else if (language == "zh") "常规" else if (language == "es") tr("es", "", "General") else "General")) }
     var selectedIcon by remember(editingHabit?.id) { mutableStateOf(editingHabit?.icon ?: "sparkle") }
     var selectedColor by remember(editingHabit?.id) { mutableStateOf(editingHabit?.color ?: "purple") }
     var type by remember(editingHabit?.id) { mutableStateOf(editingHabit?.type ?: "BINARY") } // "BINARY" or "NUMBER"
-    var unit by remember(editingHabit?.id) { mutableStateOf(editingHabit?.unit ?: (if (language == "de") "Minuten" else if (language == "ka") "წუთები" else if (language == "zh") "分钟" else "Minutes")) }
+    var unit by remember(editingHabit?.id) { mutableStateOf(editingHabit?.unit ?: (if (language == "de") "Minuten" else if (language == "ka") "წუთები" else if (language == "zh") "分钟" else if (language == "es") tr("es", "", "Minutes") else "Minutes")) }
     var selectedChip by remember(editingHabit?.id) {
         val standardUnitsDe = listOf("Minuten", "Liter", "ml", "km", "Stunden", "Mal")
         val standardUnitsEn = listOf("Minutes", "Liters", "ml", "km", "Hours", "Times")
         val initialChip = when {
-            unit.isEmpty() -> if (language == "de") "Anderes..." else if (language == "ka") "მორგებული..." else if (language == "zh") "自定义..." else "Custom..."
+            unit.isEmpty() -> if (language == "de") "Anderes..." else if (language == "ka") "მორგებული..." else if (language == "zh") "自定义..." else if (language == "es") tr("es", "", "Custom...") else "Custom..."
             language == "de" && unit in standardUnitsDe -> unit
             language != "de" && unit in standardUnitsEn -> unit
-            unit.lowercase() in listOf("minuten", "minutes", "min") -> if (language == "de") "Minuten" else if (language == "ka") "წუთები" else if (language == "zh") "分钟" else "Minutes"
-            unit.lowercase() in listOf("liter", "liters", "l") -> if (language == "de") "Liter" else if (language == "ka") "ლიტრი" else if (language == "zh") "升" else "Liters"
+            unit.lowercase() in listOf("minuten", "minutes", "min") -> if (language == "de") "Minuten" else if (language == "ka") "წუთები" else if (language == "zh") "分钟" else if (language == "es") tr("es", "", "Minutes") else "Minutes"
+            unit.lowercase() in listOf("liter", "liters", "l") -> if (language == "de") "Liter" else if (language == "ka") "ლიტრი" else if (language == "zh") "升" else if (language == "es") tr("es", "", "Liters") else "Liters"
             unit.lowercase() == "ml" -> "ml"
             unit.lowercase() == "km" -> "km"
-            unit.lowercase() in listOf("stunden", "hours", "h") -> if (language == "de") "Stunden" else if (language == "ka") "საათები" else if (language == "zh") "小时" else "Hours"
-            unit.lowercase() in listOf("mal", "times") -> if (language == "de") "Mal" else if (language == "ka") "ჯერ" else if (language == "zh") "次" else "Times"
-            else -> if (language == "de") "Anderes..." else if (language == "ka") "მორგებული..." else if (language == "zh") "自定义..." else "Custom..."
+            unit.lowercase() in listOf("stunden", "hours", "h") -> if (language == "de") "Stunden" else if (language == "ka") "საათები" else if (language == "zh") "小时" else if (language == "es") tr("es", "", "Hours") else "Hours"
+            unit.lowercase() in listOf("mal", "times") -> if (language == "de") "Mal" else if (language == "ka") "ჯერ" else if (language == "zh") "次" else if (language == "es") tr("es", "", "Times") else "Times"
+            else -> if (language == "de") "Anderes..." else if (language == "ka") "მორგებული..." else if (language == "zh") "自定义..." else if (language == "es") tr("es", "", "Custom...") else "Custom..."
         }
         mutableStateOf(initialChip)
     }
@@ -12075,7 +12075,7 @@ fun CreateHabitScreen(
                     ) {
                         Icon(imageVector = Icons.Default.Edit, contentDescription = null, tint = PrimaryViolet, modifier = Modifier.size(20.dp))
                         Text(
-                            text = if (language == "de") "Basis-Informationen" else if (language == "ka") "ძირითადი ინფორმაცია" else if (language == "zh") "基本信息" else "Basic Information",
+                            text = if (language == "de") "Basis-Informationen" else if (language == "ka") "ძირითადი ინფორმაცია" else if (language == "zh") "基本信息" else if (language == "es") tr("es", "", "Basic Information") else "Basic Information",
                             style = MaterialTheme.typography.titleMedium,
                             color = TextPrimary,
                             fontWeight = FontWeight.Bold
@@ -12085,7 +12085,7 @@ fun CreateHabitScreen(
                     // Name field
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
-                            text = if (language == "de") "Name der Gewohnheit" else if (language == "ka") "ჩვევის სახელი" else if (language == "zh") "习惯名称" else "Habit Name",
+                            text = if (language == "de") "Name der Gewohnheit" else if (language == "ka") "ჩვევის სახელი" else if (language == "zh") "习惯名称" else if (language == "es") tr("es", "", "Habit Name") else "Habit Name",
                             style = MaterialTheme.typography.labelMedium,
                             color = TextSecondary,
                             fontWeight = FontWeight.Medium
@@ -12096,12 +12096,12 @@ fun CreateHabitScreen(
                                 name = it
                                 if (it.isNotBlank()) nameError = false
                             },
-                            placeholderText = if (language == "de") "z.B. Meditieren, Laufen, Lesen..." else if (language == "ka") "მაგ., მედიტაცია, სირბილი, კითხვა..." else if (language == "zh") "例如：冥想、跑步、阅读..." else "e.g., Meditate, Running, Reading...",
+                            placeholderText = if (language == "de") "z.B. Meditieren, Laufen, Lesen..." else if (language == "ka") "მაგ., მედიტაცია, სირბილი, კითხვა..." else if (language == "zh") "例如：冥想、跑步、阅读..." else if (language == "es") tr("es", "", "e.g., Meditate, Running, Reading...") else "e.g., Meditate, Running, Reading...",
                             isError = nameError,
                             supportingText = {
                                 if (nameError) {
                                     Text(
-                                        text = if (language == "de") "Bitte gib einen Namen ein" else if (language == "ka") "გთხოვთ შეიყვანოთ სახელი" else if (language == "zh") "请输入名称" else "Please enter a name",
+                                        text = if (language == "de") "Bitte gib einen Namen ein" else if (language == "ka") "გთხოვთ შეიყვანოთ სახელი" else if (language == "zh") "请输入名称" else if (language == "es") tr("es", "", "Please enter a name") else "Please enter a name",
                                         color = FailedRed,
                                         style = MaterialTheme.typography.labelSmall
                                     )
@@ -12123,7 +12123,7 @@ fun CreateHabitScreen(
                     // Description field (optional)
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
-                            text = if (language == "de") "Beschreibung (optional)" else if (language == "ka") "აღწერა (სურვილისამებრ)" else if (language == "zh") "描述说明（可选）" else "Description (optional)",
+                            text = if (language == "de") "Beschreibung (optional)" else if (language == "ka") "აღწერა (სურვილისამებრ)" else if (language == "zh") "描述说明（可选）" else if (language == "es") tr("es", "", "Description (optional)") else "Description (optional)",
                             style = MaterialTheme.typography.labelMedium,
                             color = TextSecondary,
                             fontWeight = FontWeight.Medium
@@ -12131,7 +12131,7 @@ fun CreateHabitScreen(
                         AppTextField(
                             value = description,
                             onValueChange = { description = it },
-                            placeholderText = if (language == "de") "z.B. Notizen, Motivation oder Regeln..." else if (language == "ka") "მაგ. შენიშვნები, მოტივაცია თუ წესები..." else if (language == "zh") "例如：备忘、动力寄语或规则..." else "e.g. Notes, motivation or rules...",
+                            placeholderText = if (language == "de") "z.B. Notizen, Motivation oder Regeln..." else if (language == "ka") "მაგ. შენიშვნები, მოტივაცია თუ წესები..." else if (language == "zh") "例如：备忘、动力寄语或规则..." else if (language == "es") tr("es", "", "e.g. Notes, motivation or rules...") else "e.g. Notes, motivation or rules...",
                             testTag = "habit_description_input",
                             singleLine = false,
                             minLines = 1,
@@ -12167,14 +12167,14 @@ fun CreateHabitScreen(
                     ) {
                         Icon(imageVector = Icons.Default.Flag, contentDescription = null, tint = PrimaryViolet, modifier = Modifier.size(20.dp))
                         Text(
-                            text = if (language == "de") "Ziel & Messung" else if (language == "ka") "მიზანი და გაზომვა" else if (language == "zh") "目标与计量" else "Goal & Measurement",
+                            text = if (language == "de") "Ziel & Messung" else if (language == "ka") "მიზანი და გაზომვა" else if (language == "zh") "目标与计量" else if (language == "es") tr("es", "", "Goal & Measurement") else "Goal & Measurement",
                             style = MaterialTheme.typography.titleMedium,
                             color = TextPrimary,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.weight(1f))
                         InfoIconButton(
-                            title = if (language == "de") "Gewohnheitstyp & Messung" else if (language == "ka") "ჩვევის ტიპი" else if (language == "zh") "习惯类型与计量" else "Habit Type & Measurement",
+                            title = if (language == "de") "Gewohnheitstyp & Messung" else if (language == "ka") "ჩვევის ტიპი" else if (language == "zh") "习惯类型与计量" else if (language == "es") tr("es", "", "Habit Type & Measurement") else "Habit Type & Measurement",
                             explanation = if (language == "de") {
                                 "Aufbauend: Für neue Routinen (z.B. Sport).\nAbgewöhnend: Für schlechte Angewohnheiten (z.B. Rauchen).\n\nJa/Nein: Einfaches Abhaken.\nZahlenbasiert: Menge tracken (z.B. 2 Liter trinken)."
                             } else {
@@ -12187,15 +12187,15 @@ fun CreateHabitScreen(
                     // Goal Segment
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
-                            text = if (language == "de") "Gewohnheits-Ziel" else if (language == "ka") "მიზანი" else if (language == "zh") "目标" else "Goal",
+                            text = if (language == "de") "Gewohnheits-Ziel" else if (language == "ka") "მიზანი" else if (language == "zh") "目标" else if (language == "es") tr("es", "", "Goal") else "Goal",
                             style = MaterialTheme.typography.labelMedium,
                             color = TextSecondary,
                             fontWeight = FontWeight.Medium
                         )
                         AppSegmentedButtonWithIcons(
                             options = listOf(
-                                (if (language == "de") "Aufbauen" else if (language == "ka") "აშენება" else if (language == "zh") "养成" else "Build") to Icons.Default.ArrowUpward,
-                                (if (language == "de") "Abgewöhnen" else if (language == "ka") "თავი დაანებე" else if (language == "zh") "戒除" else "Quit") to Icons.Default.ArrowDownward
+                                (if (language == "de") "Aufbauen" else if (language == "ka") "აშენება" else if (language == "zh") "养成" else if (language == "es") tr("es", "", "Build") else "Build") to Icons.Default.ArrowUpward,
+                                (if (language == "de") "Abgewöhnen" else if (language == "ka") "თავი დაანებე" else if (language == "zh") "戒除" else if (language == "es") tr("es", "", "Quit") else "Quit") to Icons.Default.ArrowDownward
                             ),
                             selectedIndex = if (isNegative) 1 else 0,
                             onOptionSelected = { index -> isNegative = (index == 1) },
@@ -12208,15 +12208,15 @@ fun CreateHabitScreen(
                     // Measurement Type
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
-                            text = if (language == "de") "Art der Messung" else if (language == "ka") "გაზომვის ტიპი" else if (language == "zh") "计量方式" else "Measurement Type",
+                            text = if (language == "de") "Art der Messung" else if (language == "ka") "გაზომვის ტიპი" else if (language == "zh") "计量方式" else if (language == "es") tr("es", "", "Measurement Type") else "Measurement Type",
                             style = MaterialTheme.typography.labelMedium,
                             color = TextSecondary,
                             fontWeight = FontWeight.Medium
                         )
                         AppSegmentedButton(
                             options = listOf(
-                                if (language == "de") "Ja / Nein" else if (language == "ka") "დიახ / არა" else if (language == "zh") "是 / 否" else "Yes / No",
-                                if (language == "de") "Zahlenbasiert" else if (language == "ka") "რიცხვითი" else if (language == "zh") "数值计量" else "Numeric"
+                                if (language == "de") "Ja / Nein" else if (language == "ka") "დიახ / არა" else if (language == "zh") "是 / 否" else if (language == "es") tr("es", "", "Yes / No") else "Yes / No",
+                                if (language == "de") "Zahlenbasiert" else if (language == "ka") "რიცხვითი" else if (language == "zh") "数值计量" else if (language == "es") tr("es", "", "Numeric") else "Numeric"
                             ),
                             selectedIndex = if (type == "NUMBER") 1 else 0,
                             onOptionSelected = { index -> type = if (index == 1) "NUMBER" else "BINARY" },
@@ -12230,7 +12230,7 @@ fun CreateHabitScreen(
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             Text(
-                                text = if (language == "de") "Einheit auswählen" else if (language == "ka") "აირჩიეთ ერთეული" else if (language == "zh") "选择单位" else "Select Unit",
+                                text = if (language == "de") "Einheit auswählen" else if (language == "ka") "აირჩიეთ ერთეული" else if (language == "zh") "选择单位" else if (language == "es") tr("es", "", "Select Unit") else "Select Unit",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = TextSecondary,
                                 fontWeight = FontWeight.SemiBold
@@ -12429,7 +12429,7 @@ fun CreateHabitScreen(
                     ) {
                         Icon(imageVector = Icons.Default.Palette, contentDescription = null, tint = HabitOrange, modifier = Modifier.size(20.dp))
                         Text(
-                            text = if (language == "de") "Aussehen anpassen" else if (language == "ka") "Visuals-ის მორგება" else if (language == "zh") "定制视觉外观" else "Customize Visuals",
+                            text = if (language == "de") "Aussehen anpassen" else if (language == "ka") "Visuals-ის მორგება" else if (language == "zh") "定制视觉外观" else if (language == "es") tr("es", "", "Customize Visuals") else "Customize Visuals",
                             style = MaterialTheme.typography.titleMedium,
                             color = TextPrimary,
                             fontWeight = FontWeight.Bold
@@ -12438,7 +12438,7 @@ fun CreateHabitScreen(
 
                     // Icon selector
                     Text(
-                        text = if (language == "de") "Icon auswählen" else if (language == "ka") "აირჩიეთ ხატულა" else if (language == "zh") "选择图标" else "Select Icon",
+                        text = if (language == "de") "Icon auswählen" else if (language == "ka") "აირჩიეთ ხატულა" else if (language == "zh") "选择图标" else if (language == "es") tr("es", "", "Select Icon") else "Select Icon",
                         style = MaterialTheme.typography.labelMedium,
                         color = TextSecondary,
                         fontWeight = FontWeight.Medium
@@ -12594,7 +12594,7 @@ fun CreateHabitScreen(
 
                     // Color selector dots
                     Text(
-                        text = if (language == "de") "Farbe auswählen" else if (language == "ka") "აირჩიეთ ფერი" else if (language == "zh") "选择颜色" else "Select Color",
+                        text = if (language == "de") "Farbe auswählen" else if (language == "ka") "აირჩიეთ ფერი" else if (language == "zh") "选择颜色" else if (language == "es") tr("es", "", "Select Color") else "Select Color",
                         style = MaterialTheme.typography.labelMedium,
                         color = TextSecondary,
                         fontWeight = FontWeight.Medium
@@ -12626,7 +12626,7 @@ fun CreateHabitScreen(
                     ) {
                         Icon(imageVector = Icons.Default.CalendarToday, contentDescription = null, tint = PrimaryViolet, modifier = Modifier.size(20.dp))
                         Text(
-                            text = if (language == "de") "Häufigkeit & Startdatum" else if (language == "ka") "სიხშირე და თარიღი" else if (language == "zh") "频率与开始日期" else "Frequency & Start Date",
+                            text = if (language == "de") "Häufigkeit & Startdatum" else if (language == "ka") "სიხშირე და თარიღი" else if (language == "zh") "频率与开始日期" else if (language == "es") tr("es", "", "Frequency & Start Date") else "Frequency & Start Date",
                             style = MaterialTheme.typography.titleMedium,
                             color = TextPrimary,
                             fontWeight = FontWeight.Bold
@@ -12635,9 +12635,9 @@ fun CreateHabitScreen(
 
                     // Frequency Selector
                     val freqOptions = listOf(
-                        "DAILY" to (if (language == "de") "Täglich" else if (language == "ka") "ყოველდღიური" else if (language == "zh") "每天" else "Daily"),
-                        "TIMES_WEEKLY" to (if (language == "de") "X mal/Wo" else if (language == "ka") "X ჯერ / კვირა" else if (language == "zh") "每周 X 次" else "X times/Wk"),
-                        "SPECIFIC" to (if (language == "de") "Tage" else if (language == "ka") "დღეები" else if (language == "zh") "天" else "Days")
+                        "DAILY" to (if (language == "de") "Täglich" else if (language == "ka") "ყოველდღიური" else if (language == "zh") "每天" else if (language == "es") tr("es", "", "Daily") else "Daily"),
+                        "TIMES_WEEKLY" to (if (language == "de") "X mal/Wo" else if (language == "ka") "X ჯერ / კვირა" else if (language == "zh") "每周 X 次" else if (language == "es") tr("es", "", "X times/Wk") else "X times/Wk"),
+                        "SPECIFIC" to (if (language == "de") "Tage" else if (language == "ka") "დღეები" else if (language == "zh") "天" else if (language == "es") tr("es", "", "Days") else "Days")
                     )
                     val selectedFreqIndex = freqOptions.indexOfFirst { it.first == frequency }.coerceAtLeast(0)
                     AppSegmentedButton(
@@ -12717,7 +12717,7 @@ fun CreateHabitScreen(
 
                     // Start Date Sub-row
                     Text(
-                        text = if (language == "de") "Startdatum" else if (language == "ka") "დაწყების თარიღი" else if (language == "zh") "开始日期" else "Start Date",
+                        text = if (language == "de") "Startdatum" else if (language == "ka") "დაწყების თარიღი" else if (language == "zh") "开始日期" else if (language == "es") tr("es", "", "Start Date") else "Start Date",
                         style = MaterialTheme.typography.labelMedium,
                         color = TextSecondary,
                         fontWeight = FontWeight.Medium
@@ -12810,14 +12810,14 @@ fun CreateHabitScreen(
                         Icon(imageVector = Icons.Default.NotificationsActive, contentDescription = null, tint = PrimaryViolet, modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
-                            text = if (language == "de") "Erinnerungen" else if (language == "ka") "შეხსენება" else if (language == "zh") "提醒" else "Reminders",
+                            text = if (language == "de") "Erinnerungen" else if (language == "ka") "შეხსენება" else if (language == "zh") "提醒" else if (language == "es") tr("es", "", "Reminders") else "Reminders",
                             style = MaterialTheme.typography.titleMedium,
                             color = TextPrimary,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.weight(1f))
                         InfoIconButton(
-                            title = if (language == "de") "Erinnerungen" else if (language == "ka") "შეხსენება" else if (language == "zh") "提醒" else "Reminders",
+                            title = if (language == "de") "Erinnerungen" else if (language == "ka") "შეხსენება" else if (language == "zh") "提醒" else if (language == "es") tr("es", "", "Reminders") else "Reminders",
                             explanation = if (language == "de") {
                                 "Richte dir Benachrichtigungen ein, um zur gewünschten Uhrzeit an deine Gewohnheit erinnert zu werden."
                             } else {
@@ -12918,7 +12918,7 @@ fun CreateHabitScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = if (language == "de") "Erinnerung hinzufügen" else if (language == "ka") "დაამატეთ შეხსენება" else if (language == "zh") "添加提醒" else "Add Reminder",
+                            text = if (language == "de") "Erinnerung hinzufügen" else if (language == "ka") "დაამატეთ შეხსენება" else if (language == "zh") "添加提醒" else if (language == "es") tr("es", "", "Add Reminder") else "Add Reminder",
                             fontWeight = FontWeight.Bold,
                             color = TextPrimary,
                             style = MaterialTheme.typography.titleSmall
@@ -12948,14 +12948,14 @@ fun CreateHabitScreen(
                         Icon(imageVector = Icons.Default.EmojiEvents, contentDescription = null, tint = HabitOrange, modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
-                            text = if (language == "de") "Meilenstein-Belohnungen" else if (language == "ka") "Milestone ჯილდოები" else if (language == "zh") "里程碑奖励" else "Milestone Rewards",
+                            text = if (language == "de") "Meilenstein-Belohnungen" else if (language == "ka") "Milestone ჯილდოები" else if (language == "zh") "里程碑奖励" else if (language == "es") tr("es", "", "Milestone Rewards") else "Milestone Rewards",
                             style = MaterialTheme.typography.titleMedium,
                             color = TextPrimary,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.weight(1f))
                         InfoIconButton(
-                            title = if (language == "de") "Meilenstein-Belohnungen" else if (language == "ka") "Milestone ჯილდოები" else if (language == "zh") "里程碑奖励" else "Milestone Rewards",
+                            title = if (language == "de") "Meilenstein-Belohnungen" else if (language == "ka") "Milestone ჯილდოები" else if (language == "zh") "里程碑奖励" else if (language == "es") tr("es", "", "Milestone Rewards") else "Milestone Rewards",
                             explanation = if (language == "de") {
                                 "Setze dir persönliche Belohnungen für das Erreichen von Meilensteinen (z. B. 30 Tage Serie). Sobald du das Ziel erreichst, wird die Belohnung freigeschaltet!"
                             } else {
@@ -12992,12 +12992,12 @@ fun CreateHabitScreen(
                                                 fontWeight = FontWeight.Bold
                                             )
                                             val condText = when (reward.conditionType) {
-                                                "STREAK" -> if (language == "de") "${reward.conditionValue} Tage Serie" else if (language == "ka") "${reward.conditionValue} დღის სტრიქონი" else if (language == "zh") "${reward.conditionValue} 天连续" else "${reward.conditionValue} Day Streak"
-                                                "COMPLETIONS" -> if (language == "de") "${reward.conditionValue} Erledigungen" else if (language == "ka") "${reward.conditionValue} დასრულებები" else if (language == "zh") "${reward.conditionValue} 次完成" else "${reward.conditionValue} Completions"
+                                                "STREAK" -> if (language == "de") "${reward.conditionValue} Tage Serie" else if (language == "ka") "${reward.conditionValue} დღის სტრიქონი" else if (language == "zh") "${reward.conditionValue} 天连续" else if (language == "es") tr("es", "", "${reward.conditionValue} Day Streak") else "${reward.conditionValue} Day Streak"
+                                                "COMPLETIONS" -> if (language == "de") "${reward.conditionValue} Erledigungen" else if (language == "ka") "${reward.conditionValue} დასრულებები" else if (language == "zh") "${reward.conditionValue} 次完成" else if (language == "es") tr("es", "", "${reward.conditionValue} Completions") else "${reward.conditionValue} Completions"
                                                 "TROPHY_COUPLED" -> {
                                                     val tr = STANDARD_TROPHIES.find { it.id == reward.trophyId }
                                                     if (tr != null) {
-                                                        if (language == "de") "Trophäe: ${tr.titleDe}" else if (language == "ka") "ტროფი: ${tr.titleEn}" else if (language == "zh") "奖杯：${tr.titleEn}" else "Trophy: ${tr.titleEn}"
+                                                        if (language == "de") "Trophäe: ${tr.titleDe}" else if (language == "ka") "ტროფი: ${tr.titleEn}" else if (language == "zh") "奖杯：${tr.titleEn}" else if (language == "es") tr("es", "", "Trophy: ${tr.titleEn}") else "Trophy: ${tr.titleEn}"
                                                     } else {
                                                         reward.trophyId ?: ""
                                                     }
@@ -13051,7 +13051,7 @@ fun CreateHabitScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = if (language == "de") "Belohnung hinzufügen" else if (language == "ka") "დაამატე ჯილდო" else if (language == "zh") "添加奖励" else "Add Reward",
+                            text = if (language == "de") "Belohnung hinzufügen" else if (language == "ka") "დაამატე ჯილდო" else if (language == "zh") "添加奖励" else if (language == "es") tr("es", "", "Add Reward") else "Add Reward",
                             fontWeight = FontWeight.Bold,
                             color = TextPrimary,
                             style = MaterialTheme.typography.titleSmall
@@ -13085,7 +13085,7 @@ fun CreateHabitScreen(
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
-                            text = if (language == "de") "Abbrechen" else if (language == "ka") "გაუქმება" else if (language == "zh") "取消" else "Cancel",
+                            text = if (language == "de") "Abbrechen" else if (language == "ka") "გაუქმება" else if (language == "zh") "取消" else if (language == "es") tr("es", "", "Cancel") else "Cancel",
                             fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.titleMedium,
                             color = TextSecondary
@@ -13093,9 +13093,9 @@ fun CreateHabitScreen(
                     }
 
                     val buttonText = if (editingHabit != null) {
-                        if (language == "de") "Speichern" else if (language == "ka") "შენახვა" else if (language == "zh") "保存" else "Save"
+                        if (language == "de") "Speichern" else if (language == "ka") "შენახვა" else if (language == "zh") "保存" else if (language == "es") tr("es", "", "Save") else "Save"
                     } else {
-                        if (language == "de") "Erstellen" else if (language == "ka") "შექმნა" else if (language == "zh") "创建" else "Create"
+                        if (language == "de") "Erstellen" else if (language == "ka") "შექმნა" else if (language == "zh") "创建" else if (language == "es") tr("es", "", "Create") else "Create"
                     }
 
                     Button(
@@ -13212,9 +13212,9 @@ fun CreateHabitScreen(
                 Spacer(modifier = Modifier.width(16.dp))
                 Text(
                     text = if (editingHabit != null) {
-                        if (language == "de") "Gewohnheit bearbeiten" else if (language == "ka") "ჩვევის რედაქტირება" else if (language == "zh") "编辑习惯" else "Edit Habit"
+                        if (language == "de") "Gewohnheit bearbeiten" else if (language == "ka") "ჩვევის რედაქტირება" else if (language == "zh") "编辑习惯" else if (language == "es") tr("es", "", "Edit Habit") else "Edit Habit"
                     } else {
-                        if (language == "de") "Neue Gewohnheit" else if (language == "ka") "ახალი ჩვევა" else if (language == "zh") "新建习惯" else "New Habit"
+                        if (language == "de") "Neue Gewohnheit" else if (language == "ka") "ახალი ჩვევა" else if (language == "zh") "新建习惯" else if (language == "es") tr("es", "", "New Habit") else "New Habit"
                     },
                     style = MaterialTheme.typography.displayMedium,
                     color = TextPrimary,
@@ -13452,12 +13452,12 @@ fun AddMilestoneRewardDialog(
                 colors = ButtonDefaults.buttonColors(containerColor = PrimaryViolet),
                 enabled = rewardText.isNotBlank() && (mode == "TROPHY" || conditionValueStr.isNotBlank())
             ) {
-                Text(if (language == "de") "Hinzufügen" else if (language == "ka") "დამატება" else if (language == "zh") "添加" else "Add", fontWeight = FontWeight.Bold)
+                Text(if (language == "de") "Hinzufügen" else if (language == "ka") "დამატება" else if (language == "zh") "添加" else if (language == "es") tr("es", "", "Add") else "Add", fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(if (language == "de") "Abbrechen" else if (language == "ka") "გაუქმება" else if (language == "zh") "取消" else "Cancel", color = TextSecondary)
+                Text(if (language == "de") "Abbrechen" else if (language == "ka") "გაუქმება" else if (language == "zh") "取消" else if (language == "es") tr("es", "", "Cancel") else "Cancel", color = TextSecondary)
             }
         }
     )
@@ -13487,7 +13487,7 @@ fun AddCustomReminderDialog(
         containerColor = AppCard,
         title = {
             Text(
-                text = if (language == "de") "Erinnerung hinzufügen" else if (language == "ka") "დაამატეთ შეხსენება" else if (language == "zh") "添加提醒" else "Add Reminder",
+                text = if (language == "de") "Erinnerung hinzufügen" else if (language == "ka") "დაამატეთ შეხსენება" else if (language == "zh") "添加提醒" else if (language == "es") tr("es", "", "Add Reminder") else "Add Reminder",
                 color = TextPrimary,
                 style = MaterialTheme.typography.titleMedium
             )
@@ -13505,7 +13505,7 @@ fun AddCustomReminderDialog(
                     modifier = Modifier.weight(1f)
                 ) {
                     Text(
-                        text = if (language == "de") "Stunde (0-23)" else if (language == "ka") "საათი (0-23)" else if (language == "zh") "小时 (0-23)" else "Hour (0-23)",
+                        text = if (language == "de") "Stunde (0-23)" else if (language == "ka") "საათი (0-23)" else if (language == "zh") "小时 (0-23)" else if (language == "es") tr("es", "", "Hour (0-23)") else "Hour (0-23)",
                         style = MaterialTheme.typography.labelSmall,
                         color = TextSecondary,
                         modifier = Modifier.padding(bottom = 4.dp)
@@ -13548,7 +13548,7 @@ fun AddCustomReminderDialog(
                     modifier = Modifier.weight(1f)
                 ) {
                     Text(
-                        text = if (language == "de") "Minute (0-59)" else if (language == "ka") "წუთი (0-59)" else if (language == "zh") "分钟 (0-59)" else "Minute (0-59)",
+                        text = if (language == "de") "Minute (0-59)" else if (language == "ka") "წუთი (0-59)" else if (language == "zh") "分钟 (0-59)" else if (language == "es") tr("es", "", "Minute (0-59)") else "Minute (0-59)",
                         style = MaterialTheme.typography.labelSmall,
                         color = TextSecondary,
                         modifier = Modifier.padding(bottom = 4.dp)
@@ -13584,12 +13584,12 @@ fun AddCustomReminderDialog(
                 colors = ButtonDefaults.buttonColors(containerColor = PrimaryViolet),
                 onClick = { onConfirm(hour, minute) }
             ) {
-                Text(if (language == "de") "Hinzufügen" else if (language == "ka") "დამატება" else if (language == "zh") "添加" else "Add", color = Color.White)
+                Text(if (language == "de") "Hinzufügen" else if (language == "ka") "დამატება" else if (language == "zh") "添加" else if (language == "es") tr("es", "", "Add") else "Add", color = Color.White)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(if (language == "de") "Abbrechen" else if (language == "ka") "გაუქმება" else if (language == "zh") "取消" else "Cancel", color = TextSecondary)
+                Text(if (language == "de") "Abbrechen" else if (language == "ka") "გაუქმება" else if (language == "zh") "取消" else if (language == "es") tr("es", "", "Cancel") else "Cancel", color = TextSecondary)
             }
         }
     )
@@ -13863,11 +13863,11 @@ fun getEncouragementText(completed: Int, total: Int, language: String): String {
 
 fun getStrengthLabel(strength: Int, language: String): String {
     return when {
-        strength == 0 -> if (language == "de") "Ausstehend - Auf geht's!" else if (language == "ka") "მომლოდინე - წავიდეთ!" else if (language == "zh") "未完成 - 开始行动！" else "Pending - Let's go!"
-        strength < 30 -> if (language == "de") "Anfang gemacht - Weiter so! 🌱" else if (language == "ka") "დაიწყო - გააგრძელე! 🌱" else if (language == "zh") "已起步 - 继续保持！🌱" else "Started - Keep going! 🌱"
-        strength < 60 -> if (language == "de") "Mittelmäßig - Dranbleiben! ✨" else if (language == "ka") "სამართლიანი - ასე გააგრძელე! ✨" else if (language == "zh") "良好 - 继续加油！✨" else "Fair - Keep it up! ✨"
-        strength < 85 -> if (language == "de") "Solide - Starker Einsatz! 💪" else if (language == "ka") "მყარი - ძლიერად მიდის! 💪" else if (language == "zh") "扎实 - 势头强劲！💪" else "Solid - Going strong! 💪"
-        else -> if (language == "de") "Exzellent - Unaufhaltsam! 🔥" else if (language == "ka") "შესანიშნავი - შეუჩერებელი! 🔥" else if (language == "zh") "卓越 - 势不可挡！🔥" else "Excellent - Unstoppable! 🔥"
+        strength == 0 -> if (language == "de") "Ausstehend - Auf geht's!" else if (language == "ka") "მომლოდინე - წავიდეთ!" else if (language == "zh") "未完成 - 开始行动！" else if (language == "es") tr("es", "", "Pending - Let's go!") else "Pending - Let's go!"
+        strength < 30 -> if (language == "de") "Anfang gemacht - Weiter so! 🌱" else if (language == "ka") "დაიწყო - გააგრძელე! 🌱" else if (language == "zh") "已起步 - 继续保持！🌱" else if (language == "es") tr("es", "", "Started - Keep going! 🌱") else "Started - Keep going! 🌱"
+        strength < 60 -> if (language == "de") "Mittelmäßig - Dranbleiben! ✨" else if (language == "ka") "სამართლიანი - ასე გააგრძელე! ✨" else if (language == "zh") "良好 - 继续加油！✨" else if (language == "es") tr("es", "", "Fair - Keep it up! ✨") else "Fair - Keep it up! ✨"
+        strength < 85 -> if (language == "de") "Solide - Starker Einsatz! 💪" else if (language == "ka") "მყარი - ძლიერად მიდის! 💪" else if (language == "zh") "扎实 - 势头强劲！💪" else if (language == "es") tr("es", "", "Solid - Going strong! 💪") else "Solid - Going strong! 💪"
+        else -> if (language == "de") "Exzellent - Unaufhaltsam! 🔥" else if (language == "ka") "შესანიშნავი - შეუჩერებელი! 🔥" else if (language == "zh") "卓越 - 势不可挡！🔥" else if (language == "es") tr("es", "", "Excellent - Unstoppable! 🔥") else "Excellent - Unstoppable! 🔥"
     }
 }
 
@@ -13975,7 +13975,7 @@ fun HabitStreakAchievementCard(
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = if (language == "de") "Beste Serie: $longestStreak Tage" else if (language == "ka") "ყველაზე გრძელი სერია: $longestStreak დღეები" else if (language == "zh") "最高连续：$longestStreak 天" else "Longest Streak: $longestStreak Days",
+                        text = if (language == "de") "Beste Serie: $longestStreak Tage" else if (language == "ka") "ყველაზე გრძელი სერია: $longestStreak დღეები" else if (language == "zh") "最高连续：$longestStreak 天" else if (language == "es") tr("es", "", "Longest Streak: $longestStreak Days") else "Longest Streak: $longestStreak Days",
                         style = MaterialTheme.typography.bodySmall,
                         color = TextSecondary
                     )
@@ -14101,13 +14101,13 @@ fun HabitStreakAchievementCard(
                                 if (isUnlocked) {
                                     Toast.makeText(
                                         context,
-                                        if (language == "de") "Freigeschaltet: $badgeTitle ($target Tage)!" else if (language == "ka") "განბლოკილია: $badgeTitle ( $target დღე)!" else if (language == "zh") "已解锁：$badgeTitle（达成 $target 天）！" else "Unlocked: $badgeTitle ($target days)!",
+                                        if (language == "de") "Freigeschaltet: $badgeTitle ($target Tage)!" else if (language == "ka") "განბლოკილია: $badgeTitle ( $target დღე)!" else if (language == "zh") "已解锁：$badgeTitle（达成 $target 天）！" else if (language == "es") tr("es", "", "Unlocked: $badgeTitle ($target days)!") else "Unlocked: $badgeTitle ($target days)!",
                                         Toast.LENGTH_SHORT
                                     ).show()
                                 } else {
                                     Toast.makeText(
                                         context,
-                                        if (language == "de") "Noch gesperrt: $badgeTitle ($target Tage benötigt, aktuell: $longestStreak)" else if (language == "ka") "ჩაკეტილი: $badgeTitle (საჭიროა $target დღე, მიმდინარე: $longestStreak )" else if (language == "zh") "未解锁：$badgeTitle（需达成 $target 天，当前：$longestStreak 天）" else "Locked: $badgeTitle ($target days required, current: $longestStreak)",
+                                        if (language == "de") "Noch gesperrt: $badgeTitle ($target Tage benötigt, aktuell: $longestStreak)" else if (language == "ka") "ჩაკეტილი: $badgeTitle (საჭიროა $target დღე, მიმდინარე: $longestStreak )" else if (language == "zh") "未解锁：$badgeTitle（需达成 $target 天，当前：$longestStreak 天）" else if (language == "es") tr("es", "", "Locked: $badgeTitle ($target days required, current: $longestStreak)") else "Locked: $badgeTitle ($target days required, current: $longestStreak)",
                                         Toast.LENGTH_SHORT
                                     ).show()
                                 }
@@ -14143,7 +14143,7 @@ fun HabitStreakAchievementCard(
                         }
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = if (language == "de") "${target} Tage" else if (language == "ka") "${target} დღეები" else if (language == "zh") "${target} 天" else "${target} Days",
+                            text = if (language == "de") "${target} Tage" else if (language == "ka") "${target} დღეები" else if (language == "zh") "${target} 天" else if (language == "es") tr("es", "", "${target} Days") else "${target} Days",
                             style = MaterialTheme.typography.labelSmall,
                             color = if (isUnlocked) TextPrimary else TextSecondary.copy(alpha = 0.6f),
                             fontWeight = FontWeight.Bold
@@ -14222,7 +14222,7 @@ fun GlobalAchievementCard(
                     )
                     if (isUnlocked) {
                         Text(
-                            text = if (language == "de") "Freigeschaltet" else if (language == "ka") "განბლოკილია" else if (language == "zh") "已解锁" else "Unlocked",
+                            text = if (language == "de") "Freigeschaltet" else if (language == "ka") "განბლოკილია" else if (language == "zh") "已解锁" else if (language == "es") tr("es", "", "Unlocked") else "Unlocked",
                             style = MaterialTheme.typography.labelSmall,
                             color = SuccessGreen,
                             fontWeight = FontWeight.Bold,
@@ -14367,8 +14367,8 @@ fun ProfileScreen(
             Achievement(
                 type = "COMPLETIONS",
                 tier = "COMP_10",
-                title = if (language == "de") "Erster Schritt" else if (language == "ka") "პირველი ნაბიჯი" else if (language == "zh") "第一步" else "First Step",
-                description = if (language == "de") "Trage insgesamt 10 Erledigungen ein." else if (language == "ka") "დაარეგისტრირეთ სულ 10 დასრულება ყველა ჩვევაში." else if (language == "zh") "记录累计 10 次完成。" else "Log a total of 10 completions across all habits.",
+                title = if (language == "de") "Erster Schritt" else if (language == "ka") "პირველი ნაბიჯი" else if (language == "zh") "第一步" else if (language == "es") tr("es", "", "First Step") else "First Step",
+                description = if (language == "de") "Trage insgesamt 10 Erledigungen ein." else if (language == "ka") "დაარეგისტრირეთ სულ 10 დასრულება ყველა ჩვევაში." else if (language == "zh") "记录累计 10 次完成。" else if (language == "es") tr("es", "", "Log a total of 10 completions across all habits.") else "Log a total of 10 completions across all habits.",
                 targetValue = 10,
                 currentValue = totalGlobalCompletions,
                 isUnlocked = totalGlobalCompletions >= 10
@@ -14376,8 +14376,8 @@ fun ProfileScreen(
             Achievement(
                 type = "COMPLETIONS",
                 tier = "COMP_50",
-                title = if (language == "de") "Gewohnheits-Routine" else if (language == "ka") "ჩვევების რუტინა" else if (language == "zh") "习惯养成" else "Habit Routine",
-                description = if (language == "de") "Trage insgesamt 50 Erledigungen ein." else if (language == "ka") "დაარეგისტრირეთ სულ 50 დასრულება ყველა ჩვევაში." else if (language == "zh") "记录累计 50 次完成。" else "Log a total of 50 completions across all habits.",
+                title = if (language == "de") "Gewohnheits-Routine" else if (language == "ka") "ჩვევების რუტინა" else if (language == "zh") "习惯养成" else if (language == "es") tr("es", "", "Habit Routine") else "Habit Routine",
+                description = if (language == "de") "Trage insgesamt 50 Erledigungen ein." else if (language == "ka") "დაარეგისტრირეთ სულ 50 დასრულება ყველა ჩვევაში." else if (language == "zh") "记录累计 50 次完成。" else if (language == "es") tr("es", "", "Log a total of 50 completions across all habits.") else "Log a total of 50 completions across all habits.",
                 targetValue = 50,
                 currentValue = totalGlobalCompletions,
                 isUnlocked = totalGlobalCompletions >= 50
@@ -14385,8 +14385,8 @@ fun ProfileScreen(
             Achievement(
                 type = "COMPLETIONS",
                 tier = "COMP_200",
-                title = if (language == "de") "Eiserner Wille" else if (language == "ka") "რკინის ნება" else if (language == "zh") "钢铁意志" else "Iron Will",
-                description = if (language == "de") "Trage insgesamt 200 Erledigungen ein." else if (language == "ka") "დაარეგისტრირეთ სულ 200 დასრულება ყველა ჩვევაში." else if (language == "zh") "记录累计 200 次完成。" else "Log a total of 200 completions across all habits.",
+                title = if (language == "de") "Eiserner Wille" else if (language == "ka") "რკინის ნება" else if (language == "zh") "钢铁意志" else if (language == "es") tr("es", "", "Iron Will") else "Iron Will",
+                description = if (language == "de") "Trage insgesamt 200 Erledigungen ein." else if (language == "ka") "დაარეგისტრირეთ სულ 200 დასრულება ყველა ჩვევაში." else if (language == "zh") "记录累计 200 次完成。" else if (language == "es") tr("es", "", "Log a total of 200 completions across all habits.") else "Log a total of 200 completions across all habits.",
                 targetValue = 200,
                 currentValue = totalGlobalCompletions,
                 isUnlocked = totalGlobalCompletions >= 200
@@ -14394,8 +14394,8 @@ fun ProfileScreen(
             Achievement(
                 type = "COMPLETIONS",
                 tier = "COMP_500",
-                title = if (language == "de") "Lebensstil-Transformation" else if (language == "ka") "ცხოვრების წესის ტრანსფორმაცია" else if (language == "zh") "生活蜕变" else "Lifestyle Transformation",
-                description = if (language == "de") "Trage insgesamt 500 Erledigungen ein." else if (language == "ka") "დაარეგისტრირეთ სულ 500 დასრულება ყველა ჩვევაში." else if (language == "zh") "记录累计 500 次完成。" else "Log a total of 500 completions across all habits.",
+                title = if (language == "de") "Lebensstil-Transformation" else if (language == "ka") "ცხოვრების წესის ტრანსფორმაცია" else if (language == "zh") "生活蜕变" else if (language == "es") tr("es", "", "Lifestyle Transformation") else "Lifestyle Transformation",
+                description = if (language == "de") "Trage insgesamt 500 Erledigungen ein." else if (language == "ka") "დაარეგისტრირეთ სულ 500 დასრულება ყველა ჩვევაში." else if (language == "zh") "记录累计 500 次完成。" else if (language == "es") tr("es", "", "Log a total of 500 completions across all habits.") else "Log a total of 500 completions across all habits.",
                 targetValue = 500,
                 currentValue = totalGlobalCompletions,
                 isUnlocked = totalGlobalCompletions >= 500
@@ -14403,8 +14403,8 @@ fun ProfileScreen(
             Achievement(
                 type = "COMPLETIONS",
                 tier = "COMP_1000",
-                title = if (language == "de") "Meister der Beständigkeit" else if (language == "ka") "მიმდევრულობის ოსტატი" else if (language == "zh") "坚持大师" else "Master of Consistency",
-                description = if (language == "de") "Trage insgesamt 1000 Erledigungen ein." else if (language == "ka") "დაარეგისტრირეთ სულ 1000 დასრულება ყველა ჩვევაში." else if (language == "zh") "记录累计 1000 次完成。" else "Log a total of 1000 completions across all habits.",
+                title = if (language == "de") "Meister der Beständigkeit" else if (language == "ka") "მიმდევრულობის ოსტატი" else if (language == "zh") "坚持大师" else if (language == "es") tr("es", "", "Master of Consistency") else "Master of Consistency",
+                description = if (language == "de") "Trage insgesamt 1000 Erledigungen ein." else if (language == "ka") "დაარეგისტრირეთ სულ 1000 დასრულება ყველა ჩვევაში." else if (language == "zh") "记录累计 1000 次完成。" else if (language == "es") tr("es", "", "Log a total of 1000 completions across all habits.") else "Log a total of 1000 completions across all habits.",
                 targetValue = 1000,
                 currentValue = totalGlobalCompletions,
                 isUnlocked = totalGlobalCompletions >= 1000
@@ -14417,8 +14417,8 @@ fun ProfileScreen(
             Achievement(
                 type = "PERFECT_DAYS",
                 tier = "PERF_7",
-                title = if (language == "de") "Perfekte Woche" else if (language == "ka") "იდეალური კვირა" else if (language == "zh") "完美周" else "Perfect Week",
-                description = if (language == "de") "Erreiche eine Serie von 7 perfekten Tagen am Stück." else if (language == "ka") "მიაღწიეთ ზედიზედ 7 სრულყოფილი დღის სერიას." else if (language == "zh") "连续达成 7 个完美天。" else "Achieve a streak of 7 consecutive perfect days.",
+                title = if (language == "de") "Perfekte Woche" else if (language == "ka") "იდეალური კვირა" else if (language == "zh") "完美周" else if (language == "es") tr("es", "", "Perfect Week") else "Perfect Week",
+                description = if (language == "de") "Erreiche eine Serie von 7 perfekten Tagen am Stück." else if (language == "ka") "მიაღწიეთ ზედიზედ 7 სრულყოფილი დღის სერიას." else if (language == "zh") "连续达成 7 个完美天。" else if (language == "es") tr("es", "", "Achieve a streak of 7 consecutive perfect days.") else "Achieve a streak of 7 consecutive perfect days.",
                 targetValue = 7,
                 currentValue = if (perfectDaysStreak >= 7) 7 else currentPerfectStreak,
                 isUnlocked = perfectDaysStreak >= 7
@@ -14426,8 +14426,8 @@ fun ProfileScreen(
             Achievement(
                 type = "PERFECT_DAYS",
                 tier = "PERF_30",
-                title = if (language == "de") "Perfekter Monat" else if (language == "ka") "იდეალური თვე" else if (language == "zh") "完美月" else "Perfect Month",
-                description = if (language == "de") "Erreiche eine Serie von 30 perfekten Tagen am Stück." else if (language == "ka") "მიაღწიეთ ზედიზედ 30 სრულყოფილი დღის სერიას." else if (language == "zh") "连续达成 30 个完美天。" else "Achieve a streak of 30 consecutive perfect days.",
+                title = if (language == "de") "Perfekter Monat" else if (language == "ka") "იდეალური თვე" else if (language == "zh") "完美月" else if (language == "es") tr("es", "", "Perfect Month") else "Perfect Month",
+                description = if (language == "de") "Erreiche eine Serie von 30 perfekten Tagen am Stück." else if (language == "ka") "მიაღწიეთ ზედიზედ 30 სრულყოფილი დღის სერიას." else if (language == "zh") "连续达成 30 个完美天。" else if (language == "es") tr("es", "", "Achieve a streak of 30 consecutive perfect days.") else "Achieve a streak of 30 consecutive perfect days.",
                 targetValue = 30,
                 currentValue = if (perfectDaysStreak >= 30) 30 else currentPerfectStreak,
                 isUnlocked = perfectDaysStreak >= 30
@@ -14435,8 +14435,8 @@ fun ProfileScreen(
             Achievement(
                 type = "PERFECT_DAYS",
                 tier = "PERF_100",
-                title = if (language == "de") "100 perfekte Tage" else if (language == "ka") "100 იდეალური დღე" else if (language == "zh") "100完美天" else "100 Perfect Days",
-                description = if (language == "de") "Erreiche eine Serie von 100 perfekten Tagen am Stück." else if (language == "ka") "მიაღწიეთ ზედიზედ 100 სრულყოფილი დღის სერიას." else if (language == "zh") "连续达成 100 个完美天。" else "Achieve a streak of 100 consecutive perfect days.",
+                title = if (language == "de") "100 perfekte Tage" else if (language == "ka") "100 იდეალური დღე" else if (language == "zh") "100完美天" else if (language == "es") tr("es", "", "100 Perfect Days") else "100 Perfect Days",
+                description = if (language == "de") "Erreiche eine Serie von 100 perfekten Tagen am Stück." else if (language == "ka") "მიაღწიეთ ზედიზედ 100 სრულყოფილი დღის სერიას." else if (language == "zh") "连续达成 100 个完美天。" else if (language == "es") tr("es", "", "Achieve a streak of 100 consecutive perfect days.") else "Achieve a streak of 100 consecutive perfect days.",
                 targetValue = 100,
                 currentValue = if (perfectDaysStreak >= 100) 100 else currentPerfectStreak,
                 isUnlocked = perfectDaysStreak >= 100
@@ -14444,8 +14444,8 @@ fun ProfileScreen(
             Achievement(
                 type = "PERFECT_DAYS",
                 tier = "PERF_365",
-                title = if (language == "de") "Perfektes Jahr" else if (language == "ka") "იდეალური წელი" else if (language == "zh") "完美年" else "Perfect Year",
-                description = if (language == "de") "Erreiche eine Serie von 365 perfekten Tagen am Stück." else if (language == "ka") "მიაღწიეთ ზედიზედ 365 სრულყოფილი დღის სერიებს." else if (language == "zh") "连续达成 365 个完美天。" else "Achieve a streak of 365 consecutive perfect days.",
+                title = if (language == "de") "Perfektes Jahr" else if (language == "ka") "იდეალური წელი" else if (language == "zh") "完美年" else if (language == "es") tr("es", "", "Perfect Year") else "Perfect Year",
+                description = if (language == "de") "Erreiche eine Serie von 365 perfekten Tagen am Stück." else if (language == "ka") "მიაღწიეთ ზედიზედ 365 სრულყოფილი დღის სერიებს." else if (language == "zh") "连续达成 365 个完美天。" else if (language == "es") tr("es", "", "Achieve a streak of 365 consecutive perfect days.") else "Achieve a streak of 365 consecutive perfect days.",
                 targetValue = 365,
                 currentValue = if (perfectDaysStreak >= 365) 365 else currentPerfectStreak,
                 isUnlocked = perfectDaysStreak >= 365
@@ -14453,8 +14453,8 @@ fun ProfileScreen(
             Achievement(
                 type = "PERFECT_DAYS",
                 tier = "PERF_1000",
-                title = if (language == "de") "Perfektion" else if (language == "ka") "სრულყოფილება" else if (language == "zh") "完美极致" else "Perfection",
-                description = if (language == "de") "Erreiche eine Serie von 1000 perfekten Tagen am Stück." else if (language == "ka") "მიაღწიეთ ზედიზედ 1000 სრულყოფილი დღის სერიებს." else if (language == "zh") "连续达成 1000 个完美天。" else "Achieve a streak of 1000 consecutive perfect days.",
+                title = if (language == "de") "Perfektion" else if (language == "ka") "სრულყოფილება" else if (language == "zh") "完美极致" else if (language == "es") tr("es", "", "Perfection") else "Perfection",
+                description = if (language == "de") "Erreiche eine Serie von 1000 perfekten Tagen am Stück." else if (language == "ka") "მიაღწიეთ ზედიზედ 1000 სრულყოფილი დღის სერიებს." else if (language == "zh") "连续达成 1000 个完美天。" else if (language == "es") tr("es", "", "Achieve a streak of 1000 consecutive perfect days.") else "Achieve a streak of 1000 consecutive perfect days.",
                 targetValue = 1000,
                 currentValue = if (perfectDaysStreak >= 1000) 1000 else currentPerfectStreak,
                 isUnlocked = perfectDaysStreak >= 1000
@@ -14515,7 +14515,7 @@ fun ProfileScreen(
 
             // Center Title
             Text(
-                text = if (language == "de") "Profil" else if (language == "ka") "პროფილი" else if (language == "zh") "我的" else "Profile",
+                text = if (language == "de") "Profil" else if (language == "ka") "პროფილი" else if (language == "zh") "我的" else if (language == "es") tr("es", "", "Profile") else "Profile",
                 style = MaterialTheme.typography.displayLarge,
                 color = TextPrimary,
                 fontWeight = FontWeight.Bold,
@@ -14649,7 +14649,7 @@ fun ProfileScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = if (language == "de") "Erfolge freigeschaltet" else if (language == "ka") "მიღწევები განბლოკილია" else if (language == "zh") "已解锁成就" else "Achievements Unlocked",
+                                    text = if (language == "de") "Erfolge freigeschaltet" else if (language == "ka") "მიღწევები განბლოკილია" else if (language == "zh") "已解锁成就" else if (language == "es") tr("es", "", "Achievements Unlocked") else "Achievements Unlocked",
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.SemiBold,
                                     color = TextPrimary
@@ -14744,7 +14744,7 @@ fun ProfileScreen(
                 // CATEGORY 1: HABIT STREAKS
                 if (displayedHabitStreaks.isNotEmpty()) {
                     item {
-                        val explanationTitle = if (language == "de") "Gewohnheiten-Serien" else if (language == "ka") "ჩვევების ზოლები" else if (language == "zh") "习惯连续记录" else "Habit Streaks"
+                        val explanationTitle = if (language == "de") "Gewohnheiten-Serien" else if (language == "ka") "ჩვევების ზოლები" else if (language == "zh") "习惯连续记录" else if (language == "es") tr("es", "", "Habit Streaks") else "Habit Streaks"
                         val explanationText = if (language == "de") {
                             "Gewohnheiten-Serien belohnen deine Beständigkeit bei einzelnen Gewohnheiten!\n\n" +
                             "Jede Gewohnheit hat ihre eigene Erfolgssträhne. Du schaltest die Stufen frei, indem du die Gewohnheit an aufeinanderfolgenden Tagen erfüllst:\n\n" +
@@ -14771,7 +14771,7 @@ fun ProfileScreen(
                             "Tap on the badges in each habit card to see more details!"
                     }
                         CategoryHeader(
-                            title = if (language == "de") "Gewohnheiten-Serien" else if (language == "ka") "ჩვევების ზოლები" else if (language == "zh") "习惯连续记录" else "Habit Streaks",
+                            title = if (language == "de") "Gewohnheiten-Serien" else if (language == "ka") "ჩვევების ზოლები" else if (language == "zh") "习惯连续记录" else if (language == "es") tr("es", "", "Habit Streaks") else "Habit Streaks",
                             icon = Icons.Default.Whatshot,
                             color = HabitRed,
                             explanationTitle = explanationTitle,
@@ -14800,7 +14800,7 @@ fun ProfileScreen(
                                 thickness = 1.dp
                             )
                         }
-                        val explanationTitle = if (language == "de") "Gesamt-Abschlüsse" else if (language == "ka") "სულ დასრულებები" else if (language == "zh") "累计完成次数" else "Total Completions"
+                        val explanationTitle = if (language == "de") "Gesamt-Abschlüsse" else if (language == "ka") "სულ დასრულებები" else if (language == "zh") "累计完成次数" else if (language == "es") tr("es", "", "Total Completions") else "Total Completions"
                         val explanationText = if (language == "de") {
                             "Gesamt-Abschlüsse zählen, wie oft du deine Gewohnheitsziele insgesamt erfolgreich erreicht hast!\n\n" +
                             "Hierbei werden all deine absolvierten Ziele über alle Gewohnheiten hinweg addiert. Erreiche folgende Meilensteine:\n\n" +
@@ -14824,7 +14824,7 @@ fun ProfileScreen(
                             "• 🏆 Lifestyle Transformation: 500 completions in total"
                     }
                         CategoryHeader(
-                            title = if (language == "de") "Gesamt-Abschlüsse" else if (language == "ka") "სულ დასრულებები" else if (language == "zh") "累计完成次数" else "Total Completions",
+                            title = if (language == "de") "Gesamt-Abschlüsse" else if (language == "ka") "სულ დასრულებები" else if (language == "zh") "累计完成次数" else if (language == "es") tr("es", "", "Total Completions") else "Total Completions",
                             icon = Icons.Default.EmojiEvents,
                             color = HabitYellow,
                             explanationTitle = explanationTitle,
@@ -14856,7 +14856,7 @@ fun ProfileScreen(
                                 thickness = 1.dp
                             )
                         }
-                        val explanationTitle = if (language == "de") "Perfekte Tage" else if (language == "ka") "იდეალური დღეები" else if (language == "zh") "完美日" else "Perfect Days"
+                        val explanationTitle = if (language == "de") "Perfekte Tage" else if (language == "ka") "იდეალური დღეები" else if (language == "zh") "完美日" else if (language == "es") tr("es", "", "Perfect Days") else "Perfect Days"
                         val explanationText = if (language == "de") {
                             "Perfekte Tage belohnen Tage, an denen du deine Disziplin zu 100% gehalten hast!\n\n" +
                             "Ein perfekter Tag ist ein Tag, an dem du alle deine für diesen Tag geplanten bzw. aktiven Gewohnheiten vollständig erledigt hast. Wenn du diese perfekten Tage hintereinander schaffst, erreichst du:\n\n" +
@@ -14873,7 +14873,7 @@ fun ProfileScreen(
                         "Perfect Days reward consecutive days where you maintained 100% discipline!\n\nA perfect day is a day where you successfully complete all of your scheduled/active habits. By stringing perfect days together, you achieve:\n\n• 📅 Perfect Week: 7 consecutive perfect days\n• 🗓️ Perfect Month: 30 consecutive perfect days\n• 💯 100 Perfect Days: 100 consecutive perfect days\n• 📆 Perfect Year: 365 consecutive perfect days\n• 👑 Perfection: 1000 consecutive perfect days"
                     }
                         CategoryHeader(
-                            title = if (language == "de") "Perfekte Tage" else if (language == "ka") "იდეალური დღეები" else if (language == "zh") "完美日" else "Perfect Days",
+                            title = if (language == "de") "Perfekte Tage" else if (language == "ka") "იდეალური დღეები" else if (language == "zh") "完美日" else if (language == "es") tr("es", "", "Perfect Days") else "Perfect Days",
                             icon = Icons.Default.WorkspacePremium,
                             color = SuccessGreen,
                             explanationTitle = explanationTitle,
@@ -14903,7 +14903,7 @@ fun ProfileScreen(
                 containerColor = AppCard,
                 title = {
                     Text(
-                        text = if (language == "de") "Profil bearbeiten" else if (language == "ka") "პროფილის რედაქტირება" else if (language == "zh") "编辑个人主页" else "Edit Profile",
+                        text = if (language == "de") "Profil bearbeiten" else if (language == "ka") "პროფილის რედაქტირება" else if (language == "zh") "编辑个人主页" else if (language == "es") tr("es", "", "Edit Profile") else "Edit Profile",
                         color = TextPrimary,
                         fontWeight = FontWeight.Bold
                     )
@@ -14964,7 +14964,7 @@ fun ProfileScreen(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = if (language == "de") "Foto ändern" else if (language == "ka") "ფოტოს შეცვლა" else if (language == "zh") "更换照片" else "Change photo",
+                                    text = if (language == "de") "Foto ändern" else if (language == "ka") "ფოტოს შეცვლა" else if (language == "zh") "更换照片" else if (language == "es") tr("es", "", "Change photo") else "Change photo",
                                     color = PrimaryViolet
                                 )
                             }
@@ -14973,8 +14973,8 @@ fun ProfileScreen(
                         AppTextField(
                             value = tempUserName,
                             onValueChange = { tempUserName = it },
-                            labelText = if (language == "de") "Name" else if (language == "ka") "სახელი" else if (language == "zh") "名称" else "Name",
-                            placeholderText = if (language == "de") "Dein Name..." else if (language == "ka") "შენი სახელი..." else if (language == "zh") "你的名字..." else "Your name...",
+                            labelText = if (language == "de") "Name" else if (language == "ka") "სახელი" else if (language == "zh") "名称" else if (language == "es") tr("es", "", "Name") else "Name",
+                            placeholderText = if (language == "de") "Dein Name..." else if (language == "ka") "შენი სახელი..." else if (language == "zh") "你的名字..." else if (language == "es") tr("es", "", "Your name...") else "Your name...",
                             singleLine = true,
                             containerColor = AppCard,
                             testTag = "edit_profile_name_input"
@@ -14988,12 +14988,12 @@ fun ProfileScreen(
                             showEditNameDialog = false
                         }
                     ) {
-                        Text(if (language == "de") "Speichern" else if (language == "ka") "შენახვა" else if (language == "zh") "保存" else "Save", color = PrimaryViolet, fontWeight = FontWeight.Bold)
+                        Text(if (language == "de") "Speichern" else if (language == "ka") "შენახვა" else if (language == "zh") "保存" else if (language == "es") tr("es", "", "Save") else "Save", color = PrimaryViolet, fontWeight = FontWeight.Bold)
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { showEditNameDialog = false }) {
-                        Text(if (language == "de") "Abbrechen" else if (language == "ka") "გაუქმება" else if (language == "zh") "取消" else "Cancel", color = TextSecondary)
+                        Text(if (language == "de") "Abbrechen" else if (language == "ka") "გაუქმება" else if (language == "zh") "取消" else if (language == "es") tr("es", "", "Cancel") else "Cancel", color = TextSecondary)
                     }
                 }
             )
@@ -15070,14 +15070,14 @@ fun HabitAnalyticsSection(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = if (language == "de") "VERLAUF" else if (language == "ka") "ისტორია" else if (language == "zh") "历史趋势" else "HISTORY",
+                                text = if (language == "de") "VERLAUF" else if (language == "ka") "ისტორია" else if (language == "zh") "历史趋势" else if (language == "es") tr("es", "", "HISTORY") else "HISTORY",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = TextSecondary,
                                 fontWeight = FontWeight.Bold
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             InfoIconButton(
-                                title = if (language == "de") "Habit-Verlauf" else if (language == "ka") "ჩვევების ისტორია" else if (language == "zh") "习惯历史" else "Habit History",
+                                title = if (language == "de") "Habit-Verlauf" else if (language == "ka") "ჩვევების ისტორია" else if (language == "zh") "习惯历史" else if (language == "es") tr("es", "", "Habit History") else "Habit History",
                                 explanation = if (language == "de") {
                                     "Zeigt an, wie viel du an jedem Tag eingetragen hast. Bei numerischen Gewohnheiten wird das Erfüllungsverhältnis (z.B. 50% deines Ziels) dargestellt. Wechsle zwischen Woche, Monat und Jahr, um langfristige Muster zu erkennen."
                                 } else if (language == "ka") {
@@ -15090,7 +15090,7 @@ fun HabitAnalyticsSection(
                         }
 
                         Text(
-                            text = if (language == "de") "Mal pro Tag" else if (language == "ka") "ჯერ დღეში" else if (language == "zh") "次 / 每天" else "Times per day",
+                            text = if (language == "de") "Mal pro Tag" else if (language == "ka") "ჯერ დღეში" else if (language == "zh") "次 / 每天" else if (language == "es") tr("es", "", "Times per day") else "Times per day",
                             style = MaterialTheme.typography.labelSmall,
                             color = TextSecondary
                         )
@@ -15191,9 +15191,9 @@ fun HabitAnalyticsSection(
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
                         listOf(
-                            "WEEK" to (if (language == "de") "Woche" else if (language == "ka") "კვირა" else if (language == "zh") "周" else "Week"),
-                            "MONTH" to (if (language == "de") "Monat" else if (language == "ka") "თვე" else if (language == "zh") "月" else "Month"),
-                            "YEAR" to (if (language == "de") "Jahr" else if (language == "ka") "წელიწადი" else if (language == "zh") "年" else "Year")
+                            "WEEK" to (if (language == "de") "Woche" else if (language == "ka") "კვირა" else if (language == "zh") "周" else if (language == "es") tr("es", "", "Week") else "Week"),
+                            "MONTH" to (if (language == "de") "Monat" else if (language == "ka") "თვე" else if (language == "zh") "月" else if (language == "es") tr("es", "", "Month") else "Month"),
+                            "YEAR" to (if (language == "de") "Jahr" else if (language == "ka") "წელიწადი" else if (language == "zh") "年" else if (language == "es") tr("es", "", "Year") else "Year")
                         ).forEach { (key, display) ->
                             val isSelected = activeFilter == key
                             Button(
@@ -15365,7 +15365,7 @@ fun DailyNoteDialog(
                 .fillMaxWidth()
         ) {
             Text(
-                text = if (language == "de") "Tägliche Notiz" else if (language == "ka") "ყოველდღიური შენიშვნა" else if (language == "zh") "每日随笔" else "Daily Note",
+                text = if (language == "de") "Tägliche Notiz" else if (language == "ka") "ყოველდღიური შენიშვნა" else if (language == "zh") "每日随笔" else if (language == "es") tr("es", "", "Daily Note") else "Daily Note",
                 style = MaterialTheme.typography.titleLarge,
                 color = TextPrimary,
                 fontWeight = FontWeight.Bold,
@@ -15378,7 +15378,7 @@ fun DailyNoteDialog(
             AppTextField(
                 value = noteText,
                 onValueChange = { noteText = it },
-                placeholderText = if (language == "de") "Gedanken, Erfolge oder Notizen für diesen Tag..." else if (language == "ka") "აზრები, მიღწევები თუ ნოტები ამ დღისთვის..." else if (language == "zh") "这一天的心得体会、小成就 or 备忘..." else "Thoughts, achievements, or notes for this day...",
+                placeholderText = if (language == "de") "Gedanken, Erfolge oder Notizen für diesen Tag..." else if (language == "ka") "აზრები, მიღწევები თუ ნოტები ამ დღისთვის..." else if (language == "zh") "这一天的心得体会、小成就 or 备忘..." else if (language == "es") tr("es", "", "Thoughts, achievements, or notes for this day...") else "Thoughts, achievements, or notes for this day...",
                 modifier = Modifier
                     .heightIn(min = 140.dp, max = 240.dp)
                     .focusRequester(focusRequester),
@@ -15397,7 +15397,7 @@ fun DailyNoteDialog(
                     .height(48.dp)
             ) {
                 Text(
-                    text = if (language == "de") "Speichern" else if (language == "ka") "შენახვა" else if (language == "zh") "保存" else "Save",
+                    text = if (language == "de") "Speichern" else if (language == "ka") "შენახვა" else if (language == "zh") "保存" else if (language == "es") tr("es", "", "Save") else "Save",
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.titleMedium
@@ -15725,7 +15725,7 @@ fun AchievementUnlockedOverlay(
                             fontSize = 14.sp
                         )
                         Text(
-                            text = if (language == "de") "ERFOLG FREIGESCHALTET!" else if (language == "ka") "მიღწევა განბლოკილია!" else if (language == "zh") "成就解锁！" else "ACHIEVEMENT UNLOCKED!",
+                            text = if (language == "de") "ERFOLG FREIGESCHALTET!" else if (language == "ka") "მიღწევა განბლოკილია!" else if (language == "zh") "成就解锁！" else if (language == "es") tr("es", "", "ACHIEVEMENT UNLOCKED!") else "ACHIEVEMENT UNLOCKED!",
                             style = MaterialTheme.typography.labelLarge,
                             color = Color(0xFFFFD54F),
                             fontWeight = FontWeight.ExtraBold,
@@ -15853,7 +15853,7 @@ fun AchievementUnlockedOverlay(
                                 )
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Text(
-                                    text = if (language == "de") "Deine persönliche Belohnung:" else if (language == "ka") "თქვენი პირადი ჯილდო:" else if (language == "zh") "你的专属奖励：" else "Your Personal Reward:",
+                                    text = if (language == "de") "Deine persönliche Belohnung:" else if (language == "ka") "თქვენი პირადი ჯილდო:" else if (language == "zh") "你的专属奖励：" else if (language == "es") tr("es", "", "Your Personal Reward:") else "Your Personal Reward:",
                                     style = MaterialTheme.typography.labelLarge,
                                     color = PrimaryViolet,
                                     fontWeight = FontWeight.Bold
@@ -15879,7 +15879,7 @@ fun AchievementUnlockedOverlay(
                             }
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = if (language == "de") "Du hast diese Belohnung freigeschaltet! Du kannst sie jederzeit in den Meilenstein-Belohnungen auf der Statistik-Seite einlösen." else if (language == "ka") "თქვენ განბლოკეთ ეს ჯილდო! შეგიძლიათ გამოისყიდოთ ის სტატისტიკის გვერდზე." else if (language == "zh") "你解锁了这项奖励！你可以在统计页面的里程碑奖励中查看与兑换。" else "You unlocked this reward! You can view and redeem it anytime in Milestone Rewards on the Statistics page.",
+                                text = if (language == "de") "Du hast diese Belohnung freigeschaltet! Du kannst sie jederzeit in den Meilenstein-Belohnungen auf der Statistik-Seite einlösen." else if (language == "ka") "თქვენ განბლოკეთ ეს ჯილდო! შეგიძლიათ გამოისყიდოთ ის სტატისტიკის გვერდზე." else if (language == "zh") "你解锁了这项奖励！你可以在统计页面的里程碑奖励中查看与兑换。" else if (language == "es") tr("es", "", "You unlocked this reward! You can view and redeem it anytime in Milestone Rewards on the Statistics page.") else "You unlocked this reward! You can view and redeem it anytime in Milestone Rewards on the Statistics page.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = TextSecondary,
                                 textAlign = TextAlign.Center
@@ -15900,7 +15900,7 @@ fun AchievementUnlockedOverlay(
                         .testTag("dismiss_achievement_button")
                 ) {
                     Text(
-                        text = if (language == "de") "Klasse! 🎉" else if (language == "ka") "გასაოცარია! 🎉" else if (language == "zh") "太棒了！🎉" else "Awesome! 🎉",
+                        text = if (language == "de") "Klasse! 🎉" else if (language == "ka") "გასაოცარია! 🎉" else if (language == "zh") "太棒了！🎉" else if (language == "es") tr("es", "", "Awesome! 🎉") else "Awesome! 🎉",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
@@ -16649,7 +16649,7 @@ fun OnboardingScreen(
                     modifier = Modifier.testTag("btn_onboarding_skip")
                 ) {
                     Text(
-                        text = if (language == "de") "Überspringen" else if (language == "ka") "გამოტოვება" else if (language == "zh") "跳过" else "Skip",
+                        text = if (language == "de") "Überspringen" else if (language == "ka") "გამოტოვება" else if (language == "zh") "跳过" else if (language == "es") tr("es", "", "Skip") else "Skip",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium
@@ -16761,7 +16761,7 @@ fun OnboardingScreen(
                         horizontalArrangement = Arrangement.Center
                     ) {
                         Text(
-                            text = if (language == "de") "Weiter" else if (language == "ka") "შემდეგი" else if (language == "zh") "下一步" else "Next",
+                            text = if (language == "de") "Weiter" else if (language == "ka") "შემდეგი" else if (language == "zh") "下一步" else if (language == "es") tr("es", "", "Next") else "Next",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
@@ -16790,7 +16790,7 @@ fun OnboardingScreen(
                         horizontalArrangement = Arrangement.Center
                     ) {
                         Text(
-                            text = if (language == "de") "Starte deine Reise 🚀" else if (language == "ka") "დაიწყე შენი მოგზაურობა 🚀" else if (language == "zh") "开启你的习惯之旅 🚀" else "Begin your journey 🚀",
+                            text = if (language == "de") "Starte deine Reise 🚀" else if (language == "ka") "დაიწყე შენი მოგზაურობა 🚀" else if (language == "zh") "开启你的习惯之旅 🚀" else if (language == "es") tr("es", "", "Begin your journey 🚀") else "Begin your journey 🚀",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
@@ -16821,7 +16821,7 @@ private fun OnboardingStepWelcome(language: String) {
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = if (language == "de") "Willkommen" else if (language == "ka") "მოგესალმებით" else if (language == "zh") "欢迎" else "Welcome",
+            text = if (language == "de") "Willkommen" else if (language == "ka") "მოგესალმებით" else if (language == "zh") "欢迎" else if (language == "es") tr("es", "", "Welcome") else "Welcome",
             style = MaterialTheme.typography.displayLarge.copy(fontSize = 54.sp),
             color = MaterialTheme.colorScheme.onBackground,
             fontWeight = FontWeight.ExtraBold,
@@ -16831,7 +16831,7 @@ private fun OnboardingStepWelcome(language: String) {
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = if (language == "de") "bei Frequent Habits" else if (language == "ka") "Frequent Habits-ში" else if (language == "zh") "来到 Frequent Habits" else "to Frequent Habits",
+            text = if (language == "de") "bei Frequent Habits" else if (language == "ka") "Frequent Habits-ში" else if (language == "zh") "来到 Frequent Habits" else if (language == "es") tr("es", "", "to Frequent Habits") else "to Frequent Habits",
             style = MaterialTheme.typography.headlineLarge.copy(fontSize = 32.sp),
             color = MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.Bold,
@@ -16899,7 +16899,7 @@ private fun OnboardingStepPersonalize(language: String, viewModel: HabitsViewMod
         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)
     ) {
         Text(
-            text = if (language == "de") "App personalisieren" else if (language == "ka") "პერსონალიზაცია" else if (language == "zh") "个性化应用" else "Personalize App",
+            text = if (language == "de") "App personalisieren" else if (language == "ka") "პერსონალიზაცია" else if (language == "zh") "个性化应用" else if (language == "es") tr("es", "", "Personalize App") else "Personalize App",
             style = MaterialTheme.typography.headlineLarge.copy(fontSize = 28.sp, lineHeight = 34.sp),
             color = MaterialTheme.colorScheme.onBackground,
             fontWeight = FontWeight.ExtraBold,
@@ -16911,7 +16911,7 @@ private fun OnboardingStepPersonalize(language: String, viewModel: HabitsViewMod
 
         // Language Picker
         Text(
-            text = if (language == "de") "SPRACHE" else if (language == "ka") "ენა" else if (language == "zh") "语言" else "LANGUAGE",
+            text = if (language == "de") "SPRACHE" else if (language == "ka") "ენა" else if (language == "zh") "语言" else if (language == "es") tr("es", "", "LANGUAGE") else "LANGUAGE",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = FontWeight.Bold,
@@ -16953,7 +16953,7 @@ private fun OnboardingStepPersonalize(language: String, viewModel: HabitsViewMod
 
         // Design Mode
         Text(
-            text = if (language == "de") "Design-Theme" else if (language == "ka") "დიზაინის თემა" else if (language == "zh") "设计主题" else "Design Theme",
+            text = if (language == "de") "Design-Theme" else if (language == "ka") "დიზაინის თემა" else if (language == "zh") "设计主题" else if (language == "es") tr("es", "", "Design Theme") else "Design Theme",
             style = MaterialTheme.typography.labelMedium,
             color = TextSecondary,
             fontWeight = FontWeight.SemiBold,
@@ -16962,8 +16962,8 @@ private fun OnboardingStepPersonalize(language: String, viewModel: HabitsViewMod
         Spacer(modifier = Modifier.height(8.dp))
         AppSegmentedButtonWithIcons(
             options = listOf(
-                (if (language == "de") "Dunkel" else if (language == "ka") "ბნელი" else if (language == "zh") "深色" else "Dark") to Icons.Default.DarkMode,
-                (if (language == "de") "Hell" else if (language == "ka") "სინათლე" else if (language == "zh") "浅色" else "Light") to Icons.Default.LightMode
+                (if (language == "de") "Dunkel" else if (language == "ka") "ბნელი" else if (language == "zh") "深色" else if (language == "es") tr("es", "", "Dark") else "Dark") to Icons.Default.DarkMode,
+                (if (language == "de") "Hell" else if (language == "ka") "სინათლე" else if (language == "zh") "浅色" else if (language == "es") tr("es", "", "Light") else "Light") to Icons.Default.LightMode
             ),
             selectedIndex = if (darkModeEnabled) 0 else 1,
             onOptionSelected = { index -> viewModel.setDarkModeEnabled(index == 0) },
@@ -16974,7 +16974,7 @@ private fun OnboardingStepPersonalize(language: String, viewModel: HabitsViewMod
 
         // Color Palette Selector
         Text(
-            text = if (language == "de") "AKZENTFARBE" else if (language == "ka") "აქცენტი ფერი" else if (language == "zh") "强调配色" else "ACCENT COLOR",
+            text = if (language == "de") "AKZENTFARBE" else if (language == "ka") "აქცენტი ფერი" else if (language == "zh") "强调配色" else if (language == "es") tr("es", "", "ACCENT COLOR") else "ACCENT COLOR",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = FontWeight.Bold,
@@ -16991,7 +16991,7 @@ private fun OnboardingStepPersonalize(language: String, viewModel: HabitsViewMod
 
         // Notification Section Header
         Text(
-            text = if (language == "de") "BENACHRICHTIGUNGEN" else if (language == "ka") "შეტყობინებები" else if (language == "zh") "通知提醒" else "NOTIFICATIONS",
+            text = if (language == "de") "BENACHRICHTIGUNGEN" else if (language == "ka") "შეტყობინებები" else if (language == "zh") "通知提醒" else if (language == "es") tr("es", "", "NOTIFICATIONS") else "NOTIFICATIONS",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = FontWeight.Bold,
@@ -17022,15 +17022,15 @@ private fun OnboardingStepPersonalize(language: String, viewModel: HabitsViewMod
                     Spacer(modifier = Modifier.width(10.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = if (language == "de") "Tägliche Erinnerungen & Insights" else if (language == "ka") "ყოველდღიური შეხსენებები და ანალიზი" else if (language == "zh") "每日提醒与智能洞察" else "Daily Reminders & Insights",
+                            text = if (language == "de") "Tägliche Erinnerungen & Insights" else if (language == "ka") "ყოველდღიური შეხსენებები და ანალიზი" else if (language == "zh") "每日提醒与智能洞察" else if (language == "es") tr("es", "", "Daily Reminders & Insights") else "Daily Reminders & Insights",
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
                             text = if (hasNotificationPermission) {
-                                if (language == "de") "Erinnerungen sind aktiv ✓" else if (language == "ka") "შეხსენებები აქტიურია ✓" else if (language == "zh") "提醒已启用 ✓" else "Reminders active ✓"
+                                if (language == "de") "Erinnerungen sind aktiv ✓" else if (language == "ka") "შეხსენებები აქტიურია ✓" else if (language == "zh") "提醒已启用 ✓" else if (language == "es") tr("es", "", "Reminders active ✓") else "Reminders active ✓"
                             } else {
-                                if (language == "de") "Tägliche Benachrichtigungen aktivieren" else if (language == "ka") "ყოველდღიური შეტყობინებების ჩართვა" else if (language == "zh") "开启每日通知提醒" else "Enable daily notifications"
+                                if (language == "de") "Tägliche Benachrichtigungen aktivieren" else if (language == "ka") "ყოველდღიური შეტყობინებების ჩართვა" else if (language == "zh") "开启每日通知提醒" else if (language == "es") tr("es", "", "Enable daily notifications") else "Enable daily notifications"
                             },
                             style = MaterialTheme.typography.bodySmall,
                             color = if (hasNotificationPermission) SuccessGreen else TextSecondary
@@ -17055,7 +17055,7 @@ private fun OnboardingStepPersonalize(language: String, viewModel: HabitsViewMod
                         contentPadding = PaddingValues(vertical = 8.dp)
                     ) {
                         Text(
-                            text = if (language == "de") "Benachrichtigungen aktivieren" else if (language == "ka") "შეტყობინებების ჩართვა" else if (language == "zh") "开启通知" else "Enable Notifications",
+                            text = if (language == "de") "Benachrichtigungen aktivieren" else if (language == "ka") "შეტყობინებების ჩართვა" else if (language == "zh") "开启通知" else if (language == "es") tr("es", "", "Enable Notifications") else "Enable Notifications",
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
@@ -17076,7 +17076,7 @@ private fun OnboardingStepPersonalize(language: String, viewModel: HabitsViewMod
                             Icon(Icons.Default.CheckCircle, contentDescription = null, tint = SuccessGreen, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = if (language == "de") "Aktiviert ✓" else if (language == "ka") "ჩართულია ✓" else if (language == "zh") "已开启 ✓" else "Enabled ✓",
+                                text = if (language == "de") "Aktiviert ✓" else if (language == "ka") "ჩართულია ✓" else if (language == "zh") "已开启 ✓" else if (language == "es") tr("es", "", "Enabled ✓") else "Enabled ✓",
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = SuccessGreen
@@ -17091,7 +17091,7 @@ private fun OnboardingStepPersonalize(language: String, viewModel: HabitsViewMod
 
         // SAF Backup Folder Section Header
         Text(
-            text = if (language == "de") "AUTO-BACKUP ORDNER" else if (language == "ka") "სარეზერვო საქაღალდე" else if (language == "zh") "自动备份文件夹" else "AUTO-BACKUP FOLDER",
+            text = if (language == "de") "AUTO-BACKUP ORDNER" else if (language == "ka") "სარეზერვო საქაღალდე" else if (language == "zh") "自动备份文件夹" else if (language == "es") tr("es", "", "AUTO-BACKUP FOLDER") else "AUTO-BACKUP FOLDER",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = FontWeight.Bold,
@@ -17122,15 +17122,15 @@ private fun OnboardingStepPersonalize(language: String, viewModel: HabitsViewMod
                     Spacer(modifier = Modifier.width(10.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = if (language == "de") "Lokales Auto-Backup" else if (language == "ka") "ადგილობრივი ავტო-სარეზერვო ასლი" else if (language == "zh") "本地自动备份" else "Local Auto-Backup",
+                            text = if (language == "de") "Lokales Auto-Backup" else if (language == "ka") "ადგილობრივი ავტო-სარეზერვო ასლი" else if (language == "zh") "本地自动备份" else if (language == "es") tr("es", "", "Local Auto-Backup") else "Local Auto-Backup",
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
                             text = if (isFolderSet) {
-                                if (language == "de") "Speicherort festgelegt ✓" else if (language == "ka") "სარეზერვო საქაღალდე არჩეულია ✓" else if (language == "zh") "备份文件夹已设置 ✓" else "Backup folder set ✓"
+                                if (language == "de") "Speicherort festgelegt ✓" else if (language == "ka") "სარეზერვო საქაღალდე არჩეულია ✓" else if (language == "zh") "备份文件夹已设置 ✓" else if (language == "es") tr("es", "", "Backup folder set ✓") else "Backup folder set ✓"
                             } else {
-                                if (language == "de") "Lokalen Ordner für Backups wählen" else if (language == "ka") "აირჩიეთ ადგილობრივი საქაღალდე" else if (language == "zh") "选择自动备份本地文件夹" else "Pick local folder for auto backups"
+                                if (language == "de") "Lokalen Ordner für Backups wählen" else if (language == "ka") "აირჩიეთ ადგილობრივი საქაღალდე" else if (language == "zh") "选择自动备份本地文件夹" else if (language == "es") tr("es", "", "Pick local folder for auto backups") else "Pick local folder for auto backups"
                             },
                             style = MaterialTheme.typography.bodySmall,
                             color = if (isFolderSet) SuccessGreen else TextSecondary
@@ -17149,7 +17149,7 @@ private fun OnboardingStepPersonalize(language: String, viewModel: HabitsViewMod
                     contentPadding = PaddingValues(vertical = 8.dp)
                 ) {
                     Text(
-                        text = if (isFolderSet) (if (language == "de") "Backup-Ordner ändern" else if (language == "ka") "საქაღალდის შეცვლა" else if (language == "zh") "更改备份文件夹" else "Change Backup Folder") else (if (language == "de") "Backup-Ordner wählen" else if (language == "ka") "საქაღალდის არჩევა" else if (language == "zh") "选择备份文件夹" else "Select Backup Folder"),
+                        text = if (isFolderSet) (if (language == "de") "Backup-Ordner ändern" else if (language == "ka") "საქაღალდის შეცვლა" else if (language == "zh") "更改备份文件夹" else if (language == "es") tr("es", "", "Change Backup Folder") else "Change Backup Folder") else (if (language == "de") "Backup-Ordner wählen" else if (language == "ka") "საქაღალდის არჩევა" else if (language == "zh") "选择备份文件夹" else if (language == "es") tr("es", "", "Select Backup Folder") else "Select Backup Folder"),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = if (isFolderSet) MaterialTheme.colorScheme.onSurface else Color.White
@@ -17407,7 +17407,7 @@ private fun OnboardingStepReviewTimeCapsule(language: String) {
                             }
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = if (language == "de") "Dein Monatsrückblick" else if (language == "ka") "თქვენი ყოველთვიური მიმოხილვა" else if (language == "zh") "你的月度回顾" else "Your Monthly Review",
+                                text = if (language == "de") "Dein Monatsrückblick" else if (language == "ka") "თქვენი ყოველთვიური მიმოხილვა" else if (language == "zh") "你的月度回顾" else if (language == "es") tr("es", "", "Your Monthly Review") else "Your Monthly Review",
                                 style = MaterialTheme.typography.titleSmall,
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold
@@ -17426,7 +17426,7 @@ private fun OnboardingStepReviewTimeCapsule(language: String) {
                                 Icon(Icons.Default.Lock, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = if (language == "de") "Zeitkapsel enthalten" else if (language == "ka") "მოყვება დროის კაფსულა" else if (language == "zh") "内含时间胶囊" else "Time Capsule included",
+                                    text = if (language == "de") "Zeitkapsel enthalten" else if (language == "ka") "მოყვება დროის კაფსულა" else if (language == "zh") "内含时间胶囊" else if (language == "es") tr("es", "", "Time Capsule included") else "Time Capsule included",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = Color.White,
                                     fontWeight = FontWeight.Bold
@@ -17441,7 +17441,7 @@ private fun OnboardingStepReviewTimeCapsule(language: String) {
         Spacer(modifier = Modifier.height(20.dp))
 
         Text(
-            text = if (language == "de") "Rückblick & Zeitkapsel" else if (language == "ka") "მიმოხილვა და კაფსულა" else if (language == "zh") "回顾与时间胶囊" else "Review & Time Capsule",
+            text = if (language == "de") "Rückblick & Zeitkapsel" else if (language == "ka") "მიმოხილვა და კაფსულა" else if (language == "zh") "回顾与时间胶囊" else if (language == "es") tr("es", "", "Review & Time Capsule") else "Review & Time Capsule",
             style = MaterialTheme.typography.headlineLarge.copy(fontSize = 28.sp, lineHeight = 34.sp),
             color = MaterialTheme.colorScheme.onBackground,
             fontWeight = FontWeight.ExtraBold,
@@ -17513,7 +17513,7 @@ private fun OnboardingStepMilestoneRewards(language: String) {
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = if (language == "de") "EIGENE BELOHNUNG" else if (language == "ka") "ჯილდო" else if (language == "zh") "自定义奖励" else "CUSTOM REWARD",
+                                        text = if (language == "de") "EIGENE BELOHNUNG" else if (language == "ka") "ჯილდო" else if (language == "zh") "自定义奖励" else if (language == "es") tr("es", "", "CUSTOM REWARD") else "CUSTOM REWARD",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = PrimaryViolet,
                                         fontWeight = FontWeight.Bold
@@ -17548,13 +17548,13 @@ private fun OnboardingStepMilestoneRewards(language: String) {
                             Spacer(modifier = Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = if (language == "de") "Kinobesuch 🎬" else if (language == "ka") "ფილმის ღამე 🎬" else if (language == "zh") "看电影之夜 🎬" else "Movie Night 🎬",
+                                    text = if (language == "de") "Kinobesuch 🎬" else if (language == "ka") "ფილმის ღამე 🎬" else if (language == "zh") "看电影之夜 🎬" else if (language == "es") tr("es", "", "Movie Night 🎬") else "Movie Night 🎬",
                                     style = MaterialTheme.typography.titleSmall,
                                     color = TextPrimary,
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    text = if (language == "de") "Belohnung für 30 Tage Streak" else if (language == "ka") "ჯილდო 30 დღიანი სერიისთვის" else if (language == "zh") "30 天连续达成专属奖励" else "Reward for 30 Day Streak",
+                                    text = if (language == "de") "Belohnung für 30 Tage Streak" else if (language == "ka") "ჯილდო 30 დღიანი სერიისთვის" else if (language == "zh") "30 天连续达成专属奖励" else if (language == "es") tr("es", "", "Reward for 30 Day Streak") else "Reward for 30 Day Streak",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = TextSecondary
                                 )
@@ -17568,7 +17568,7 @@ private fun OnboardingStepMilestoneRewards(language: String) {
         Spacer(modifier = Modifier.height(20.dp))
 
         Text(
-            text = if (language == "de") "Custom Rewards" else if (language == "ka") "მორგებული ჯილდოები" else if (language == "zh") "自定义奖励" else "Custom Rewards",
+            text = if (language == "de") "Custom Rewards" else if (language == "ka") "მორგებული ჯილდოები" else if (language == "zh") "自定义奖励" else if (language == "es") tr("es", "", "Custom Rewards") else "Custom Rewards",
             style = MaterialTheme.typography.headlineLarge.copy(fontSize = 28.sp, lineHeight = 34.sp),
             color = MaterialTheme.colorScheme.onBackground,
             fontWeight = FontWeight.ExtraBold,
@@ -17601,7 +17601,7 @@ private fun OnboardingStepAndMuchMore(language: String) {
         modifier = Modifier.fillMaxWidth().padding(12.dp)
     ) {
         Text(
-            text = if (language == "de") "Und vieles mehr" else if (language == "ka") "და კიდევ ბევრი რამ" else if (language == "zh") "以及更多丰富功能" else "And much more",
+            text = if (language == "de") "Und vieles mehr" else if (language == "ka") "და კიდევ ბევრი რამ" else if (language == "zh") "以及更多丰富功能" else if (language == "es") tr("es", "", "And much more") else "And much more",
             style = MaterialTheme.typography.headlineLarge.copy(fontSize = 32.sp, lineHeight = 38.sp),
             color = MaterialTheme.colorScheme.onBackground,
             fontWeight = FontWeight.ExtraBold,
@@ -17609,7 +17609,7 @@ private fun OnboardingStepAndMuchMore(language: String) {
         )
         Spacer(modifier = Modifier.height(6.dp))
         Text(
-            text = if (language == "de") "Entdecke viele weitere durchdachte Funktionen:" else if (language == "ka") "აღმოაჩინეთ კიდევ ბევრი გააზრებულად შემუშავებული ფუნქცია:" else if (language == "zh") "探索更多精心雕琢的实用功能：" else "Discover many more thoughtfully crafted features:",
+            text = if (language == "de") "Entdecke viele weitere durchdachte Funktionen:" else if (language == "ka") "აღმოაჩინეთ კიდევ ბევრი გააზრებულად შემუშავებული ფუნქცია:" else if (language == "zh") "探索更多精心雕琢的实用功能：" else if (language == "es") tr("es", "", "Discover many more thoughtfully crafted features:") else "Discover many more thoughtfully crafted features:",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
@@ -17629,15 +17629,15 @@ private fun OnboardingStepAndMuchMore(language: String) {
             ) {
                 FeatureTile(
                     icon = Icons.Default.MusicNote,
-                    title = if (language == "de") "Audio Timer" else if (language == "ka") "აუდიო ტაიმერი" else if (language == "zh") "白噪音计时器" else "Audio Timer",
-                    subtitle = if (language == "de") "Fokus & Soundscapes" else if (language == "ka") "ფოკუსი და ხმოვანი პეიზაჟები" else if (language == "zh") "专注与背景白噪音" else "Focus & Soundscapes",
+                    title = if (language == "de") "Audio Timer" else if (language == "ka") "აუდიო ტაიმერი" else if (language == "zh") "白噪音计时器" else if (language == "es") tr("es", "", "Audio Timer") else "Audio Timer",
+                    subtitle = if (language == "de") "Fokus & Soundscapes" else if (language == "ka") "ფოკუსი და ხმოვანი პეიზაჟები" else if (language == "zh") "专注与背景白噪音" else if (language == "es") tr("es", "", "Focus & Soundscapes") else "Focus & Soundscapes",
                     color = PrimaryViolet,
                     modifier = Modifier.weight(1.3f)
                 )
                 FeatureTile(
                     icon = Icons.Default.BarChart,
-                    title = if (language == "de") "Unrivaled Analytics" else if (language == "ka") "შეუდარებელი ანალიტიკა" else if (language == "zh") "深度数据分析" else "Unrivaled Analytics",
-                    subtitle = if (language == "de") "Heatmaps & Trends" else if (language == "ka") "სითბოს რუქები და ტენდენციები" else if (language == "zh") "打卡热力图与趋势" else "Heatmaps & Trends",
+                    title = if (language == "de") "Unrivaled Analytics" else if (language == "ka") "შეუდარებელი ანალიტიკა" else if (language == "zh") "深度数据分析" else if (language == "es") tr("es", "", "Unrivaled Analytics") else "Unrivaled Analytics",
+                    subtitle = if (language == "de") "Heatmaps & Trends" else if (language == "ka") "სითბოს რუქები და ტენდენციები" else if (language == "zh") "打卡热力图与趋势" else if (language == "es") tr("es", "", "Heatmaps & Trends") else "Heatmaps & Trends",
                     color = HabitBlue,
                     modifier = Modifier.weight(1.0f)
                 )
@@ -17650,15 +17650,15 @@ private fun OnboardingStepAndMuchMore(language: String) {
             ) {
                 FeatureTile(
                     icon = Icons.Default.EditNote,
-                    title = if (language == "de") "Mini Notebook" else if (language == "ka") "მინი ნოუთბუქი" else if (language == "zh") "迷你随手记" else "Mini Notebook",
-                    subtitle = if (language == "de") "Notizen zu Habits" else if (language == "ka") "შენიშვნები და ანარეკლები" else if (language == "zh") "习惯感悟与笔记" else "Notes & Reflections",
+                    title = if (language == "de") "Mini Notebook" else if (language == "ka") "მინი ნოუთბუქი" else if (language == "zh") "迷你随手记" else if (language == "es") tr("es", "", "Mini Notebook") else "Mini Notebook",
+                    subtitle = if (language == "de") "Notizen zu Habits" else if (language == "ka") "შენიშვნები და ანარეკლები" else if (language == "zh") "习惯感悟与笔记" else if (language == "es") tr("es", "", "Notes & Reflections") else "Notes & Reflections",
                     color = HabitOrange,
                     modifier = Modifier.weight(1.0f)
                 )
                 FeatureTile(
                     icon = Icons.Default.Share,
-                    title = if (language == "de") "Sharing Options" else if (language == "ka") "გაზიარების პარამეტრები" else if (language == "zh") "丰富分享功能" else "Sharing Options",
-                    subtitle = if (language == "de") "Karten & Export" else if (language == "ka") "ბარათები და ექსპორტი" else if (language == "zh") "卡片生成与导出" else "Cards & Export",
+                    title = if (language == "de") "Sharing Options" else if (language == "ka") "გაზიარების პარამეტრები" else if (language == "zh") "丰富分享功能" else if (language == "es") tr("es", "", "Sharing Options") else "Sharing Options",
+                    subtitle = if (language == "de") "Karten & Export" else if (language == "ka") "ბარათები და ექსპორტი" else if (language == "zh") "卡片生成与导出" else if (language == "es") tr("es", "", "Cards & Export") else "Cards & Export",
                     color = HabitGreen,
                     modifier = Modifier.weight(1.4f)
                 )
@@ -17671,15 +17671,15 @@ private fun OnboardingStepAndMuchMore(language: String) {
             ) {
                 FeatureTile(
                     icon = Icons.Default.Widgets,
-                    title = if (language == "de") "Homescreen Widget" else if (language == "ka") "საწყისი ეკრანის ვიჯეტი" else if (language == "zh") "桌面小组件" else "Homescreen Widget",
-                    subtitle = if (language == "de") "Schnelles Abhaken" else if (language == "ka") "სწრაფი შემოწმება" else if (language == "zh") "桌面快捷打卡" else "Quick Checking",
+                    title = if (language == "de") "Homescreen Widget" else if (language == "ka") "საწყისი ეკრანის ვიჯეტი" else if (language == "zh") "桌面小组件" else if (language == "es") tr("es", "", "Homescreen Widget") else "Homescreen Widget",
+                    subtitle = if (language == "de") "Schnelles Abhaken" else if (language == "ka") "სწრაფი შემოწმება" else if (language == "zh") "桌面快捷打卡" else if (language == "es") tr("es", "", "Quick Checking") else "Quick Checking",
                     color = SecondaryViolet,
                     modifier = Modifier.weight(1.2f)
                 )
                 FeatureTile(
                     icon = Icons.Default.EmojiEvents,
-                    title = if (language == "de") "Gamification" else if (language == "ka") "გემიფიკაცია" else if (language == "zh") "趣味成长体系" else "Gamification",
-                    subtitle = if (language == "de") "Trophäen & Level" else if (language == "ka") "ტროფები და სამკერდე ნიშნები" else if (language == "zh") "奖杯与成就勋章" else "Trophies & Badges",
+                    title = if (language == "de") "Gamification" else if (language == "ka") "გემიფიკაცია" else if (language == "zh") "趣味成长体系" else if (language == "es") tr("es", "", "Gamification") else "Gamification",
+                    subtitle = if (language == "de") "Trophäen & Level" else if (language == "ka") "ტროფები და სამკერდე ნიშნები" else if (language == "zh") "奖杯与成就勋章" else if (language == "es") tr("es", "", "Trophies & Badges") else "Trophies & Badges",
                     color = HabitYellow,
                     modifier = Modifier.weight(1.0f)
                 )
@@ -17780,22 +17780,22 @@ private fun OnboardingStepFinalLaunch(
                 ManifestoBulletPoint(
                     icon = Icons.Default.CheckCircle,
                     color = SuccessGreen,
-                    title = if (language == "de") "Kein Tracking, keine Werbung" else if (language == "ka") "არანაირი თვალთვალი, არანაირი რეკლამა" else if (language == "zh") "无追踪，零广告" else "No tracking, no advertisements",
-                    description = if (language == "de") "Absolut werbefrei und ohne versteckte Analysedienste." else if (language == "ka") "სრულიად ურეკლამო, ფარული თვალთვალის სერვისების გარეშე." else if (language == "zh") "完全无广告，且无任何隐藏追踪服务。" else "Completely ad-free without hidden tracking services."
+                    title = if (language == "de") "Kein Tracking, keine Werbung" else if (language == "ka") "არანაირი თვალთვალი, არანაირი რეკლამა" else if (language == "zh") "无追踪，零广告" else if (language == "es") tr("es", "", "No tracking, no advertisements") else "No tracking, no advertisements",
+                    description = if (language == "de") "Absolut werbefrei und ohne versteckte Analysedienste." else if (language == "ka") "სრულიად ურეკლამო, ფარული თვალთვალის სერვისების გარეშე." else if (language == "zh") "完全无广告，且无任何隐藏追踪服务。" else if (language == "es") tr("es", "", "Completely ad-free without hidden tracking services.") else "Completely ad-free without hidden tracking services."
                 )
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
                 ManifestoBulletPoint(
                     icon = Icons.Default.Security,
                     color = PrimaryViolet,
-                    title = if (language == "de") "Lokaler Speicherort" else if (language == "ka") "მკაცრად ადგილობრივი საცავი" else if (language == "zh") "严格本地离线存储" else "Strictly local storage",
-                    description = if (language == "de") "Alle Notizen und Daten verbleiben sicher auf deinem Gerät." else if (language == "ka") "ყველა ჩანაწერი და მეტრიკა მკაცრად რჩება თქვენს ტელეფონში." else if (language == "zh") "所有打卡数据与指标均严格保存在你的手机本地。" else "All entries and metrics remain strictly on your phone."
+                    title = if (language == "de") "Lokaler Speicherort" else if (language == "ka") "მკაცრად ადგილობრივი საცავი" else if (language == "zh") "严格本地离线存储" else if (language == "es") tr("es", "", "Strictly local storage") else "Strictly local storage",
+                    description = if (language == "de") "Alle Notizen und Daten verbleiben sicher auf deinem Gerät." else if (language == "ka") "ყველა ჩანაწერი და მეტრიკა მკაცრად რჩება თქვენს ტელეფონში." else if (language == "zh") "所有打卡数据与指标均严格保存在你的手机本地。" else if (language == "es") tr("es", "", "All entries and metrics remain strictly on your phone.") else "All entries and metrics remain strictly on your phone."
                 )
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
                 ManifestoBulletPoint(
                     icon = Icons.Default.VerifiedUser,
                     color = HabitBlue,
-                    title = if (language == "de") "Keine Registrierung erforderlich" else if (language == "ka") "რეგისტრაცია არ არის საჭირო" else if (language == "zh") "无需注册任何账号" else "No registration needed",
-                    description = if (language == "de") "Sofort loslegen – ganz ohne Konto oder Passwort." else if (language == "ka") "დაიწყეთ დაუყოვნებლივ - არ არის საჭირო ანგარიში ან შესვლა." else if (language == "zh") "即开即用——无需账户或繁琐密码。" else "Start immediately — no account or login required."
+                    title = if (language == "de") "Keine Registrierung erforderlich" else if (language == "ka") "რეგისტრაცია არ არის საჭირო" else if (language == "zh") "无需注册任何账号" else if (language == "es") tr("es", "", "No registration needed") else "No registration needed",
+                    description = if (language == "de") "Sofort loslegen – ganz ohne Konto oder Passwort." else if (language == "ka") "დაიწყეთ დაუყოვნებლივ - არ არის საჭირო ანგარიში ან შესვლა." else if (language == "zh") "即开即用——无需账户或繁琐密码。" else if (language == "es") tr("es", "", "Start immediately — no account or login required.") else "Start immediately — no account or login required."
                 )
             }
         }
@@ -18387,14 +18387,14 @@ fun calculateYearlyReviewData(
     val bestDayOfWeekEntry = completionsByDayOfWeek.maxByOrNull { it.value.size }
     val bestDayOfWeekNum = bestDayOfWeekEntry?.key ?: Calendar.MONDAY
     val bestDayOfWeekName = when (bestDayOfWeekNum) {
-        Calendar.SUNDAY -> if (language == "de") "Sonntag" else if (language == "ka") "კვირა" else if (language == "zh") "周日" else "Sunday"
-        Calendar.MONDAY -> if (language == "de") "Montag" else if (language == "ka") "ორშაბათი" else if (language == "zh") "周一" else "Monday"
-        Calendar.TUESDAY -> if (language == "de") "Dienstag" else if (language == "ka") "სამშაბათი" else if (language == "zh") "周二" else "Tuesday"
-        Calendar.WEDNESDAY -> if (language == "de") "Mittwoch" else if (language == "ka") "ოთხშაბათი" else if (language == "zh") "周三" else "Wednesday"
-        Calendar.THURSDAY -> if (language == "de") "Donnerstag" else if (language == "ka") "ხუთშაბათი" else if (language == "zh") "周四" else "Thursday"
-        Calendar.FRIDAY -> if (language == "de") "Freitag" else if (language == "ka") "პარასკევი" else if (language == "zh") "周五" else "Friday"
-        Calendar.SATURDAY -> if (language == "de") "Samstag" else if (language == "ka") "შაბათი" else if (language == "zh") "周六" else "Saturday"
-        else -> if (language == "de") "Montag" else if (language == "ka") "ორშაბათი" else if (language == "zh") "周一" else "Monday"
+        Calendar.SUNDAY -> if (language == "de") "Sonntag" else if (language == "ka") "კვირა" else if (language == "zh") "周日" else if (language == "es") tr("es", "", "Sunday") else "Sunday"
+        Calendar.MONDAY -> if (language == "de") "Montag" else if (language == "ka") "ორშაბათი" else if (language == "zh") "周一" else if (language == "es") tr("es", "", "Monday") else "Monday"
+        Calendar.TUESDAY -> if (language == "de") "Dienstag" else if (language == "ka") "სამშაბათი" else if (language == "zh") "周二" else if (language == "es") tr("es", "", "Tuesday") else "Tuesday"
+        Calendar.WEDNESDAY -> if (language == "de") "Mittwoch" else if (language == "ka") "ოთხშაბათი" else if (language == "zh") "周三" else if (language == "es") tr("es", "", "Wednesday") else "Wednesday"
+        Calendar.THURSDAY -> if (language == "de") "Donnerstag" else if (language == "ka") "ხუთშაბათი" else if (language == "zh") "周四" else if (language == "es") tr("es", "", "Thursday") else "Thursday"
+        Calendar.FRIDAY -> if (language == "de") "Freitag" else if (language == "ka") "პარასკევი" else if (language == "zh") "周五" else if (language == "es") tr("es", "", "Friday") else "Friday"
+        Calendar.SATURDAY -> if (language == "de") "Samstag" else if (language == "ka") "შაბათი" else if (language == "zh") "周六" else if (language == "es") tr("es", "", "Saturday") else "Saturday"
+        else -> if (language == "de") "Montag" else if (language == "ka") "ორშაბათი" else if (language == "zh") "周一" else if (language == "es") tr("es", "", "Monday") else "Monday"
     }
     val bestDayOfWeekCompletions = bestDayOfWeekEntry?.value?.size ?: 0
 
@@ -18534,7 +18534,7 @@ fun ReviewArchiveDialog(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = if (language == "de") "Deine Rückblicke" else if (language == "ka") "თქვენი მიმოხილვები" else if (language == "zh") "你的回顾" else "Your Reviews",
+                    text = if (language == "de") "Deine Rückblicke" else if (language == "ka") "თქვენი მიმოხილვები" else if (language == "zh") "你的回顾" else if (language == "es") tr("es", "", "Your Reviews") else "Your Reviews",
                     style = MaterialTheme.typography.titleLarge,
                     color = TextPrimary,
                     fontWeight = FontWeight.Bold
@@ -18560,8 +18560,8 @@ fun ReviewArchiveDialog(
                 onTimeframeSelected = { selectedTabIndex = it },
                 language = language,
                 customLabels = listOf(
-                    if (language == "de") "Monatlich (${availableMonths.size})" else if (language == "ka") "ყოველთვიური (${availableMonths.size})" else if (language == "zh") "月度回顾 (${availableMonths.size})" else "Monthly (${availableMonths.size})",
-                    if (language == "de") "Jährlich (${availableYears.size})" else if (language == "ka") "ყოველწლიურად (${availableYears.size})" else if (language == "zh") "年度回顾 (${availableYears.size})" else "Yearly (${availableYears.size})"
+                    if (language == "de") "Monatlich (${availableMonths.size})" else if (language == "ka") "ყოველთვიური (${availableMonths.size})" else if (language == "zh") "月度回顾 (${availableMonths.size})" else if (language == "es") tr("es", "", "Monthly (${availableMonths.size})") else "Monthly (${availableMonths.size})",
+                    if (language == "de") "Jährlich (${availableYears.size})" else if (language == "ka") "ყოველწლიურად (${availableYears.size})" else if (language == "zh") "年度回顾 (${availableYears.size})" else if (language == "es") tr("es", "", "Yearly (${availableYears.size})") else "Yearly (${availableYears.size})"
                 )
             )
 
@@ -18577,7 +18577,7 @@ fun ReviewArchiveDialog(
                         if (availableMonths.isEmpty()) {
                             item {
                                 Text(
-                                    text = if (language == "de") "Noch keine Monatsrückblicke verfügbar." else if (language == "ka") "ყოველთვიური მიმოხილვები ჯერ არ არის ხელმისაწვდომი." else if (language == "zh") "暂无月度回顾。" else "No monthly reviews available yet.",
+                                    text = if (language == "de") "Noch keine Monatsrückblicke verfügbar." else if (language == "ka") "ყოველთვიური მიმოხილვები ჯერ არ არის ხელმისაწვდომი." else if (language == "zh") "暂无月度回顾。" else if (language == "es") tr("es", "", "No monthly reviews available yet.") else "No monthly reviews available yet.",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = TextSecondary,
                                     modifier = Modifier.padding(vertical = 16.dp)
@@ -18587,18 +18587,18 @@ fun ReviewArchiveDialog(
                             items(availableMonths) { (y, m) ->
                                 val monthLogsCount = calculateMonthlyReviewData(y, m, allHabits, allLogs, language).totalCompletions
                                 val mName = when (m) {
-                                    1 -> if (language == "de") "Januar" else if (language == "ka") "იანვარი" else if (language == "zh") "1月" else "January"
-                                    2 -> if (language == "de") "Februar" else if (language == "ka") "თებერვალი" else if (language == "zh") "2月" else "February"
-                                    3 -> if (language == "de") "März" else if (language == "ka") "მარტი" else if (language == "zh") "3月" else "March"
-                                    4 -> if (language == "de") "April" else if (language == "ka") "აპრილი" else if (language == "zh") "4月" else "April"
-                                    5 -> if (language == "de") "Mai" else if (language == "ka") "მაისი" else if (language == "zh") "5月" else "May"
-                                    6 -> if (language == "de") "Juni" else if (language == "ka") "ივნისი" else if (language == "zh") "6月" else "June"
-                                    7 -> if (language == "de") "Juli" else if (language == "ka") "ივლისი" else if (language == "zh") "7月" else "July"
-                                    8 -> if (language == "de") "August" else if (language == "ka") "აგვისტო" else if (language == "zh") "8月" else "August"
-                                    9 -> if (language == "de") "September" else if (language == "ka") "სექტემბერი" else if (language == "zh") "9月" else "September"
-                                    10 -> if (language == "de") "Oktober" else if (language == "ka") "ოქტომბერი" else if (language == "zh") "10月" else "October"
-                                    11 -> if (language == "de") "November" else if (language == "ka") "ნოემბერი" else if (language == "zh") "11月" else "November"
-                                    else -> if (language == "de") "Dezember" else if (language == "ka") "დეკემბერი" else if (language == "zh") "12月" else "December"
+                                    1 -> if (language == "de") "Januar" else if (language == "ka") "იანვარი" else if (language == "zh") "1月" else if (language == "es") tr("es", "", "January") else "January"
+                                    2 -> if (language == "de") "Februar" else if (language == "ka") "თებერვალი" else if (language == "zh") "2月" else if (language == "es") tr("es", "", "February") else "February"
+                                    3 -> if (language == "de") "März" else if (language == "ka") "მარტი" else if (language == "zh") "3月" else if (language == "es") tr("es", "", "March") else "March"
+                                    4 -> if (language == "de") "April" else if (language == "ka") "აპრილი" else if (language == "zh") "4月" else if (language == "es") tr("es", "", "April") else "April"
+                                    5 -> if (language == "de") "Mai" else if (language == "ka") "მაისი" else if (language == "zh") "5月" else if (language == "es") tr("es", "", "May") else "May"
+                                    6 -> if (language == "de") "Juni" else if (language == "ka") "ივნისი" else if (language == "zh") "6月" else if (language == "es") tr("es", "", "June") else "June"
+                                    7 -> if (language == "de") "Juli" else if (language == "ka") "ივლისი" else if (language == "zh") "7月" else if (language == "es") tr("es", "", "July") else "July"
+                                    8 -> if (language == "de") "August" else if (language == "ka") "აგვისტო" else if (language == "zh") "8月" else if (language == "es") tr("es", "", "August") else "August"
+                                    9 -> if (language == "de") "September" else if (language == "ka") "სექტემბერი" else if (language == "zh") "9月" else if (language == "es") tr("es", "", "September") else "September"
+                                    10 -> if (language == "de") "Oktober" else if (language == "ka") "ოქტომბერი" else if (language == "zh") "10月" else if (language == "es") tr("es", "", "October") else "October"
+                                    11 -> if (language == "de") "November" else if (language == "ka") "ნოემბერი" else if (language == "zh") "11月" else if (language == "es") tr("es", "", "November") else "November"
+                                    else -> if (language == "de") "Dezember" else if (language == "ka") "დეკემბერი" else if (language == "zh") "12月" else if (language == "es") tr("es", "", "December") else "December"
                                 }
                                 Surface(
                                     modifier = Modifier
@@ -18630,13 +18630,13 @@ fun ReviewArchiveDialog(
                                             Spacer(modifier = Modifier.width(10.dp))
                                             Column {
                                                 Text(
-                                                    text = if (language == "de") "Rückblick $mName $y" else if (language == "ka") "მიმოხილვა $mName $y" else if (language == "zh") "$y 年 $mName 回顾" else "Review $mName $y",
+                                                    text = if (language == "de") "Rückblick $mName $y" else if (language == "ka") "მიმოხილვა $mName $y" else if (language == "zh") "$y 年 $mName 回顾" else if (language == "es") tr("es", "", "Review $mName $y") else "Review $mName $y",
                                                     style = MaterialTheme.typography.titleSmall,
                                                     color = TextPrimary,
                                                     fontWeight = FontWeight.Bold
                                                 )
                                                 Text(
-                                                    text = "$monthLogsCount " + (if (language == "de") "Abschlüsse" else if (language == "ka") "დასრულებები" else if (language == "zh") "完成次数" else "completions"),
+                                                    text = "$monthLogsCount " + (if (language == "de") "Abschlüsse" else if (language == "ka") "დასრულებები" else if (language == "zh") "完成次数" else if (language == "es") tr("es", "", "completions") else "completions"),
                                                     style = MaterialTheme.typography.labelSmall,
                                                     color = TextSecondary
                                                 )
@@ -18656,7 +18656,7 @@ fun ReviewArchiveDialog(
                         if (availableYears.isEmpty()) {
                             item {
                                 Text(
-                                    text = if (language == "de") "Noch keine Jahresrückblicke verfügbar." else if (language == "ka") "ჯერ არ არის ხელმისაწვდომი წლიური მიმოხილვები." else if (language == "zh") "暂无年度回顾。" else "No yearly reviews available yet.",
+                                    text = if (language == "de") "Noch keine Jahresrückblicke verfügbar." else if (language == "ka") "ჯერ არ არის ხელმისაწვდომი წლიური მიმოხილვები." else if (language == "zh") "暂无年度回顾。" else if (language == "es") tr("es", "", "No yearly reviews available yet.") else "No yearly reviews available yet.",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = TextSecondary,
                                     modifier = Modifier.padding(vertical = 16.dp)
@@ -18695,13 +18695,13 @@ fun ReviewArchiveDialog(
                                             Spacer(modifier = Modifier.width(10.dp))
                                             Column {
                                                 Text(
-                                                    text = if (language == "de") "Jahresrückblick $y" else if (language == "ka") "$y წელი მიმოხილვა" else if (language == "zh") "$y 年度回顾" else "$y Year in Review",
+                                                    text = if (language == "de") "Jahresrückblick $y" else if (language == "ka") "$y წელი მიმოხილვა" else if (language == "zh") "$y 年度回顾" else if (language == "es") tr("es", "", "$y Year in Review") else "$y Year in Review",
                                                     style = MaterialTheme.typography.titleSmall,
                                                     color = TextPrimary,
                                                     fontWeight = FontWeight.Bold
                                                 )
                                                 Text(
-                                                    text = "$yearLogsCount " + (if (language == "de") "Abschlüsse" else if (language == "ka") "დასრულებები" else if (language == "zh") "完成次数" else "completions"),
+                                                    text = "$yearLogsCount " + (if (language == "de") "Abschlüsse" else if (language == "ka") "დასრულებები" else if (language == "zh") "完成次数" else if (language == "es") tr("es", "", "completions") else "completions"),
                                                     style = MaterialTheme.typography.labelSmall,
                                                     color = TextSecondary
                                                 )
@@ -18853,9 +18853,9 @@ fun YearlyReviewDialog(
                         ) {
                             Text(
                                 text = if (isLastPage) {
-                                    if (language == "de") "Fertig" else if (language == "ka") "დასრულება" else if (language == "zh") "完成" else "Finish"
+                                    if (language == "de") "Fertig" else if (language == "ka") "დასრულება" else if (language == "zh") "完成" else if (language == "es") tr("es", "", "Finish") else "Finish"
                                 } else {
-                                    if (language == "de") "Weiter" else if (language == "ka") "შემდეგი" else if (language == "zh") "下一步" else "Next"
+                                    if (language == "de") "Weiter" else if (language == "ka") "შემდეგი" else if (language == "zh") "下一步" else if (language == "es") tr("es", "", "Next") else "Next"
                                 },
                                 fontWeight = FontWeight.Bold,
                                 style = MaterialTheme.typography.titleMedium
@@ -18916,7 +18916,7 @@ fun YearlyReviewCoverSlide(year: Int, language: String, reviewData: YearlyReview
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = if (language == "de") "Dein Jahresrückblick $year" else if (language == "ka") "თქვენი $year მიმოხილვა" else if (language == "zh") "你的 $year 年度回顾" else "Your $year Review",
+            text = if (language == "de") "Dein Jahresrückblick $year" else if (language == "ka") "თქვენი $year მიმოხილვა" else if (language == "zh") "你的 $year 年度回顾" else if (language == "es") tr("es", "", "Your $year Review") else "Your $year Review",
             style = MaterialTheme.typography.headlineLarge,
             color = Color.White,
             fontWeight = FontWeight.ExtraBold,
@@ -18926,7 +18926,7 @@ fun YearlyReviewCoverSlide(year: Int, language: String, reviewData: YearlyReview
         Spacer(modifier = Modifier.height(12.dp))
 
         Text(
-            text = if (language == "de") "Ein Jahr voller Gewohnheiten, Erfolge und persönlichem Wachstum. Lass uns deine Meilensteine feiern!" else if (language == "ka") "ჩვევების, მიღწევებისა და პიროვნული ზრდის წელიწადი. მოდით აღვნიშნოთ თქვენი ეტაპები!" else if (language == "zh") "充满自律、成就与个人成长的一年。让我们共同庆祝你的里程碑！" else "A year of habits, achievements, and personal growth. Let's celebrate your milestones!",
+            text = if (language == "de") "Ein Jahr voller Gewohnheiten, Erfolge und persönlichem Wachstum. Lass uns deine Meilensteine feiern!" else if (language == "ka") "ჩვევების, მიღწევებისა და პიროვნული ზრდის წელიწადი. მოდით აღვნიშნოთ თქვენი ეტაპები!" else if (language == "zh") "充满自律、成就与个人成长的一年。让我们共同庆祝你的里程碑！" else if (language == "es") tr("es", "", "A year of habits, achievements, and personal growth. Let's celebrate your milestones!") else "A year of habits, achievements, and personal growth. Let's celebrate your milestones!",
             style = MaterialTheme.typography.bodyLarge,
             color = Color.White.copy(alpha = 0.8f),
             textAlign = TextAlign.Center
@@ -18944,7 +18944,7 @@ fun YearlyReviewVolumeSlide(year: Int, language: String, reviewData: YearlyRevie
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = if (language == "de") "Dein Einsatz in $year" else if (language == "ka") "თქვენი თავდადება $year -ში" else if (language == "zh") "你在 $year 年的全情投入" else "Your Dedication in $year",
+            text = if (language == "de") "Dein Einsatz in $year" else if (language == "ka") "თქვენი თავდადება $year -ში" else if (language == "zh") "你在 $year 年的全情投入" else if (language == "es") tr("es", "", "Your Dedication in $year") else "Your Dedication in $year",
             style = MaterialTheme.typography.headlineMedium,
             color = Color.White,
             fontWeight = FontWeight.Bold,
@@ -18980,13 +18980,13 @@ fun YearlyReviewVolumeSlide(year: Int, language: String, reviewData: YearlyRevie
                 Spacer(modifier = Modifier.width(14.dp))
                 Column {
                     Text(
-                        text = "${reviewData.totalCompletions} ${if (language == "de") "Abschlüsse" else if (language == "ka") "დასრულება" else if (language == "zh") "完成次数" else "Completions"}",
+                        text = "${reviewData.totalCompletions} ${if (language == "de") "Abschlüsse" else if (language == "ka") "დასრულება" else if (language == "zh") "完成次数" else if (language == "es") tr("es", "", "Completions") else "Completions"}",
                         style = MaterialTheme.typography.titleLarge,
                         color = Color.White,
                         fontWeight = FontWeight.ExtraBold
                     )
                     Text(
-                        text = if (language == "de") "Erfüllte Gewohnheiten insgesamt" else if (language == "ka") "სულ დასრულებული ჩვევები" else if (language == "zh") "累计完成习惯" else "Total habits completed",
+                        text = if (language == "de") "Erfüllte Gewohnheiten insgesamt" else if (language == "ka") "სულ დასრულებული ჩვევები" else if (language == "zh") "累计完成习惯" else if (language == "es") tr("es", "", "Total habits completed") else "Total habits completed",
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.White.copy(alpha = 0.8f)
                     )
@@ -19023,13 +19023,13 @@ fun YearlyReviewVolumeSlide(year: Int, language: String, reviewData: YearlyRevie
                 Spacer(modifier = Modifier.width(14.dp))
                 Column {
                     Text(
-                        text = "${reviewData.totalCheckIns} ${if (language == "de") "Check-ins insgesamt" else if (language == "ka") "სულ ჩექინები" else if (language == "zh") "累计打卡次数" else "Total Check-ins"}",
+                        text = "${reviewData.totalCheckIns} ${if (language == "de") "Check-ins insgesamt" else if (language == "ka") "სულ ჩექინები" else if (language == "zh") "累计打卡次数" else if (language == "es") tr("es", "", "Total Check-ins") else "Total Check-ins"}",
                         style = MaterialTheme.typography.titleLarge,
                         color = Color.White,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = if (language == "de") "Erfasste Einträge & Fortschritte in diesem Jahr" else if (language == "ka") "ამ წელს ჩაწერილი ჩანაწერები და პროგრესი" else if (language == "zh") "本年度记录的打卡与进度" else "Logged entries & progress this year",
+                        text = if (language == "de") "Erfasste Einträge & Fortschritte in diesem Jahr" else if (language == "ka") "ამ წელს ჩაწერილი ჩანაწერები და პროგრესი" else if (language == "zh") "本年度记录的打卡与进度" else if (language == "es") tr("es", "", "Logged entries & progress this year") else "Logged entries & progress this year",
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.White.copy(alpha = 0.8f)
                     )
@@ -19066,13 +19066,13 @@ fun YearlyReviewVolumeSlide(year: Int, language: String, reviewData: YearlyRevie
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
                     Text(
-                        text = "${reviewData.activeDaysCount} ${if (language == "de") "Tage" else if (language == "ka") "დღეები" else if (language == "zh") "天" else "Days"}",
+                        text = "${reviewData.activeDaysCount} ${if (language == "de") "Tage" else if (language == "ka") "დღეები" else if (language == "zh") "天" else if (language == "es") tr("es", "", "Days") else "Days"}",
                         style = MaterialTheme.typography.headlineMedium,
                         color = Color.White,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = if (language == "de") "${reviewData.activeDaysPercentage}% aller Tage in $year aktiv gewesen" else if (language == "ka") "აქტიურია ${reviewData.activeDaysPercentage} დღეების % $year -ში" else if (language == "zh") "在 $year 年中活跃了 ${reviewData.activeDaysPercentage}% 的天数" else "Active on ${reviewData.activeDaysPercentage}% of days in $year",
+                        text = if (language == "de") "${reviewData.activeDaysPercentage}% aller Tage in $year aktiv gewesen" else if (language == "ka") "აქტიურია ${reviewData.activeDaysPercentage} დღეების % $year -ში" else if (language == "zh") "在 $year 年中活跃了 ${reviewData.activeDaysPercentage}% 的天数" else if (language == "es") tr("es", "", "Active on ${reviewData.activeDaysPercentage}% of days in $year") else "Active on ${reviewData.activeDaysPercentage}% of days in $year",
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.White.copy(alpha = 0.8f)
                     )
@@ -19109,13 +19109,13 @@ fun YearlyReviewVolumeSlide(year: Int, language: String, reviewData: YearlyRevie
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
                     Text(
-                        text = "${reviewData.perfectDaysCount} ${if (language == "de") "Perfekte Tage" else if (language == "ka") "იდეალური დღეები" else if (language == "zh") "完美天数" else "Perfect Days"}",
+                        text = "${reviewData.perfectDaysCount} ${if (language == "de") "Perfekte Tage" else if (language == "ka") "იდეალური დღეები" else if (language == "zh") "完美天数" else if (language == "es") tr("es", "", "Perfect Days") else "Perfect Days"}",
                         style = MaterialTheme.typography.headlineMedium,
                         color = Color.White,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = if (language == "de") "100% aller Gewohnheiten an diesen Tagen abgeschlossen" else if (language == "ka") "ყველა ჩვევა დასრულებულია ამ დღეებში" else if (language == "zh") "这些天内所有习惯全部完成" else "All habits completed on these days",
+                        text = if (language == "de") "100% aller Gewohnheiten an diesen Tagen abgeschlossen" else if (language == "ka") "ყველა ჩვევა დასრულებულია ამ დღეებში" else if (language == "zh") "这些天内所有习惯全部完成" else if (language == "es") tr("es", "", "All habits completed on these days") else "All habits completed on these days",
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.White.copy(alpha = 0.8f)
                     )
@@ -19135,7 +19135,7 @@ fun YearlyReviewTopHabitSlide(year: Int, language: String, reviewData: YearlyRev
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "⭐ " + (if (language == "de") "Star-Gewohnheit $year" else if (language == "ka") "$year ვარსკვლავის ჩვევა" else if (language == "zh") "$year 年度明星习惯" else "$year Star Habit"),
+            text = "⭐ " + (if (language == "de") "Star-Gewohnheit $year" else if (language == "ka") "$year ვარსკვლავის ჩვევა" else if (language == "zh") "$year 年度明星习惯" else if (language == "es") tr("es", "", "$year Star Habit") else "$year Star Habit"),
             style = MaterialTheme.typography.headlineMedium,
             color = Color.White,
             fontWeight = FontWeight.Bold,
@@ -19143,7 +19143,7 @@ fun YearlyReviewTopHabitSlide(year: Int, language: String, reviewData: YearlyRev
         )
 
         Text(
-            text = if (language == "de") "Deine beständigste und erfolgreichste Gewohnheit" else if (language == "ka") "თქვენი ყველაზე თანმიმდევრული და დასრულებული ჩვევა" else if (language == "zh") "你最持之以恒、完成率最高的习惯" else "Your most consistent and completed habit",
+            text = if (language == "de") "Deine beständigste und erfolgreichste Gewohnheit" else if (language == "ka") "თქვენი ყველაზე თანმიმდევრული და დასრულებული ჩვევა" else if (language == "zh") "你最持之以恒、完成率最高的习惯" else if (language == "es") tr("es", "", "Your most consistent and completed habit") else "Your most consistent and completed habit",
             style = MaterialTheme.typography.bodyMedium,
             color = Color.White.copy(alpha = 0.8f),
             textAlign = TextAlign.Center,
@@ -19198,7 +19198,7 @@ fun YearlyReviewTopHabitSlide(year: Int, language: String, reviewData: YearlyRev
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
-                            text = "${reviewData.topHabitCompletions} " + (if (language == "de") "Abschlüsse in $year" else if (language == "ka") "დასრულებები $year -ში" else if (language == "zh") "$year 年累计完成" else "Completions in $year"),
+                            text = "${reviewData.topHabitCompletions} " + (if (language == "de") "Abschlüsse in $year" else if (language == "ka") "დასრულებები $year -ში" else if (language == "zh") "$year 年累计完成" else if (language == "es") tr("es", "", "Completions in $year") else "Completions in $year"),
                             style = MaterialTheme.typography.titleMedium,
                             color = Color.White,
                             fontWeight = FontWeight.Bold,
@@ -19209,7 +19209,7 @@ fun YearlyReviewTopHabitSlide(year: Int, language: String, reviewData: YearlyRev
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        text = if (language == "de") "Du hast hier herausragende Disziplin gezeigt! Behalte diesen Schwung bei." else if (language == "ka") "აქ გამორჩეული დისციპლინა გამოავლინეთ! გააგრძელე ეს საოცარი იმპულსი." else if (language == "zh") "你在这里展现了非凡的自律！继续保持这股强劲势头。" else "You showed outstanding discipline here! Keep up this amazing momentum.",
+                        text = if (language == "de") "Du hast hier herausragende Disziplin gezeigt! Behalte diesen Schwung bei." else if (language == "ka") "აქ გამორჩეული დისციპლინა გამოავლინეთ! გააგრძელე ეს საოცარი იმპულსი." else if (language == "zh") "你在这里展现了非凡的自律！继续保持这股强劲势头。" else if (language == "es") tr("es", "", "You showed outstanding discipline here! Keep up this amazing momentum.") else "You showed outstanding discipline here! Keep up this amazing momentum.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.White.copy(alpha = 0.85f),
                         textAlign = TextAlign.Center
@@ -19223,7 +19223,7 @@ fun YearlyReviewTopHabitSlide(year: Int, language: String, reviewData: YearlyRev
                 shape = RoundedCornerShape(20.dp)
             ) {
                 Text(
-                    text = if (language == "de") "Noch keine ausreichenden Daten für $year." else if (language == "ka") "$year -სთვის ჩვევების მონაცემები ჯერ არ არის ხელმისაწვდომი." else if (language == "zh") "暂无 $year 年度的习惯数据。" else "No habit data available for $year yet.",
+                    text = if (language == "de") "Noch keine ausreichenden Daten für $year." else if (language == "ka") "$year -სთვის ჩვევების მონაცემები ჯერ არ არის ხელმისაწვდომი." else if (language == "zh") "暂无 $year 年度的习惯数据。" else if (language == "es") tr("es", "", "No habit data available for $year yet.") else "No habit data available for $year yet.",
                     style = MaterialTheme.typography.bodyLarge,
                     color = Color.White,
                     modifier = Modifier.padding(24.dp),
@@ -19244,7 +19244,7 @@ fun YearlyReviewGrowthSlide(year: Int, language: String, reviewData: YearlyRevie
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "🌱 " + (if (language == "de") "Wachstumsfeld" else if (language == "ka") "ზრდის ზონა" else if (language == "zh") "成长潜力区" else "Growth Area"),
+            text = "🌱 " + (if (language == "de") "Wachstumsfeld" else if (language == "ka") "ზრდის ზონა" else if (language == "zh") "成长潜力区" else if (language == "es") tr("es", "", "Growth Area") else "Growth Area"),
             style = MaterialTheme.typography.headlineMedium,
             color = Color.White,
             fontWeight = FontWeight.Bold,
@@ -19252,7 +19252,7 @@ fun YearlyReviewGrowthSlide(year: Int, language: String, reviewData: YearlyRevie
         )
 
         Text(
-            text = if (language == "de") "Hier schlummert großes Potenzial für das neue Jahr ${year + 1}" else if (language == "ka") "დიდი პოტენციალი გელოდებათ ${year + 1} -ში" else if (language == "zh") "在 ${year + 1} 年中等待释放的巨大潜力" else "Great potential waiting for you in ${year + 1}",
+            text = if (language == "de") "Hier schlummert großes Potenzial für das neue Jahr ${year + 1}" else if (language == "ka") "დიდი პოტენციალი გელოდებათ ${year + 1} -ში" else if (language == "zh") "在 ${year + 1} 年中等待释放的巨大潜力" else if (language == "es") tr("es", "", "Great potential waiting for you in ${year + 1}") else "Great potential waiting for you in ${year + 1}",
             style = MaterialTheme.typography.bodyMedium,
             color = Color.White.copy(alpha = 0.8f),
             textAlign = TextAlign.Center,
@@ -19303,7 +19303,7 @@ fun YearlyReviewGrowthSlide(year: Int, language: String, reviewData: YearlyRevie
                     Spacer(modifier = Modifier.height(12.dp))
 
                     Text(
-                        text = "${reviewData.growthHabitCompletions} " + (if (language == "de") "Abschlüsse in $year" else if (language == "ka") "დასრულებები $year -ში" else if (language == "zh") "$year 年累计完成" else "Completions in $year"),
+                        text = "${reviewData.growthHabitCompletions} " + (if (language == "de") "Abschlüsse in $year" else if (language == "ka") "დასრულებები $year -ში" else if (language == "zh") "$year 年累计完成" else if (language == "es") tr("es", "", "Completions in $year") else "Completions in $year"),
                         style = MaterialTheme.typography.titleMedium,
                         color = Color(0xFFFCD34D),
                         fontWeight = FontWeight.Bold
@@ -19312,7 +19312,7 @@ fun YearlyReviewGrowthSlide(year: Int, language: String, reviewData: YearlyRevie
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        text = if (language == "de") "Setze dir für ${year + 1} kleine, machbare Schritte, um diese Gewohnheit auf das nächste Level zu heben!" else if (language == "ka") "დააყენეთ მცირე, ქმედითი ნაბიჯები ${year + 1} -სთვის, რომ ეს ჩვევა შემდეგ დონეზე გადაიზარდოს!" else if (language == "zh") "为 ${year + 1} 年设定切实可行的小步骤，让这个习惯更上一层楼！" else "Set small, actionable steps for ${year + 1} to take this habit to the next level!",
+                        text = if (language == "de") "Setze dir für ${year + 1} kleine, machbare Schritte, um diese Gewohnheit auf das nächste Level zu heben!" else if (language == "ka") "დააყენეთ მცირე, ქმედითი ნაბიჯები ${year + 1} -სთვის, რომ ეს ჩვევა შემდეგ დონეზე გადაიზარდოს!" else if (language == "zh") "为 ${year + 1} 年设定切实可行的小步骤，让这个习惯更上一层楼！" else if (language == "es") tr("es", "", "Set small, actionable steps for ${year + 1} to take this habit to the next level!") else "Set small, actionable steps for ${year + 1} to take this habit to the next level!",
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.White.copy(alpha = 0.85f),
                         textAlign = TextAlign.Center
@@ -19326,7 +19326,7 @@ fun YearlyReviewGrowthSlide(year: Int, language: String, reviewData: YearlyRevie
                 shape = RoundedCornerShape(20.dp)
             ) {
                 Text(
-                    text = if (language == "de") "Du liegst bei allen deinen Gewohnheiten voll im Plan! Super!" else if (language == "ka") "თქვენ ანადგურებთ ყველა თქვენს ჩვევას! დიდი სამუშაო!" else if (language == "zh") "你的所有习惯都在完美推进中！太棒了！" else "You are crushing all your habits! Great job!",
+                    text = if (language == "de") "Du liegst bei allen deinen Gewohnheiten voll im Plan! Super!" else if (language == "ka") "თქვენ ანადგურებთ ყველა თქვენს ჩვევას! დიდი სამუშაო!" else if (language == "zh") "你的所有习惯都在完美推进中！太棒了！" else if (language == "es") tr("es", "", "You are crushing all your habits! Great job!") else "You are crushing all your habits! Great job!",
                     style = MaterialTheme.typography.bodyLarge,
                     color = Color.White,
                     modifier = Modifier.padding(24.dp),
@@ -19347,7 +19347,7 @@ fun YearlyReviewPeakMomentsSlide(year: Int, language: String, reviewData: Yearly
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "📅 " + (if (language == "de") "Höhepunkte & Muster" else if (language == "ka") "პიკის მომენტები და შაბლონები" else if (language == "zh") "高光时刻与模式分析" else "Peak Moments & Patterns"),
+            text = "📅 " + (if (language == "de") "Höhepunkte & Muster" else if (language == "ka") "პიკის მომენტები და შაბლონები" else if (language == "zh") "高光时刻与模式分析" else if (language == "es") tr("es", "", "Peak Moments & Patterns") else "Peak Moments & Patterns"),
             style = MaterialTheme.typography.headlineMedium,
             color = Color.White,
             fontWeight = FontWeight.Bold,
@@ -19355,7 +19355,7 @@ fun YearlyReviewPeakMomentsSlide(year: Int, language: String, reviewData: Yearly
         )
 
         Text(
-            text = if (language == "de") "Deine stärksten Zeiten im Jahr $year" else if (language == "ka") "თქვენი ყველაზე პროდუქტიული დრო $year -ში" else if (language == "zh") "$year 年中你最具成效的时光" else "Your most productive times in $year",
+            text = if (language == "de") "Deine stärksten Zeiten im Jahr $year" else if (language == "ka") "თქვენი ყველაზე პროდუქტიული დრო $year -ში" else if (language == "zh") "$year 年中你最具成效的时光" else if (language == "es") tr("es", "", "Your most productive times in $year") else "Your most productive times in $year",
             style = MaterialTheme.typography.bodyMedium,
             color = Color.White.copy(alpha = 0.8f),
             textAlign = TextAlign.Center,
@@ -19391,7 +19391,7 @@ fun YearlyReviewPeakMomentsSlide(year: Int, language: String, reviewData: Yearly
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
                     Text(
-                        text = if (language == "de") "Stärkster Monat" else if (language == "ka") "ტოპ თვე" else if (language == "zh") "最佳月份" else "Top Month",
+                        text = if (language == "de") "Stärkster Monat" else if (language == "ka") "ტოპ თვე" else if (language == "zh") "最佳月份" else if (language == "es") tr("es", "", "Top Month") else "Top Month",
                         style = MaterialTheme.typography.labelMedium,
                         color = Color.White.copy(alpha = 0.7f)
                     )
@@ -19402,7 +19402,7 @@ fun YearlyReviewPeakMomentsSlide(year: Int, language: String, reviewData: Yearly
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "${reviewData.bestMonthCompletions} " + (if (language == "de") "Abschlüsse in diesem Monat 🚀" else if (language == "ka") "დასრულებები ამ თვეში 🚀" else if (language == "zh") "本月累计完成 🚀" else "Completions in this month 🚀"),
+                        text = "${reviewData.bestMonthCompletions} " + (if (language == "de") "Abschlüsse in diesem Monat 🚀" else if (language == "ka") "დასრულებები ამ თვეში 🚀" else if (language == "zh") "本月累计完成 🚀" else if (language == "es") tr("es", "", "Completions in this month 🚀") else "Completions in this month 🚀"),
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.White.copy(alpha = 0.85f)
                     )
@@ -19439,7 +19439,7 @@ fun YearlyReviewPeakMomentsSlide(year: Int, language: String, reviewData: Yearly
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
                     Text(
-                        text = if (language == "de") "Produktivster Wochentag" else if (language == "ka") "ყველაზე პროდუქტიული დღე" else if (language == "zh") "最高效的一天" else "Most Productive Day",
+                        text = if (language == "de") "Produktivster Wochentag" else if (language == "ka") "ყველაზე პროდუქტიული დღე" else if (language == "zh") "最高效的一天" else if (language == "es") tr("es", "", "Most Productive Day") else "Most Productive Day",
                         style = MaterialTheme.typography.labelMedium,
                         color = Color.White.copy(alpha = 0.7f)
                     )
@@ -19450,7 +19450,7 @@ fun YearlyReviewPeakMomentsSlide(year: Int, language: String, reviewData: Yearly
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "${reviewData.bestDayOfWeekCompletions} " + (if (language == "de") "Abschlüsse an diesem Wochentag ⚡" else if (language == "ka") "დასრულებები ამ სამუშაო დღეს ⚡" else if (language == "zh") "该星期的累计完成次数 ⚡" else "Completions on this weekday ⚡"),
+                        text = "${reviewData.bestDayOfWeekCompletions} " + (if (language == "de") "Abschlüsse an diesem Wochentag ⚡" else if (language == "ka") "დასრულებები ამ სამუშაო დღეს ⚡" else if (language == "zh") "该星期的累计完成次数 ⚡" else if (language == "es") tr("es", "", "Completions on this weekday ⚡") else "Completions on this weekday ⚡"),
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.White.copy(alpha = 0.85f)
                     )
@@ -19492,7 +19492,7 @@ fun YearlyReviewSummarySlide(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = if (language == "de") "Zusammenfassung $year" else if (language == "ka") "$year რეზიუმე" else if (language == "zh") "$year 年度总结" else "$year Summary",
+            text = if (language == "de") "Zusammenfassung $year" else if (language == "ka") "$year რეზიუმე" else if (language == "zh") "$year 年度总结" else if (language == "es") tr("es", "", "$year Summary") else "$year Summary",
             style = MaterialTheme.typography.headlineMedium,
             color = Color.White,
             fontWeight = FontWeight.Bold,
@@ -19516,7 +19516,7 @@ fun YearlyReviewSummarySlide(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = if (language == "de") "Gesamt-Abschlüsse:" else if (language == "ka") "სრული დასრულებები:" else if (language == "zh") "累计完成：" else "Total Completions:",
+                        text = if (language == "de") "Gesamt-Abschlüsse:" else if (language == "ka") "სრული დასრულებები:" else if (language == "zh") "累计完成：" else if (language == "es") tr("es", "", "Total Completions:") else "Total Completions:",
                         color = Color.White.copy(alpha = 0.8f),
                         style = MaterialTheme.typography.bodyMedium
                     )
@@ -19533,7 +19533,7 @@ fun YearlyReviewSummarySlide(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = if (language == "de") "Aktive Tage:" else if (language == "ka") "აქტიური დღეები:" else if (language == "zh") "活跃天数：" else "Active Days:",
+                        text = if (language == "de") "Aktive Tage:" else if (language == "ka") "აქტიური დღეები:" else if (language == "zh") "活跃天数：" else if (language == "es") tr("es", "", "Active Days:") else "Active Days:",
                         color = Color.White.copy(alpha = 0.8f),
                         style = MaterialTheme.typography.bodyMedium
                     )
@@ -19552,7 +19552,7 @@ fun YearlyReviewSummarySlide(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = if (language == "de") "Top Gewohnheit:" else if (language == "ka") "მთავარი ჩვევა:" else if (language == "zh") "最佳习惯：" else "Top Habit:",
+                            text = if (language == "de") "Top Gewohnheit:" else if (language == "ka") "მთავარი ჩვევა:" else if (language == "zh") "最佳习惯：" else if (language == "es") tr("es", "", "Top Habit:") else "Top Habit:",
                             color = Color.White.copy(alpha = 0.8f),
                             style = MaterialTheme.typography.bodyMedium
                         )
@@ -19579,7 +19579,7 @@ fun YearlyReviewSummarySlide(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = if (language == "de") "Bester Monat:" else if (language == "ka") "საუკეთესო თვე:" else if (language == "zh") "最佳月份：" else "Best Month:",
+                        text = if (language == "de") "Bester Monat:" else if (language == "ka") "საუკეთესო თვე:" else if (language == "zh") "最佳月份：" else if (language == "es") tr("es", "", "Best Month:") else "Best Month:",
                         color = Color.White.copy(alpha = 0.8f),
                         style = MaterialTheme.typography.bodyMedium
                     )
@@ -19611,7 +19611,7 @@ fun YearlyReviewSummarySlide(
             Icon(imageVector = Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = if (language == "de") "Rückblick teilen" else if (language == "ka") "გააზიარეთ მიმოხილვა" else if (language == "zh") "分享回顾" else "Share Review",
+                text = if (language == "de") "Rückblick teilen" else if (language == "ka") "გააზიარეთ მიმოხილვა" else if (language == "zh") "分享回顾" else if (language == "es") tr("es", "", "Share Review") else "Share Review",
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.bodyLarge
             )
@@ -19620,7 +19620,7 @@ fun YearlyReviewSummarySlide(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = if (language == "de") "Danke für deine Treue in $year! Auf ein fantastisches, produktives neues Jahr!" else if (language == "ka") "გმადლობთ $year -ში თანმიმდევრულობისთვის! აქ არის ფანტასტიკური და ჩვევებით სავსე ახალი წელი!" else if (language == "zh") "感谢你在 $year 年的持之以恒！祝愿你在新的一年里收获满满、精彩不断！" else "Thank you for your consistency in $year! Here's to a fantastic and habit-filled new year!",
+            text = if (language == "de") "Danke für deine Treue in $year! Auf ein fantastisches, produktives neues Jahr!" else if (language == "ka") "გმადლობთ $year -ში თანმიმდევრულობისთვის! აქ არის ფანტასტიკური და ჩვევებით სავსე ახალი წელი!" else if (language == "zh") "感谢你在 $year 年的持之以恒！祝愿你在新的一年里收获满满、精彩不断！" else if (language == "es") tr("es", "", "Thank you for your consistency in $year! Here's to a fantastic and habit-filled new year!") else "Thank you for your consistency in $year! Here's to a fantastic and habit-filled new year!",
             style = MaterialTheme.typography.bodyMedium,
             color = Color.White.copy(alpha = 0.85f),
             textAlign = TextAlign.Center
@@ -19767,9 +19767,9 @@ fun MonthlyReviewDialog(
                         ) {
                             Text(
                                 text = if (isLastPage) {
-                                    if (language == "de") "Fertig" else if (language == "ka") "დასრულება" else if (language == "zh") "完成" else "Finish"
+                                    if (language == "de") "Fertig" else if (language == "ka") "დასრულება" else if (language == "zh") "完成" else if (language == "es") tr("es", "", "Finish") else "Finish"
                                 } else {
-                                    if (language == "de") "Weiter" else if (language == "ka") "შემდეგი" else if (language == "zh") "下一步" else "Next"
+                                    if (language == "de") "Weiter" else if (language == "ka") "შემდეგი" else if (language == "zh") "下一步" else if (language == "es") tr("es", "", "Next") else "Next"
                                 },
                                 fontWeight = FontWeight.Bold,
                                 style = MaterialTheme.typography.titleMedium
@@ -19830,7 +19830,7 @@ fun MonthlyReviewCoverSlide(year: Int, month: Int, language: String, reviewData:
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = if (language == "de") "Dein Monatsrückblick" else if (language == "ka") "თქვენი ყოველთვიური მიმოხილვა" else if (language == "zh") "你的月度回顾" else "Your Monthly Review",
+            text = if (language == "de") "Dein Monatsrückblick" else if (language == "ka") "თქვენი ყოველთვიური მიმოხილვა" else if (language == "zh") "你的月度回顾" else if (language == "es") tr("es", "", "Your Monthly Review") else "Your Monthly Review",
             style = MaterialTheme.typography.headlineLarge,
             color = Color.White,
             fontWeight = FontWeight.ExtraBold,
@@ -19840,7 +19840,7 @@ fun MonthlyReviewCoverSlide(year: Int, month: Int, language: String, reviewData:
         Spacer(modifier = Modifier.height(12.dp))
 
         Text(
-            text = if (language == "de") "Deine Routine, deine Gewohnheiten und dein Fortschritt im ${reviewData.monthName}. Lass uns deine Entwicklung feiern!" else if (language == "ka") "თქვენი რუტინა, თქვენი ჩვევები და თქვენი პროგრესი ${reviewData.monthName} -ში. მოდით აღვნიშნოთ თქვენი ზრდა!" else if (language == "zh") "在 ${reviewData.monthName} 中你的日常、习惯与成长轨迹。让我们共同庆祝你的进步！" else "Your routine, your habits, and your progress in ${reviewData.monthName}. Let's celebrate your growth!",
+            text = if (language == "de") "Deine Routine, deine Gewohnheiten und dein Fortschritt im ${reviewData.monthName}. Lass uns deine Entwicklung feiern!" else if (language == "ka") "თქვენი რუტინა, თქვენი ჩვევები და თქვენი პროგრესი ${reviewData.monthName} -ში. მოდით აღვნიშნოთ თქვენი ზრდა!" else if (language == "zh") "在 ${reviewData.monthName} 中你的日常、习惯与成长轨迹。让我们共同庆祝你的进步！" else if (language == "es") tr("es", "", "Your routine, your habits, and your progress in ${reviewData.monthName}. Let's celebrate your growth!") else "Your routine, your habits, and your progress in ${reviewData.monthName}. Let's celebrate your growth!",
             style = MaterialTheme.typography.bodyLarge,
             color = Color.White.copy(alpha = 0.8f),
             textAlign = TextAlign.Center
@@ -19858,7 +19858,7 @@ fun MonthlyReviewVolumeSlide(year: Int, month: Int, language: String, reviewData
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = if (language == "de") "Dein Einsatz im ${reviewData.monthName}" else if (language == "ka") "თქვენი თავდადება ${reviewData.monthName} -ში" else if (language == "zh") "你在 ${reviewData.monthName} 的全情投入" else "Your Dedication in ${reviewData.monthName}",
+            text = if (language == "de") "Dein Einsatz im ${reviewData.monthName}" else if (language == "ka") "თქვენი თავდადება ${reviewData.monthName} -ში" else if (language == "zh") "你在 ${reviewData.monthName} 的全情投入" else if (language == "es") tr("es", "", "Your Dedication in ${reviewData.monthName}") else "Your Dedication in ${reviewData.monthName}",
             style = MaterialTheme.typography.headlineMedium,
             color = Color.White,
             fontWeight = FontWeight.Bold,
@@ -19894,7 +19894,7 @@ fun MonthlyReviewVolumeSlide(year: Int, month: Int, language: String, reviewData
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
                     Text(
-                        text = "${reviewData.totalCompletions} ${if (language == "de") "Abschlüsse" else if (language == "ka") "დასრულებები" else if (language == "zh") "完成次数" else "Completions"}",
+                        text = "${reviewData.totalCompletions} ${if (language == "de") "Abschlüsse" else if (language == "ka") "დასრულებები" else if (language == "zh") "完成次数" else if (language == "es") tr("es", "", "Completions") else "Completions"}",
                         style = MaterialTheme.typography.headlineSmall,
                         color = Color.White,
                         fontWeight = FontWeight.ExtraBold
@@ -19902,9 +19902,9 @@ fun MonthlyReviewVolumeSlide(year: Int, month: Int, language: String, reviewData
                     
                     val compText = if (reviewData.prevMonthCompletions > 0) {
                         val sign = if (reviewData.growthPercentage >= 0) "+" else ""
-                        if (language == "de") "$sign${reviewData.growthPercentage}% im Vergleich zum Vormonat (${reviewData.prevMonthCompletions}) 📈" else if (language == "ka") "$sign ${reviewData.growthPercentage} % გასულ თვესთან შედარებით ( ${reviewData.prevMonthCompletions} ) 📈" else if (language == "zh") "较上月 $sign${reviewData.growthPercentage}%（${reviewData.prevMonthCompletions} 次）📈" else "$sign${reviewData.growthPercentage}% compared to last month (${reviewData.prevMonthCompletions}) 📈"
+                        if (language == "de") "$sign${reviewData.growthPercentage}% im Vergleich zum Vormonat (${reviewData.prevMonthCompletions}) 📈" else if (language == "ka") "$sign ${reviewData.growthPercentage} % გასულ თვესთან შედარებით ( ${reviewData.prevMonthCompletions} ) 📈" else if (language == "zh") "较上月 $sign${reviewData.growthPercentage}%（${reviewData.prevMonthCompletions} 次）📈" else if (language == "es") tr("es", "", "$sign${reviewData.growthPercentage}% compared to last month (${reviewData.prevMonthCompletions}) 📈") else "$sign${reviewData.growthPercentage}% compared to last month (${reviewData.prevMonthCompletions}) 📈"
                     } else {
-                        if (language == "de") "Dein erster aktiver Monat! 🌟" else if (language == "ka") "თქვენი პირველი აქტიური თვე! 🌟" else if (language == "zh") "你的第一个活跃月份！🌟" else "Your first active month! 🌟"
+                        if (language == "de") "Dein erster aktiver Monat! 🌟" else if (language == "ka") "თქვენი პირველი აქტიური თვე! 🌟" else if (language == "zh") "你的第一个活跃月份！🌟" else if (language == "es") tr("es", "", "Your first active month! 🌟") else "Your first active month! 🌟"
                     }
                     Text(
                         text = compText,
@@ -19944,13 +19944,13 @@ fun MonthlyReviewVolumeSlide(year: Int, month: Int, language: String, reviewData
                 Spacer(modifier = Modifier.width(14.dp))
                 Column {
                     Text(
-                        text = "${reviewData.totalCheckIns} ${if (language == "de") "Check-ins insgesamt" else if (language == "ka") "სულ ჩექინები" else if (language == "zh") "累计打卡次数" else "Total Check-ins"}",
+                        text = "${reviewData.totalCheckIns} ${if (language == "de") "Check-ins insgesamt" else if (language == "ka") "სულ ჩექინები" else if (language == "zh") "累计打卡次数" else if (language == "es") tr("es", "", "Total Check-ins") else "Total Check-ins"}",
                         style = MaterialTheme.typography.titleMedium,
                         color = Color.White,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = if (language == "de") "Erfasste Einträge & Fortschritte in diesem Monat" else if (language == "ka") "ამ თვეში ჩაწერილი ჩანაწერები და პროგრესი" else if (language == "zh") "本月记录的打卡与进度" else "Logged entries & progress this month",
+                        text = if (language == "de") "Erfasste Einträge & Fortschritte in diesem Monat" else if (language == "ka") "ამ თვეში ჩაწერილი ჩანაწერები და პროგრესი" else if (language == "zh") "本月记录的打卡与进度" else if (language == "es") tr("es", "", "Logged entries & progress this month") else "Logged entries & progress this month",
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.White.copy(alpha = 0.8f)
                     )
@@ -19987,7 +19987,7 @@ fun MonthlyReviewVolumeSlide(year: Int, month: Int, language: String, reviewData
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
                     Text(
-                        text = if (language == "de") "Account-Stärke" else if (language == "ka") "ანგარიშის სიძლიერე" else if (language == "zh") "账号稳固度" else "Account Strength",
+                        text = if (language == "de") "Account-Stärke" else if (language == "ka") "ანგარიშის სიძლიერე" else if (language == "zh") "账号稳固度" else if (language == "es") tr("es", "", "Account Strength") else "Account Strength",
                         style = MaterialTheme.typography.labelMedium,
                         color = Color.White.copy(alpha = 0.7f)
                     )
@@ -20000,7 +20000,7 @@ fun MonthlyReviewVolumeSlide(year: Int, month: Int, language: String, reviewData
                     val deltaSign = if (reviewData.scoreDelta >= 0) "+" else ""
                     val deltaColor = if (reviewData.scoreDelta >= 0) "🟢" else "🔴"
                     Text(
-                        text = if (language == "de") "Veränderung: $deltaSign${reviewData.scoreDelta} Punkte $deltaColor" else if (language == "ka") "შეცვლა: $deltaSign ${reviewData.scoreDelta} წერტილები $deltaColor" else if (language == "zh") "变动：$deltaSign${reviewData.scoreDelta} 分 $deltaColor" else "Change: $deltaSign${reviewData.scoreDelta} points $deltaColor",
+                        text = if (language == "de") "Veränderung: $deltaSign${reviewData.scoreDelta} Punkte $deltaColor" else if (language == "ka") "შეცვლა: $deltaSign ${reviewData.scoreDelta} წერტილები $deltaColor" else if (language == "zh") "变动：$deltaSign${reviewData.scoreDelta} 分 $deltaColor" else if (language == "es") tr("es", "", "Change: $deltaSign${reviewData.scoreDelta} points $deltaColor") else "Change: $deltaSign${reviewData.scoreDelta} points $deltaColor",
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.White.copy(alpha = 0.8f)
                     )
@@ -20020,7 +20020,7 @@ fun MonthlyReviewMVPSlide(year: Int, month: Int, language: String, reviewData: M
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "👑 " + (if (language == "de") "Gewohnheits-MVP" else if (language == "ka") "ჩვევა MVP" else if (language == "zh") "习惯 MVP" else "Habit MVP"),
+            text = "👑 " + (if (language == "de") "Gewohnheits-MVP" else if (language == "ka") "ჩვევა MVP" else if (language == "zh") "习惯 MVP" else if (language == "es") tr("es", "", "Habit MVP") else "Habit MVP"),
             style = MaterialTheme.typography.headlineMedium,
             color = Color.White,
             fontWeight = FontWeight.Bold,
@@ -20028,7 +20028,7 @@ fun MonthlyReviewMVPSlide(year: Int, month: Int, language: String, reviewData: M
         )
 
         Text(
-            text = if (language == "de") "Deine absolut stärkste Routine in diesem Monat" else if (language == "ka") "თქვენი ყველაზე ძლიერი რუტინა თვის" else if (language == "zh") "你本月最稳固的日常习惯" else "Your strongest routine of the month",
+            text = if (language == "de") "Deine absolut stärkste Routine in diesem Monat" else if (language == "ka") "თქვენი ყველაზე ძლიერი რუტინა თვის" else if (language == "zh") "你本月最稳固的日常习惯" else if (language == "es") tr("es", "", "Your strongest routine of the month") else "Your strongest routine of the month",
             style = MaterialTheme.typography.bodyMedium,
             color = Color.White.copy(alpha = 0.8f),
             textAlign = TextAlign.Center,
@@ -20079,7 +20079,7 @@ fun MonthlyReviewMVPSlide(year: Int, month: Int, language: String, reviewData: M
                     Spacer(modifier = Modifier.height(12.dp))
 
                     Text(
-                        text = if (language == "de") "${reviewData.mvpCompletions} Abschlüsse im ${reviewData.monthName}" else if (language == "ka") "${reviewData.mvpCompletions} სრულდება ${reviewData.monthName} -ში" else if (language == "zh") "在 ${reviewData.monthName} 累计完成 ${reviewData.mvpCompletions} 次" else "${reviewData.mvpCompletions} completions in ${reviewData.monthName}",
+                        text = if (language == "de") "${reviewData.mvpCompletions} Abschlüsse im ${reviewData.monthName}" else if (language == "ka") "${reviewData.mvpCompletions} სრულდება ${reviewData.monthName} -ში" else if (language == "zh") "在 ${reviewData.monthName} 累计完成 ${reviewData.mvpCompletions} 次" else if (language == "es") tr("es", "", "${reviewData.mvpCompletions} completions in ${reviewData.monthName}") else "${reviewData.mvpCompletions} completions in ${reviewData.monthName}",
                         style = MaterialTheme.typography.titleMedium,
                         color = Color.White,
                         fontWeight = FontWeight.Bold
@@ -20088,7 +20088,7 @@ fun MonthlyReviewMVPSlide(year: Int, month: Int, language: String, reviewData: M
                     Spacer(modifier = Modifier.height(6.dp))
 
                     Text(
-                        text = if (language == "de") "Gewohnheitsstärke: ${reviewData.mvpStrength}%" else if (language == "ka") "ჩვევის სიძლიერე: ${reviewData.mvpStrength} %" else if (language == "zh") "习惯稳固度：${reviewData.mvpStrength}%" else "Habit strength: ${reviewData.mvpStrength}%",
+                        text = if (language == "de") "Gewohnheitsstärke: ${reviewData.mvpStrength}%" else if (language == "ka") "ჩვევის სიძლიერე: ${reviewData.mvpStrength} %" else if (language == "zh") "习惯稳固度：${reviewData.mvpStrength}%" else if (language == "es") tr("es", "", "Habit strength: ${reviewData.mvpStrength}%") else "Habit strength: ${reviewData.mvpStrength}%",
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.White.copy(alpha = 0.8f)
                     )
@@ -20096,7 +20096,7 @@ fun MonthlyReviewMVPSlide(year: Int, month: Int, language: String, reviewData: M
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        text = if (language == "de") "Unfassbar beständig! Behalte diese überragende Routine im nächsten Monat bei." else if (language == "ka") "წარმოუდგენელი თანმიმდევრულობა! შეინარჩუნეთ ეს უმაღლესი რუტინა შემდეგ თვეში." else if (language == "zh") "令人惊叹的自律！下个月继续保持这份卓越的日常。" else "Incredible consistency! Maintain this superior routine next month.",
+                        text = if (language == "de") "Unfassbar beständig! Behalte diese überragende Routine im nächsten Monat bei." else if (language == "ka") "წარმოუდგენელი თანმიმდევრულობა! შეინარჩუნეთ ეს უმაღლესი რუტინა შემდეგ თვეში." else if (language == "zh") "令人惊叹的自律！下个月继续保持这份卓越的日常。" else if (language == "es") tr("es", "", "Incredible consistency! Maintain this superior routine next month.") else "Incredible consistency! Maintain this superior routine next month.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.White.copy(alpha = 0.85f),
                         textAlign = TextAlign.Center
@@ -20110,7 +20110,7 @@ fun MonthlyReviewMVPSlide(year: Int, month: Int, language: String, reviewData: M
                 shape = RoundedCornerShape(20.dp)
             ) {
                 Text(
-                    text = if (language == "de") "Noch keine ausreichenden Daten für diesen Monat." else if (language == "ka") "ჩვევების მონაცემები ამ თვისთვის ჯერ არ არის ხელმისაწვდომი." else if (language == "zh") "本月暂无可用的习惯数据。" else "No habit data available for this month yet.",
+                    text = if (language == "de") "Noch keine ausreichenden Daten für diesen Monat." else if (language == "ka") "ჩვევების მონაცემები ამ თვისთვის ჯერ არ არის ხელმისაწვდომი." else if (language == "zh") "本月暂无可用的习惯数据。" else if (language == "es") tr("es", "", "No habit data available for this month yet.") else "No habit data available for this month yet.",
                     style = MaterialTheme.typography.bodyLarge,
                     color = Color.White,
                     modifier = Modifier.padding(24.dp),
@@ -20131,7 +20131,7 @@ fun MonthlyReviewFocusSlide(year: Int, month: Int, language: String, reviewData:
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "🌱 " + (if (language == "de") "Fokus-Bereich" else if (language == "ka") "ფოკუსის ზონა" else if (language == "zh") "重点提升区" else "Focus Area"),
+            text = "🌱 " + (if (language == "de") "Fokus-Bereich" else if (language == "ka") "ფოკუსის ზონა" else if (language == "zh") "重点提升区" else if (language == "es") tr("es", "", "Focus Area") else "Focus Area"),
             style = MaterialTheme.typography.headlineMedium,
             color = Color.White,
             fontWeight = FontWeight.Bold,
@@ -20139,7 +20139,7 @@ fun MonthlyReviewFocusSlide(year: Int, month: Int, language: String, reviewData:
         )
 
         Text(
-            text = if (language == "de") "Hier gab es die meisten Lücken – ein super Potenzial für den neuen Monat!" else if (language == "ka") "სადაც ყველაზე მეტი ხარვეზი გამოჩნდა - დიდი პოტენციალი ახალი თვისთვის!" else if (language == "zh") "出现缺卡较多的地方——新月份的大好提升机会！" else "Where most gaps appeared – a great potential for the new month!",
+            text = if (language == "de") "Hier gab es die meisten Lücken – ein super Potenzial für den neuen Monat!" else if (language == "ka") "სადაც ყველაზე მეტი ხარვეზი გამოჩნდა - დიდი პოტენციალი ახალი თვისთვის!" else if (language == "zh") "出现缺卡较多的地方——新月份的大好提升机会！" else if (language == "es") tr("es", "", "Where most gaps appeared – a great potential for the new month!") else "Where most gaps appeared – a great potential for the new month!",
             style = MaterialTheme.typography.bodyMedium,
             color = Color.White.copy(alpha = 0.8f),
             textAlign = TextAlign.Center,
@@ -20190,7 +20190,7 @@ fun MonthlyReviewFocusSlide(year: Int, month: Int, language: String, reviewData:
                     Spacer(modifier = Modifier.height(12.dp))
 
                     Text(
-                        text = if (language == "de") "${reviewData.focusCompletions} von ${reviewData.focusExpected} Einheiten erledigt" else if (language == "ka") "დასრულდა ${reviewData.focusExpected} ერთეულების ${reviewData.focusCompletions}" else if (language == "zh") "完成 ${reviewData.focusCompletions} / ${reviewData.focusExpected} 个单位" else "${reviewData.focusCompletions} of ${reviewData.focusExpected} units completed",
+                        text = if (language == "de") "${reviewData.focusCompletions} von ${reviewData.focusExpected} Einheiten erledigt" else if (language == "ka") "დასრულდა ${reviewData.focusExpected} ერთეულების ${reviewData.focusCompletions}" else if (language == "zh") "完成 ${reviewData.focusCompletions} / ${reviewData.focusExpected} 个单位" else if (language == "es") tr("es", "", "${reviewData.focusCompletions} of ${reviewData.focusExpected} units completed") else "${reviewData.focusCompletions} of ${reviewData.focusExpected} units completed",
                         style = MaterialTheme.typography.titleMedium,
                         color = Color(0xFFFCD34D),
                         fontWeight = FontWeight.Bold
@@ -20199,7 +20199,7 @@ fun MonthlyReviewFocusSlide(year: Int, month: Int, language: String, reviewData:
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        text = if (language == "de") "Keine Sorge! Nimm dir für den neuen Monat vor, diese Gewohnheit als Erstes am Tag zu erledigen." else if (language == "ka") "არ ინერვიულო! შეეცადეთ დაგეგმოთ ეს ჩვევა დილით პირველ რიგში ახალი თვისთვის." else if (language == "zh") "别灰心！在新月份尝试将这个习惯安排在清晨第一件事来做。" else "Don't worry! Try scheduling this habit first thing in the morning for the new month.",
+                        text = if (language == "de") "Keine Sorge! Nimm dir für den neuen Monat vor, diese Gewohnheit als Erstes am Tag zu erledigen." else if (language == "ka") "არ ინერვიულო! შეეცადეთ დაგეგმოთ ეს ჩვევა დილით პირველ რიგში ახალი თვისთვის." else if (language == "zh") "别灰心！在新月份尝试将这个习惯安排在清晨第一件事来做。" else if (language == "es") tr("es", "", "Don't worry! Try scheduling this habit first thing in the morning for the new month.") else "Don't worry! Try scheduling this habit first thing in the morning for the new month.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.White.copy(alpha = 0.85f),
                         textAlign = TextAlign.Center
@@ -20213,7 +20213,7 @@ fun MonthlyReviewFocusSlide(year: Int, month: Int, language: String, reviewData:
                 shape = RoundedCornerShape(20.dp)
             ) {
                 Text(
-                    text = if (language == "de") "Du liegst bei allen deinen Gewohnheiten voll im Plan! Super!" else if (language == "ka") "თქვენ ანადგურებთ ყველა თქვენს ჩვევას! დიდი სამუშაო!" else if (language == "zh") "你的所有习惯都在完美推进中！太棒了！" else "You are crushing all your habits! Great job!",
+                    text = if (language == "de") "Du liegst bei allen deinen Gewohnheiten voll im Plan! Super!" else if (language == "ka") "თქვენ ანადგურებთ ყველა თქვენს ჩვევას! დიდი სამუშაო!" else if (language == "zh") "你的所有习惯都在完美推进中！太棒了！" else if (language == "es") tr("es", "", "You are crushing all your habits! Great job!") else "You are crushing all your habits! Great job!",
                     style = MaterialTheme.typography.bodyLarge,
                     color = Color.White,
                     modifier = Modifier.padding(24.dp),
@@ -20257,7 +20257,7 @@ fun MonthlyReviewSummarySlide(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = if (language == "de") "Zusammenfassung ${reviewData.monthName}" else if (language == "ka") "${reviewData.monthName} რეზიუმე" else if (language == "zh") "${reviewData.monthName} 月度总结" else "${reviewData.monthName} Summary",
+            text = if (language == "de") "Zusammenfassung ${reviewData.monthName}" else if (language == "ka") "${reviewData.monthName} რეზიუმე" else if (language == "zh") "${reviewData.monthName} 月度总结" else if (language == "es") tr("es", "", "${reviewData.monthName} Summary") else "${reviewData.monthName} Summary",
             style = MaterialTheme.typography.headlineMedium,
             color = Color.White,
             fontWeight = FontWeight.Bold,
@@ -20281,7 +20281,7 @@ fun MonthlyReviewSummarySlide(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = if (language == "de") "Gesamt-Abschlüsse:" else if (language == "ka") "სრული დასრულებები:" else if (language == "zh") "累计完成：" else "Total completions:",
+                        text = if (language == "de") "Gesamt-Abschlüsse:" else if (language == "ka") "სრული დასრულებები:" else if (language == "zh") "累计完成：" else if (language == "es") tr("es", "", "Total completions:") else "Total completions:",
                         color = Color.White.copy(alpha = 0.8f),
                         style = MaterialTheme.typography.bodyMedium
                     )
@@ -20298,7 +20298,7 @@ fun MonthlyReviewSummarySlide(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = if (language == "de") "Score:" else if (language == "ka") "ქულა:" else if (language == "zh") "得分：" else "Score:",
+                        text = if (language == "de") "Score:" else if (language == "ka") "ქულა:" else if (language == "zh") "得分：" else if (language == "es") tr("es", "", "Score:") else "Score:",
                         color = Color.White.copy(alpha = 0.8f),
                         style = MaterialTheme.typography.bodyMedium
                     )
@@ -20317,7 +20317,7 @@ fun MonthlyReviewSummarySlide(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = if (language == "de") "Habit MVP:" else if (language == "ka") "ჩვევა MVP:" else if (language == "zh") "习惯 MVP：" else "Habit MVP:",
+                            text = if (language == "de") "Habit MVP:" else if (language == "ka") "ჩვევა MVP:" else if (language == "zh") "习惯 MVP：" else if (language == "es") tr("es", "", "Habit MVP:") else "Habit MVP:",
                             color = Color.White.copy(alpha = 0.8f),
                             style = MaterialTheme.typography.bodyMedium
                         )
@@ -20344,7 +20344,7 @@ fun MonthlyReviewSummarySlide(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = if (language == "de") "Power day:" else if (language == "ka") "დენის დღე:" else if (language == "zh") "能量单日：" else "Power day:",
+                        text = if (language == "de") "Power day:" else if (language == "ka") "დენის დღე:" else if (language == "zh") "能量单日：" else if (language == "es") tr("es", "", "Power day:") else "Power day:",
                         color = Color.White.copy(alpha = 0.8f),
                         style = MaterialTheme.typography.bodyMedium
                     )
@@ -20376,7 +20376,7 @@ fun MonthlyReviewSummarySlide(
             Icon(imageVector = Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = if (language == "de") "Rückblick teilen" else if (language == "ka") "გააზიარეთ მიმოხილვა" else if (language == "zh") "分享回顾" else "Share Review",
+                text = if (language == "de") "Rückblick teilen" else if (language == "ka") "გააზიარეთ მიმოხილვა" else if (language == "zh") "分享回顾" else if (language == "es") tr("es", "", "Share Review") else "Share Review",
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.bodyLarge
             )
@@ -20385,7 +20385,7 @@ fun MonthlyReviewSummarySlide(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = if (language == "de") "Großartige Arbeit! Jeder Tag ist eine Chance, besser zu werden. Weiter so!" else if (language == "ka") "დიდი სამუშაო! ყოველი დღე არის ზრდის ახალი შანსი. ასე გააგრძელე!" else if (language == "zh") "做得很棒！每一天都是成长的新契机。继续加油！" else "Great job! Every day is a new chance to grow. Keep it up!",
+            text = if (language == "de") "Großartige Arbeit! Jeder Tag ist eine Chance, besser zu werden. Weiter so!" else if (language == "ka") "დიდი სამუშაო! ყოველი დღე არის ზრდის ახალი შანსი. ასე გააგრძელე!" else if (language == "zh") "做得很棒！每一天都是成长的新契机。继续加油！" else if (language == "es") tr("es", "", "Great job! Every day is a new chance to grow. Keep it up!") else "Great job! Every day is a new chance to grow. Keep it up!",
             style = MaterialTheme.typography.bodyMedium,
             color = Color.White.copy(alpha = 0.85f),
             textAlign = TextAlign.Center
@@ -20413,7 +20413,7 @@ fun YearlyReviewStreakSlide(year: Int, language: String, reviewData: YearlyRevie
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "🔥 " + (if (language == "de") "Deine längste Serie" else if (language == "ka") "თქვენი ყველაზე გრძელი სერია" else if (language == "zh") "你的最长连续" else "Your Longest Streak"),
+            text = "🔥 " + (if (language == "de") "Deine längste Serie" else if (language == "ka") "თქვენი ყველაზე გრძელი სერია" else if (language == "zh") "你的最长连续" else if (language == "es") tr("es", "", "Your Longest Streak") else "Your Longest Streak"),
             style = MaterialTheme.typography.headlineMedium,
             color = Color.White,
             fontWeight = FontWeight.Bold,
@@ -20421,7 +20421,7 @@ fun YearlyReviewStreakSlide(year: Int, language: String, reviewData: YearlyRevie
         )
 
         Text(
-            text = if (language == "de") "Beständigkeit zahlt sich aus!" else if (language == "ka") "თანმიმდევრულობა არის გასაღები!" else if (language == "zh") "持之以恒是关键！" else "Consistency is the key!",
+            text = if (language == "de") "Beständigkeit zahlt sich aus!" else if (language == "ka") "თანმიმდევრულობა არის გასაღები!" else if (language == "zh") "持之以恒是关键！" else if (language == "es") tr("es", "", "Consistency is the key!") else "Consistency is the key!",
             style = MaterialTheme.typography.bodyMedium,
             color = Color.White.copy(alpha = 0.8f),
             textAlign = TextAlign.Center,
@@ -20474,7 +20474,7 @@ fun YearlyReviewStreakSlide(year: Int, language: String, reviewData: YearlyRevie
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            text = if (language == "de") "Erreicht bei: " else if (language == "ka") "მიღწეულია:" else if (language == "zh") "达成于：" else "Achieved on: ",
+                            text = if (language == "de") "Erreicht bei: " else if (language == "ka") "მიღწეულია:" else if (language == "zh") "达成于：" else if (language == "es") tr("es", "", "Achieved on: ") else "Achieved on: ",
                             style = MaterialTheme.typography.bodyMedium,
                             color = Color.White.copy(alpha = 0.85f)
                         )
@@ -20502,7 +20502,7 @@ fun YearlyReviewStreakSlide(year: Int, language: String, reviewData: YearlyRevie
                         border = BorderStroke(1.dp, Color(0xFF10B981))
                     ) {
                         Text(
-                            text = if (language == "de") "... und läuft weiter! 🔥" else if (language == "ka") "... და მაინც მიდის! 🔥" else if (language == "zh") "... 势头还在持续！🔥" else "... and still going! 🔥",
+                            text = if (language == "de") "... und läuft weiter! 🔥" else if (language == "ka") "... და მაინც მიდის! 🔥" else if (language == "zh") "... 势头还在持续！🔥" else if (language == "es") tr("es", "", "... and still going! 🔥") else "... and still going! 🔥",
                             style = MaterialTheme.typography.labelLarge,
                             color = Color(0xFF34D399),
                             fontWeight = FontWeight.Bold,
@@ -20525,7 +20525,7 @@ fun YearlyReviewTransformationSlide(year: Int, language: String, reviewData: Yea
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "📈 " + (if (language == "de") "Konto-Transformation" else if (language == "ka") "ანგარიშის ტრანსფორმაცია" else if (language == "zh") "账号成长蜕变" else "Account Transformation"),
+            text = "📈 " + (if (language == "de") "Konto-Transformation" else if (language == "ka") "ანგარიშის ტრანსფორმაცია" else if (language == "zh") "账号成长蜕变" else if (language == "es") tr("es", "", "Account Transformation") else "Account Transformation"),
             style = MaterialTheme.typography.headlineMedium,
             color = Color.White,
             fontWeight = FontWeight.Bold,
@@ -20533,7 +20533,7 @@ fun YearlyReviewTransformationSlide(year: Int, language: String, reviewData: Yea
         )
 
         Text(
-            text = if (language == "de") "Deine Entwicklung der globalen Account-Stärke über das Jahr $year" else if (language == "ka") "თქვენი საერთო ანგარიშის სიძლიერის განვითარება $year -ში" else if (language == "zh") "贯穿 $year 全年的账号综合实力变化趋势" else "Your overall account strength development throughout $year",
+            text = if (language == "de") "Deine Entwicklung der globalen Account-Stärke über das Jahr $year" else if (language == "ka") "თქვენი საერთო ანგარიშის სიძლიერის განვითარება $year -ში" else if (language == "zh") "贯穿 $year 全年的账号综合实力变化趋势" else if (language == "es") tr("es", "", "Your overall account strength development throughout $year") else "Your overall account strength development throughout $year",
             style = MaterialTheme.typography.bodyMedium,
             color = Color.White.copy(alpha = 0.8f),
             textAlign = TextAlign.Center,
@@ -20559,7 +20559,7 @@ fun YearlyReviewTransformationSlide(year: Int, language: String, reviewData: Yea
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = if (language == "de") "Start" else if (language == "ka") "დაწყება" else if (language == "zh") "起点" else "Start",
+                            text = if (language == "de") "Start" else if (language == "ka") "დაწყება" else if (language == "zh") "起点" else if (language == "es") tr("es", "", "Start") else "Start",
                             style = MaterialTheme.typography.labelMedium,
                             color = Color.White.copy(alpha = 0.6f)
                         )
@@ -20581,7 +20581,7 @@ fun YearlyReviewTransformationSlide(year: Int, language: String, reviewData: Yea
 
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = if (language == "de") "Ende" else if (language == "ka") "დასასრული" else if (language == "zh") "终点" else "End",
+                            text = if (language == "de") "Ende" else if (language == "ka") "დასასრული" else if (language == "zh") "终点" else if (language == "es") tr("es", "", "End") else "End",
                             style = MaterialTheme.typography.labelMedium,
                             color = Color.White.copy(alpha = 0.6f)
                         )
@@ -20606,7 +20606,7 @@ fun YearlyReviewTransformationSlide(year: Int, language: String, reviewData: Yea
                     border = BorderStroke(1.dp, deltaColor)
                 ) {
                     Text(
-                        text = if (language == "de") "Score um $sign${reviewData.scoreDelta} Punkte gesteigert! 🎉" else if (language == "ka") "ქულა გაიზარდა $sign ${reviewData.scoreDelta} ქულით! 🎉" else if (language == "zh") "得分提升了 $sign${reviewData.scoreDelta} 分！🎉" else "Score increased by $sign${reviewData.scoreDelta} points! 🎉",
+                        text = if (language == "de") "Score um $sign${reviewData.scoreDelta} Punkte gesteigert! 🎉" else if (language == "ka") "ქულა გაიზარდა $sign ${reviewData.scoreDelta} ქულით! 🎉" else if (language == "zh") "得分提升了 $sign${reviewData.scoreDelta} 分！🎉" else if (language == "es") tr("es", "", "Score increased by $sign${reviewData.scoreDelta} points! 🎉") else "Score increased by $sign${reviewData.scoreDelta} points! 🎉",
                         style = MaterialTheme.typography.titleMedium,
                         color = deltaColor,
                         fontWeight = FontWeight.Bold,
@@ -20628,7 +20628,7 @@ fun YearlyReviewTrophySlide(year: Int, language: String, reviewData: YearlyRevie
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "🏆 " + (if (language == "de") "Erfolge & Trophäen" else if (language == "ka") "მიღწევები და თასები" else if (language == "zh") "成就与奖杯" else "Achievements & Trophies"),
+            text = "🏆 " + (if (language == "de") "Erfolge & Trophäen" else if (language == "ka") "მიღწევები და თასები" else if (language == "zh") "成就与奖杯" else if (language == "es") tr("es", "", "Achievements & Trophies") else "Achievements & Trophies"),
             style = MaterialTheme.typography.headlineMedium,
             color = Color.White,
             fontWeight = FontWeight.Bold,
@@ -20636,7 +20636,7 @@ fun YearlyReviewTrophySlide(year: Int, language: String, reviewData: YearlyRevie
         )
 
         Text(
-            text = if (language == "de") "Deine verdienten Abzeichen im Jahr $year" else if (language == "ka") "თქვენი მიღებული სამკერდე ნიშნები $year -ში" else if (language == "zh") "你在 $year 年赢得的徽章" else "Your earned badges in $year",
+            text = if (language == "de") "Deine verdienten Abzeichen im Jahr $year" else if (language == "ka") "თქვენი მიღებული სამკერდე ნიშნები $year -ში" else if (language == "zh") "你在 $year 年赢得的徽章" else if (language == "es") tr("es", "", "Your earned badges in $year") else "Your earned badges in $year",
             style = MaterialTheme.typography.bodyMedium,
             color = Color.White.copy(alpha = 0.8f),
             textAlign = TextAlign.Center,
@@ -20650,9 +20650,9 @@ fun YearlyReviewTrophySlide(year: Int, language: String, reviewData: YearlyRevie
             horizontalArrangement = Arrangement.SpaceAround
         ) {
             val trophies = listOf(
-                Triple("🥇", if (language == "de") "100+ Abschlüsse" else if (language == "ka") "100+ დასრულება" else if (language == "zh") "100+ 次完成" else "100+ Completions", reviewData.totalCompletions >= 100),
-                Triple("⭐", if (language == "de") "Perfekt" else if (language == "ka") "სრულყოფილი" else if (language == "zh") "完美" else "Perfect", reviewData.perfectDaysCount >= 10),
-                Triple("🔥", if (language == "de") "Disziplin" else if (language == "ka") "მწკრივი" else if (language == "zh") "连续" else "Streak", reviewData.longestStreak >= 7)
+                Triple("🥇", if (language == "de") "100+ Abschlüsse" else if (language == "ka") "100+ დასრულება" else if (language == "zh") "100+ 次完成" else if (language == "es") tr("es", "", "100+ Completions") else "100+ Completions", reviewData.totalCompletions >= 100),
+                Triple("⭐", if (language == "de") "Perfekt" else if (language == "ka") "სრულყოფილი" else if (language == "zh") "完美" else if (language == "es") tr("es", "", "Perfect") else "Perfect", reviewData.perfectDaysCount >= 10),
+                Triple("🔥", if (language == "de") "Disziplin" else if (language == "ka") "მწკრივი" else if (language == "zh") "连续" else if (language == "es") tr("es", "", "Streak") else "Streak", reviewData.longestStreak >= 7)
             )
 
             for ((emoji, name, unlocked) in trophies) {
@@ -20688,7 +20688,7 @@ fun YearlyReviewTrophySlide(year: Int, language: String, reviewData: YearlyRevie
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = if (unlocked) (if (language == "de") "Freigeschaltet" else if (language == "ka") "განბლოკილია" else if (language == "zh") "已解锁" else "Unlocked") else (if (language == "de") "Gesperrt" else if (language == "ka") "ჩაკეტილი" else if (language == "zh") "未解锁" else "Locked"),
+                        text = if (unlocked) (if (language == "de") "Freigeschaltet" else if (language == "ka") "განბლოკილია" else if (language == "zh") "已解锁" else if (language == "es") tr("es", "", "Unlocked") else "Unlocked") else (if (language == "de") "Gesperrt" else if (language == "ka") "ჩაკეტილი" else if (language == "zh") "未解锁" else if (language == "es") tr("es", "", "Locked") else "Locked"),
                         style = MaterialTheme.typography.bodySmall,
                         color = if (unlocked) Color(0xFF34D399) else Color.White.copy(alpha = 0.4f)
                     )
@@ -20705,7 +20705,7 @@ private fun OnboardingStep1(language: String) {
     val sampleHabit1 = remember(language) {
         Habit(
             id = 991,
-            name = if (language == "de") "Wasser trinken" else if (language == "ka") "დალიე წყალი" else if (language == "zh") "喝水" else "Drink Water",
+            name = if (language == "de") "Wasser trinken" else if (language == "ka") "დალიე წყალი" else if (language == "zh") "喝水" else if (language == "es") tr("es", "", "Drink Water") else "Drink Water",
             category = "Gesundheit",
             icon = "water",
             color = "teal",
@@ -20720,7 +20720,7 @@ private fun OnboardingStep1(language: String) {
     val sampleHabit2 = remember(language) {
         Habit(
             id = 992,
-            name = if (language == "de") "Morgenmeditation" else if (language == "ka") "დილის მედიტაცია" else if (language == "zh") "晨间冥想" else "Morning Meditation",
+            name = if (language == "de") "Morgenmeditation" else if (language == "ka") "დილის მედიტაცია" else if (language == "zh") "晨间冥想" else if (language == "es") tr("es", "", "Morning Meditation") else "Morning Meditation",
             category = "Achtsamkeit",
             icon = "meditation",
             color = "purple",
@@ -20768,7 +20768,7 @@ private fun OnboardingStep1(language: String) {
         Spacer(modifier = Modifier.height(14.dp))
 
         Text(
-            text = if (language == "de") "Gewohnheiten steuern & anpassen" else if (language == "ka") "ჩვევების კონტროლი და მორგება" else if (language == "zh") "管理与定制习惯" else "Control & Customize Habits",
+            text = if (language == "de") "Gewohnheiten steuern & anpassen" else if (language == "ka") "ჩვევების კონტროლი და მორგება" else if (language == "zh") "管理与定制习惯" else if (language == "es") tr("es", "", "Control & Customize Habits") else "Control & Customize Habits",
             style = MaterialTheme.typography.titleMedium,
             color = TextPrimary,
             fontWeight = FontWeight.Bold,
@@ -20859,7 +20859,7 @@ private fun OnboardingStep2(language: String) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = if (language == "de") "FOKUS TIMER" else if (language == "ka") "ფოკუსის ტაიმერი" else if (language == "zh") "专注计时器" else "FOCUS TIMER",
+                        text = if (language == "de") "FOKUS TIMER" else if (language == "ka") "ფოკუსის ტაიმერი" else if (language == "zh") "专注计时器" else if (language == "es") tr("es", "", "FOCUS TIMER") else "FOCUS TIMER",
                         style = MaterialTheme.typography.labelSmall,
                         color = TextSecondary,
                         fontWeight = FontWeight.Bold
@@ -20870,7 +20870,7 @@ private fun OnboardingStep2(language: String) {
                         border = BorderStroke(1.dp, SuccessGreen)
                     ) {
                         Text(
-                            text = if (language == "de") "AKTIV" else if (language == "ka") "აქტიური" else if (language == "zh") "进行中" else "ACTIVE",
+                            text = if (language == "de") "AKTIV" else if (language == "ka") "აქტიური" else if (language == "zh") "进行中" else if (language == "es") tr("es", "", "ACTIVE") else "ACTIVE",
                             style = MaterialTheme.typography.labelSmall,
                             color = SuccessGreen,
                             fontWeight = FontWeight.Bold,
@@ -20897,7 +20897,7 @@ private fun OnboardingStep2(language: String) {
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = if (language == "de") "Minuten" else if (language == "ka") "წუთები" else if (language == "zh") "分钟" else "Minutes",
+                            text = if (language == "de") "Minuten" else if (language == "ka") "წუთები" else if (language == "zh") "分钟" else if (language == "es") tr("es", "", "Minutes") else "Minutes",
                             style = MaterialTheme.typography.labelSmall,
                             color = TextSecondary
                         )
@@ -20968,7 +20968,7 @@ private fun OnboardingStep2(language: String) {
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
-                        text = if (language == "de") "Hintergrund-Audio" else if (language == "ka") "ფონის აუდიო" else if (language == "zh") "背景音频" else "Background Audio",
+                        text = if (language == "de") "Hintergrund-Audio" else if (language == "ka") "ფონის აუდიო" else if (language == "zh") "背景音频" else if (language == "es") tr("es", "", "Background Audio") else "Background Audio",
                         style = MaterialTheme.typography.bodySmall,
                         color = TextSecondary,
                         fontWeight = FontWeight.SemiBold
@@ -20990,7 +20990,7 @@ private fun OnboardingStep2(language: String) {
                             Icon(Icons.Default.Search, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = if (language == "de") "Sound suchen..." else if (language == "ka") "ხმის ძებნა..." else if (language == "zh") "搜索白噪音..." else "Search sound...",
+                                text = if (language == "de") "Sound suchen..." else if (language == "ka") "ხმის ძებნა..." else if (language == "zh") "搜索白噪音..." else if (language == "es") tr("es", "", "Search sound...") else "Search sound...",
                                 color = TextSecondary,
                                 fontSize = 13.sp
                             )
@@ -21036,7 +21036,7 @@ private fun OnboardingStep2(language: String) {
                                 .height(38.dp)
                         ) {
                             Text(
-                                text = if (language == "de") "Reset" else if (language == "ka") "გადატვირთვა" else if (language == "zh") "重置" else "Reset",
+                                text = if (language == "de") "Reset" else if (language == "ka") "გადატვირთვა" else if (language == "zh") "重置" else if (language == "es") tr("es", "", "Reset") else "Reset",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 12.sp
                             )
@@ -21052,7 +21052,7 @@ private fun OnboardingStep2(language: String) {
                                 .height(38.dp)
                         ) {
                             Text(
-                                text = if (language == "de") "Fehlgeschlagen" else if (language == "ka") "ვერ მოხერხდა" else if (language == "zh") "未达成" else "Failed",
+                                text = if (language == "de") "Fehlgeschlagen" else if (language == "ka") "ვერ მოხერხდა" else if (language == "zh") "未达成" else if (language == "es") tr("es", "", "Failed") else "Failed",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 12.sp
                             )
@@ -21068,7 +21068,7 @@ private fun OnboardingStep2(language: String) {
                             .height(40.dp)
                     ) {
                         Text(
-                            text = if (language == "de") "Speichern" else if (language == "ka") "შენახვა" else if (language == "zh") "保存" else "Save",
+                            text = if (language == "de") "Speichern" else if (language == "ka") "შენახვა" else if (language == "zh") "保存" else if (language == "es") tr("es", "", "Save") else "Save",
                             color = Color.White,
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.sp
@@ -21081,7 +21081,7 @@ private fun OnboardingStep2(language: String) {
         Spacer(modifier = Modifier.height(14.dp))
 
         Text(
-            text = if (language == "de") "Fokus mit Naturklängen" else if (language == "ka") "ფოკუსირება ბუნების ხმებით" else if (language == "zh") "伴随大自然白噪音专注" else "Focus with Nature Soundscapes",
+            text = if (language == "de") "Fokus mit Naturklängen" else if (language == "ka") "ფოკუსირება ბუნების ხმებით" else if (language == "zh") "伴随大自然白噪音专注" else if (language == "es") tr("es", "", "Focus with Nature Soundscapes") else "Focus with Nature Soundscapes",
             style = MaterialTheme.typography.titleMedium,
             color = TextPrimary,
             fontWeight = FontWeight.Bold,
@@ -21127,7 +21127,7 @@ private fun OnboardingStep3(language: String) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = if (language == "de") "STATISTIK & HEATMAP" else if (language == "ka") "სტატისტიკა და სითბოს რუკა" else if (language == "zh") "统计与热力图" else "STATISTICS & HEATMAP",
+                    text = if (language == "de") "STATISTIK & HEATMAP" else if (language == "ka") "სტატისტიკა და სითბოს რუკა" else if (language == "zh") "统计与热力图" else if (language == "es") tr("es", "", "STATISTICS & HEATMAP") else "STATISTICS & HEATMAP",
                     style = MaterialTheme.typography.labelSmall,
                     color = TextSecondary,
                     fontWeight = FontWeight.Bold
@@ -21153,7 +21153,7 @@ private fun OnboardingStep3(language: String) {
         }
         Spacer(modifier = Modifier.height(14.dp))
         Text(
-            text = if (language == "de") "Behalte den Überblick" else if (language == "ka") "თვალყური ადევნეთ პროგრესს" else if (language == "zh") "时刻掌握进度" else "Keep Track of Progress",
+            text = if (language == "de") "Behalte den Überblick" else if (language == "ka") "თვალყური ადევნეთ პროგრესს" else if (language == "zh") "时刻掌握进度" else if (language == "es") tr("es", "", "Keep Track of Progress") else "Keep Track of Progress",
             style = MaterialTheme.typography.titleMedium,
             color = TextPrimary,
             fontWeight = FontWeight.Bold,
@@ -21161,7 +21161,7 @@ private fun OnboardingStep3(language: String) {
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = if (language == "de") "Visualisiere deine Erfolge in der Wochen- und Jahresübersicht." else if (language == "ka") "თქვენი მიღწევების ვიზუალიზაცია ყოველკვირეულ და წლიურ მიმოხილვებში." else if (language == "zh") "在每周和年度总览中直观呈现你的成就。" else "Visualize your achievements in weekly and yearly overviews.",
+            text = if (language == "de") "Visualisiere deine Erfolge in der Wochen- und Jahresübersicht." else if (language == "ka") "თქვენი მიღწევების ვიზუალიზაცია ყოველკვირეულ და წლიურ მიმოხილვებში." else if (language == "zh") "在每周和年度总览中直观呈现你的成就。" else if (language == "es") tr("es", "", "Visualize your achievements in weekly and yearly overviews.") else "Visualize your achievements in weekly and yearly overviews.",
             style = MaterialTheme.typography.bodySmall,
             color = TextSecondary,
             textAlign = TextAlign.Center,
@@ -21198,7 +21198,7 @@ private fun OnboardingStep4(language: String) {
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (language == "de") "HOMESCREEN WIDGETS" else if (language == "ka") "საწყისი ეკრანის ვიჯეტები" else if (language == "zh") "桌面小组件" else "HOMESCREEN WIDGETS",
+                        text = if (language == "de") "HOMESCREEN WIDGETS" else if (language == "ka") "საწყისი ეკრანის ვიჯეტები" else if (language == "zh") "桌面小组件" else if (language == "es") tr("es", "", "HOMESCREEN WIDGETS") else "HOMESCREEN WIDGETS",
                         style = MaterialTheme.typography.labelSmall,
                         color = TextSecondary,
                         fontWeight = FontWeight.Bold
@@ -21208,7 +21208,7 @@ private fun OnboardingStep4(language: String) {
         }
         Spacer(modifier = Modifier.height(14.dp))
         Text(
-            text = if (language == "de") "Schnellzugriff auf deinen Homescreen" else if (language == "ka") "სწრაფი წვდომა მთავარ ეკრანზე" else if (language == "zh") "主屏幕快捷访问" else "Quick Access on Homescreen",
+            text = if (language == "de") "Schnellzugriff auf deinen Homescreen" else if (language == "ka") "სწრაფი წვდომა მთავარ ეკრანზე" else if (language == "zh") "主屏幕快捷访问" else if (language == "es") tr("es", "", "Quick Access on Homescreen") else "Quick Access on Homescreen",
             style = MaterialTheme.typography.titleMedium,
             color = TextPrimary,
             fontWeight = FontWeight.Bold,
@@ -21216,7 +21216,7 @@ private fun OnboardingStep4(language: String) {
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = if (language == "de") "Füge Widgets hinzu, um deine Gewohnheiten direkt vom Homescreen aus abzuhaken." else if (language == "ka") "დაამატეთ ვიჯეტები ჩვევების დასასრულებლად პირდაპირ თქვენი საწყისი ეკრანიდან." else if (language == "zh") "添加小组件，直接在主屏幕上轻松打卡习惯。" else "Add widgets to complete habits directly from your home screen.",
+            text = if (language == "de") "Füge Widgets hinzu, um deine Gewohnheiten direkt vom Homescreen aus abzuhaken." else if (language == "ka") "დაამატეთ ვიჯეტები ჩვევების დასასრულებლად პირდაპირ თქვენი საწყისი ეკრანიდან." else if (language == "zh") "添加小组件，直接在主屏幕上轻松打卡习惯。" else if (language == "es") tr("es", "", "Add widgets to complete habits directly from your home screen.") else "Add widgets to complete habits directly from your home screen.",
             style = MaterialTheme.typography.bodySmall,
             color = TextSecondary,
             textAlign = TextAlign.Center,
@@ -21249,7 +21249,7 @@ private fun OnboardingStep5(language: String, viewModel: HabitsViewModel) {
         }
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = if (language == "de") "Bereit für deine Reise!" else if (language == "ka") "მოემზადეთ თქვენი მოგზაურობისთვის!" else if (language == "zh") "准备开启你的习惯之旅！" else "Ready for your journey!",
+            text = if (language == "de") "Bereit für deine Reise!" else if (language == "ka") "მოემზადეთ თქვენი მოგზაურობისთვის!" else if (language == "zh") "准备开启你的习惯之旅！" else if (language == "es") tr("es", "", "Ready for your journey!") else "Ready for your journey!",
             style = MaterialTheme.typography.titleLarge,
             color = TextPrimary,
             fontWeight = FontWeight.Bold,
@@ -21257,7 +21257,7 @@ private fun OnboardingStep5(language: String, viewModel: HabitsViewModel) {
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = if (language == "de") "Starte jetzt und baue deine Traumgewohnheiten auf." else if (language == "ka") "დაიწყე ახლა და ჩამოაყალიბე შენი საოცნებო ჩვევები." else if (language == "zh") "立即开始，打造你的理想习惯。" else "Start now and build your dream habits.",
+            text = if (language == "de") "Starte jetzt und baue deine Traumgewohnheiten auf." else if (language == "ka") "დაიწყე ახლა და ჩამოაყალიბე შენი საოცნებო ჩვევები." else if (language == "zh") "立即开始，打造你的理想习惯。" else if (language == "es") tr("es", "", "Start now and build your dream habits.") else "Start now and build your dream habits.",
             style = MaterialTheme.typography.bodyMedium,
             color = TextSecondary,
             textAlign = TextAlign.Center,
@@ -21307,15 +21307,15 @@ fun TimeCapsuleSlide(
     }
 
     val titleText = if (type == "MONTHLY") {
-        if (language == "de") "Zeitkapsel" else if (language == "ka") "დროის კაფსულა" else if (language == "zh") "时间胶囊" else "Time Capsule"
+        if (language == "de") "Zeitkapsel" else if (language == "ka") "დროის კაფსულა" else if (language == "zh") "时间胶囊" else if (language == "es") tr("es", "", "Time Capsule") else "Time Capsule"
     } else {
-        if (language == "de") "Jahres-Zeitkapsel" else if (language == "ka") "წლიური დროის კაფსულა" else if (language == "zh") "年度时间胶囊" else "Yearly Time Capsule"
+        if (language == "de") "Jahres-Zeitkapsel" else if (language == "ka") "წლიური დროის კაფსულა" else if (language == "zh") "年度时间胶囊" else if (language == "es") tr("es", "", "Yearly Time Capsule") else "Yearly Time Capsule"
     }
 
     val subtitleText = if (type == "MONTHLY") {
-        if (language == "de") "Botschaften zwischen deinem vergangenen und zukünftigen Ich." else if (language == "ka") "შეტყობინებები თქვენს წარსულსა და მომავალს შორის." else if (language == "zh") "过去与未来的你之间的跨时空对话。" else "Messages between your past and future self."
+        if (language == "de") "Botschaften zwischen deinem vergangenen und zukünftigen Ich." else if (language == "ka") "შეტყობინებები თქვენს წარსულსა და მომავალს შორის." else if (language == "zh") "过去与未来的你之间的跨时空对话。" else if (language == "es") tr("es", "", "Messages between your past and future self.") else "Messages between your past and future self."
     } else {
-        if (language == "de") "Wirf einen Blick zurück und hinterlassen Wünsche für das nächste Jahr." else if (language == "ka") "გადახედეთ თქვენს მიზნებს და დატოვეთ შეტყობინებები მომავალი წლისთვის." else if (language == "zh") "回顾你当下的目标，并为来年留下期许寄语。" else "Look back at your goals and leave messages for next year."
+        if (language == "de") "Wirf einen Blick zurück und hinterlassen Wünsche für das nächste Jahr." else if (language == "ka") "გადახედეთ თქვენს მიზნებს და დატოვეთ შეტყობინებები მომავალი წლისთვის." else if (language == "zh") "回顾你当下的目标，并为来年留下期许寄语。" else if (language == "es") tr("es", "", "Look back at your goals and leave messages for next year.") else "Look back at your goals and leave messages for next year."
     }
 
     LazyColumn(
@@ -21361,7 +21361,7 @@ fun TimeCapsuleSlide(
             }
 
             Text(
-                text = "✉️ " + (if (language == "de") "Nachricht für $pastPeriodLabel" else if (language == "ka") "შეტყობინება $pastPeriodLabel -სთვის" else if (language == "zh") "寄给 $pastPeriodLabel 的信件" else "Message for $pastPeriodLabel"),
+                text = "✉️ " + (if (language == "de") "Nachricht für $pastPeriodLabel" else if (language == "ka") "შეტყობინება $pastPeriodLabel -სთვის" else if (language == "zh") "寄给 $pastPeriodLabel 的信件" else if (language == "es") tr("es", "", "Message for $pastPeriodLabel") else "Message for $pastPeriodLabel"),
                 style = MaterialTheme.typography.titleMedium,
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
@@ -21395,7 +21395,7 @@ fun TimeCapsuleSlide(
                                 modifier = Modifier.size(24.dp)
                             )
                             Text(
-                                text = if (language == "de") "Brief entsiegelt!" else if (language == "ka") "წერილი დალუქული!" else if (language == "zh") "信件已开启！" else "Letter unsealed!",
+                                text = if (language == "de") "Brief entsiegelt!" else if (language == "ka") "წერილი დალუქული!" else if (language == "zh") "信件已开启！" else if (language == "es") tr("es", "", "Letter unsealed!") else "Letter unsealed!",
                                 style = MaterialTheme.typography.titleSmall,
                                 color = Color(0xFF92400E),
                                 fontWeight = FontWeight.Bold
@@ -21418,7 +21418,7 @@ fun TimeCapsuleSlide(
                         val sdf = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
                         val dateFormatted = sdf.format(Date(pastNote!!.createdAt))
                         Text(
-                            text = if (language == "de") "Geschrieben am $dateFormatted" else if (language == "ka") "დაწერილია $dateFormatted -ზე" else if (language == "zh") "写于 $dateFormatted" else "Written on $dateFormatted",
+                            text = if (language == "de") "Geschrieben am $dateFormatted" else if (language == "ka") "დაწერილია $dateFormatted -ზე" else if (language == "zh") "写于 $dateFormatted" else if (language == "es") tr("es", "", "Written on $dateFormatted") else "Written on $dateFormatted",
                             style = MaterialTheme.typography.labelSmall,
                             color = Color(0xFF78350F),
                             modifier = Modifier.align(Alignment.End)
@@ -21449,7 +21449,7 @@ fun TimeCapsuleSlide(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = if (language == "de") "Keine Nachricht aus der Vergangenheit versiegelt." else if (language == "ka") "წარსულიდან არ არის დალუქული მესიჯი." else if (language == "zh") "暂无已开启的过去信件。" else "No message from the past unsealed.",
+                            text = if (language == "de") "Keine Nachricht aus der Vergangenheit versiegelt." else if (language == "ka") "წარსულიდან არ არის დალუქული მესიჯი." else if (language == "zh") "暂无已开启的过去信件。" else if (language == "es") tr("es", "", "No message from the past unsealed.") else "No message from the past unsealed.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = Color.White.copy(alpha = 0.6f),
                             textAlign = TextAlign.Center
@@ -21475,7 +21475,7 @@ fun TimeCapsuleSlide(
             }
 
             Text(
-                text = "✍️ " + (if (language == "de") "Brief an dein zukünftiges Ich für $futurePeriodLabel" else if (language == "ka") "წერილი თქვენს მომავალ საკუთარ თავს $futurePeriodLabel -სთვის" else if (language == "zh") "写给未来自己在 $futurePeriodLabel 的一封信" else "Letter to your future self for $futurePeriodLabel"),
+                text = "✍️ " + (if (language == "de") "Brief an dein zukünftiges Ich für $futurePeriodLabel" else if (language == "ka") "წერილი თქვენს მომავალ საკუთარ თავს $futurePeriodLabel -სთვის" else if (language == "zh") "写给未来自己在 $futurePeriodLabel 的一封信" else if (language == "es") tr("es", "", "Letter to your future self for $futurePeriodLabel") else "Letter to your future self for $futurePeriodLabel"),
                 style = MaterialTheme.typography.titleMedium,
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
@@ -21498,9 +21498,9 @@ fun TimeCapsuleSlide(
                 ) {
                     Text(
                         text = if (type == "MONTHLY") {
-                            if (language == "de") "Was möchtest du im nächsten Monat erreichen? Welche Gewohnheiten willst du meistern? Schreib es hier nieder:" else if (language == "ka") "რისი მიღწევა გსურთ შემდეგ თვეში? რომელი ჩვევების დაუფლება გსურთ? დაწერე აქ:" else if (language == "zh") "下个月你想达成什么目标？想养成哪些好习惯？写在这里：" else "What do you want to achieve next month? Which habits do you want to master? Write it here:"
+                            if (language == "de") "Was möchtest du im nächsten Monat erreichen? Welche Gewohnheiten willst du meistern? Schreib es hier nieder:" else if (language == "ka") "რისი მიღწევა გსურთ შემდეგ თვეში? რომელი ჩვევების დაუფლება გსურთ? დაწერე აქ:" else if (language == "zh") "下个月你想达成什么目标？想养成哪些好习惯？写在这里：" else if (language == "es") tr("es", "", "What do you want to achieve next month? Which habits do you want to master? Write it here:") else "What do you want to achieve next month? Which habits do you want to master? Write it here:"
                         } else {
-                            if (language == "de") "Hinterlasse eine Nachricht oder ein großes Lebensziel an dein zukünftiges Ich für das kommende Jahr:" else if (language == "ka") "დატოვეთ მესიჯი ან მთავარი ცხოვრებისეული მიზანი მომავალი წლისთვის:" else if (language == "zh") "为来年写下一句寄语或核心人生目标，留给未来的自己：" else "Leave a message or a major life goal for your future self for the upcoming year:"
+                            if (language == "de") "Hinterlasse eine Nachricht oder ein großes Lebensziel an dein zukünftiges Ich für das kommende Jahr:" else if (language == "ka") "დატოვეთ მესიჯი ან მთავარი ცხოვრებისეული მიზანი მომავალი წლისთვის:" else if (language == "zh") "为来年写下一句寄语或核心人生目标，留给未来的自己：" else if (language == "es") tr("es", "", "Leave a message or a major life goal for your future self for the upcoming year:") else "Leave a message or a major life goal for your future self for the upcoming year:"
                         },
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.White.copy(alpha = 0.85f),
@@ -21513,7 +21513,7 @@ fun TimeCapsuleSlide(
                             futureText = newValue
                             viewModel.saveTimeCapsuleNote(type, upcomingPeriod, newValue)
                         },
-                        placeholderText = if (language == "de") "Liebes zukünftiges Ich..." else if (language == "ka") "ძვირფასო მომავალო..." else if (language == "zh") "亲爱的未来的我..." else "Dear future self...",
+                        placeholderText = if (language == "de") "Liebes zukünftiges Ich..." else if (language == "ka") "ძვირფასო მომავალო..." else if (language == "zh") "亲爱的未来的我..." else if (language == "es") tr("es", "", "Dear future self...") else "Dear future self...",
                         modifier = Modifier.height(130.dp),
                         containerColor = Color.Black.copy(alpha = 0.15f),
                         accentColor = Color(0xFFF59E0B),
@@ -21540,9 +21540,9 @@ fun TimeCapsuleSlide(
                         )
                         Text(
                             text = if (type == "MONTHLY") {
-                                if (language == "de") "Diese Kapsel bleibt bis zum Beginn von $futurePeriodLabel versiegelt." else if (language == "ka") "ეს კაფსულა რჩება დალუქული $futurePeriodLabel -ის დაწყებამდე." else if (language == "zh") "此胶囊将在 $futurePeriodLabel 开始前保持密封。" else "This capsule remains sealed until the start of $futurePeriodLabel."
+                                if (language == "de") "Diese Kapsel bleibt bis zum Beginn von $futurePeriodLabel versiegelt." else if (language == "ka") "ეს კაფსულა რჩება დალუქული $futurePeriodLabel -ის დაწყებამდე." else if (language == "zh") "此胶囊将在 $futurePeriodLabel 开始前保持密封。" else if (language == "es") tr("es", "", "This capsule remains sealed until the start of $futurePeriodLabel.") else "This capsule remains sealed until the start of $futurePeriodLabel."
                             } else {
-                                if (language == "de") "Diese Kapsel bleibt bis zum Beginn von $futurePeriodLabel versiegelt." else if (language == "ka") "ეს კაფსულა რჩება დალუქული $futurePeriodLabel -ის დაწყებამდე." else if (language == "zh") "此胶囊将在 $futurePeriodLabel 开始前保持密封。" else "This capsule remains sealed until the start of $futurePeriodLabel."
+                                if (language == "de") "Diese Kapsel bleibt bis zum Beginn von $futurePeriodLabel versiegelt." else if (language == "ka") "ეს კაფსულა რჩება დალუქული $futurePeriodLabel -ის დაწყებამდე." else if (language == "zh") "此胶囊将在 $futurePeriodLabel 开始前保持密封。" else if (language == "es") tr("es", "", "This capsule remains sealed until the start of $futurePeriodLabel.") else "This capsule remains sealed until the start of $futurePeriodLabel."
                             },
                             style = MaterialTheme.typography.labelSmall,
                             color = Color.White.copy(alpha = 0.5f)
@@ -21612,7 +21612,7 @@ fun RewardsOverviewSheet(
                 .padding(bottom = 32.dp)
         ) {
             Text(
-                text = if (language == "de") "Meilenstein-Belohnungen" else if (language == "ka") "ეტაპობრივი ჯილდოები" else if (language == "zh") "里程碑奖励" else "Milestone Rewards",
+                text = if (language == "de") "Meilenstein-Belohnungen" else if (language == "ka") "ეტაპობრივი ჯილდოები" else if (language == "zh") "里程碑奖励" else if (language == "es") tr("es", "", "Milestone Rewards") else "Milestone Rewards",
                 style = MaterialTheme.typography.titleLarge,
                 color = TextPrimary,
                 fontWeight = FontWeight.Bold,
@@ -21628,8 +21628,8 @@ fun RewardsOverviewSheet(
                 onTimeframeSelected = { selectedTabIndex = it },
                 language = language,
                 customLabels = listOf(
-                    if (language == "de") "Aktiv (${activeRewards.size})" else if (language == "ka") "აქტიური (${activeRewards.size})" else if (language == "zh") "进行中 (${activeRewards.size})" else "Active (${activeRewards.size})",
-                    if (language == "de") "Freigeschaltet (${achievedRewards.size})" else if (language == "ka") "მიღწეული (${achievedRewards.size})" else if (language == "zh") "已解锁 (${achievedRewards.size})" else "Unlocked (${achievedRewards.size})"
+                    if (language == "de") "Aktiv (${activeRewards.size})" else if (language == "ka") "აქტიური (${activeRewards.size})" else if (language == "zh") "进行中 (${activeRewards.size})" else if (language == "es") tr("es", "", "Active (${activeRewards.size})") else "Active (${activeRewards.size})",
+                    if (language == "de") "Freigeschaltet (${achievedRewards.size})" else if (language == "ka") "მიღწეული (${achievedRewards.size})" else if (language == "zh") "已解锁 (${achievedRewards.size})" else if (language == "es") tr("es", "", "Unlocked (${achievedRewards.size})") else "Unlocked (${achievedRewards.size})"
                 ),
                 badges = listOf(0, unredeemedCount)
             )
@@ -21646,7 +21646,7 @@ fun RewardsOverviewSheet(
                         if (activeRewards.isEmpty()) {
                             item {
                                 Text(
-                                    text = if (language == "de") "Keine aktiven Belohnungen festgelegt. Du kannst beim Bearbeiten oder Erstellen einer Gewohnheit Meilensteine und Belohnungen hinzufügen." else if (language == "ka") "არ არის განსაზღვრული აქტიური ჯილდოები." else if (language == "zh") "尚未设定进行中的奖励。你可以在创建或编辑习惯时添加里程碑与专属奖励。" else "No active rewards set. You can add milestone rewards when creating or editing a habit.",
+                                    text = if (language == "de") "Keine aktiven Belohnungen festgelegt. Du kannst beim Bearbeiten oder Erstellen einer Gewohnheit Meilensteine und Belohnungen hinzufügen." else if (language == "ka") "არ არის განსაზღვრული აქტიური ჯილდოები." else if (language == "zh") "尚未设定进行中的奖励。你可以在创建或编辑习惯时添加里程碑与专属奖励。" else if (language == "es") tr("es", "", "No active rewards set. You can add milestone rewards when creating or editing a habit.") else "No active rewards set. You can add milestone rewards when creating or editing a habit.",
                                     color = TextSecondary,
                                     modifier = Modifier.padding(vertical = 16.dp)
                                 )
@@ -21774,9 +21774,9 @@ fun RewardsOverviewSheet(
                                             Text(
                                                 text = if (reward.conditionType == "TROPHY_COUPLED") {
                                                     val tName = if (trophy != null) trophy.getLocalizedTitle(language) else (reward.trophyId ?: "")
-                                                    if (language == "de") "Trophäe: $tName" else if (language == "ka") "Trophy: $tName" else if (language == "zh") "奖杯：$tName" else "Trophy: $tName"
+                                                    if (language == "de") "Trophäe: $tName" else if (language == "ka") "Trophy: $tName" else if (language == "zh") "奖杯：$tName" else if (language == "es") tr("es", "", "Trophy: $tName") else "Trophy: $tName"
                                                 } else {
-                                                    if (language == "de") "Fortschritt" else if (language == "ka") "პროგრესი" else if (language == "zh") "进度" else "Progress"
+                                                    if (language == "de") "Fortschritt" else if (language == "ka") "პროგრესი" else if (language == "zh") "进度" else if (language == "es") tr("es", "", "Progress") else "Progress"
                                                 },
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = TextSecondary
@@ -21803,7 +21803,7 @@ fun RewardsOverviewSheet(
                         if (achievedRewards.isEmpty()) {
                             item {
                                 Text(
-                                    text = if (language == "de") "Noch keine Belohnungen freigeschaltet." else if (language == "ka") "ჯერ არ არის მიღებული ჯილდო." else if (language == "zh") "尚未解锁任何奖励。" else "No rewards unlocked yet.",
+                                    text = if (language == "de") "Noch keine Belohnungen freigeschaltet." else if (language == "ka") "ჯერ არ არის მიღებული ჯილდო." else if (language == "zh") "尚未解锁任何奖励。" else if (language == "es") tr("es", "", "No rewards unlocked yet.") else "No rewards unlocked yet.",
                                     color = TextSecondary,
                                     modifier = Modifier.padding(vertical = 16.dp)
                                 )
@@ -21929,7 +21929,7 @@ fun RewardsOverviewSheet(
                                                     Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
                                                     Spacer(modifier = Modifier.width(6.dp))
                                                     Text(
-                                                        text = if (language == "de") "Als eingelöst markieren ✓" else if (language == "ka") "გამოისყიდე" else if (language == "zh") "标记为已兑换" else "Mark as Redeemed ✓",
+                                                        text = if (language == "de") "Als eingelöst markieren ✓" else if (language == "ka") "გამოისყიდე" else if (language == "zh") "标记为已兑换" else if (language == "es") tr("es", "", "Mark as Redeemed ✓") else "Mark as Redeemed ✓",
                                                         style = MaterialTheme.typography.labelMedium,
                                                         fontWeight = FontWeight.Bold
                                                     )
@@ -21942,7 +21942,7 @@ fun RewardsOverviewSheet(
                                                         border = BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.5f))
                                                     ) {
                                                         Text(
-                                                            text = if (language == "de") "Eingelöst ✓" else if (language == "ka") "გამოისყიდა ✓" else if (language == "zh") "已兑换 ✓" else "Redeemed ✓",
+                                                            text = if (language == "de") "Eingelöst ✓" else if (language == "ka") "გამოისყიდა ✓" else if (language == "zh") "已兑换 ✓" else if (language == "es") tr("es", "", "Redeemed ✓") else "Redeemed ✓",
                                                             style = MaterialTheme.typography.labelSmall,
                                                             color = Color(0xFF10B981),
                                                             fontWeight = FontWeight.Bold,
@@ -22074,7 +22074,7 @@ private fun CsvImportPreviewDialog(
                     CircularProgressIndicator(color = PrimaryViolet, modifier = Modifier.size(48.dp))
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = if (language == "de") "Analysiere CSV / ZIP Datei..." else if (language == "ka") "მიმდინარეობს CSV / ZIP ფაილის ანალიზი..." else if (language == "zh") "正在分析 CSV / ZIP 文件..." else "Analyzing CSV / ZIP file...",
+                        text = if (language == "de") "Analysiere CSV / ZIP Datei..." else if (language == "ka") "მიმდინარეობს CSV / ZIP ფაილის ანალიზი..." else if (language == "zh") "正在分析 CSV / ZIP 文件..." else if (language == "es") tr("es", "", "Analyzing CSV / ZIP file...") else "Analyzing CSV / ZIP file...",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -22105,7 +22105,7 @@ private fun CsvImportPreviewDialog(
                     Spacer(modifier = Modifier.height(10.dp))
 
                     Text(
-                        text = if (language == "de") "Gewohnheiten importieren" else if (language == "ka") "იმპორტის ჩვევები" else if (language == "zh") "导入习惯" else "Import Habits",
+                        text = if (language == "de") "Gewohnheiten importieren" else if (language == "ka") "იმპორტის ჩვევები" else if (language == "zh") "导入习惯" else if (language == "es") tr("es", "", "Import Habits") else "Import Habits",
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.ExtraBold
                     )
@@ -22155,7 +22155,7 @@ private fun CsvImportPreviewDialog(
                             ) {
                                 Column(modifier = Modifier.padding(12.dp)) {
                                     Text(
-                                        text = if (language == "de") "Gewohnheiten" else if (language == "ka") "ჩვევები" else if (language == "zh") "习惯" else "Habits",
+                                        text = if (language == "de") "Gewohnheiten" else if (language == "ka") "ჩვევები" else if (language == "zh") "习惯" else if (language == "es") tr("es", "", "Habits") else "Habits",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -22176,7 +22176,7 @@ private fun CsvImportPreviewDialog(
                             ) {
                                 Column(modifier = Modifier.padding(12.dp)) {
                                     Text(
-                                        text = if (language == "de") "Einträge" else if (language == "ka") "ჟურნალები" else if (language == "zh") "条记录" else "Logs",
+                                        text = if (language == "de") "Einträge" else if (language == "ka") "ჟურნალები" else if (language == "zh") "条记录" else if (language == "es") tr("es", "", "Logs") else "Logs",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -22217,7 +22217,7 @@ private fun CsvImportPreviewDialog(
                         Spacer(modifier = Modifier.height(16.dp))
 
                         Text(
-                            text = if (language == "de") "Gefundene Gewohnheiten:" else if (language == "ka") "გამოვლენილი ჩვევები:" else if (language == "zh") "识别出的习惯：" else "Detected Habits:",
+                            text = if (language == "de") "Gefundene Gewohnheiten:" else if (language == "ka") "გამოვლენილი ჩვევები:" else if (language == "zh") "识别出的习惯：" else if (language == "es") tr("es", "", "Detected Habits:") else "Detected Habits:",
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold
                         )
@@ -22273,7 +22273,7 @@ private fun CsvImportPreviewDialog(
 
                         // Import Mode Switcher
                         Text(
-                            text = if (language == "de") "Import-Modus:" else if (language == "ka") "იმპორტის რეჟიმი:" else if (language == "zh") "导入模式：" else "Import Mode:",
+                            text = if (language == "de") "Import-Modus:" else if (language == "ka") "იმპორტის რეჟიმი:" else if (language == "zh") "导入模式：" else if (language == "es") tr("es", "", "Import Mode:") else "Import Mode:",
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold
                         )
@@ -22297,12 +22297,12 @@ private fun CsvImportPreviewDialog(
                             Spacer(modifier = Modifier.width(8.dp))
                             Column {
                                 Text(
-                                    text = if (language == "de") "Zusammenführen (Empfohlen)" else if (language == "ka") "შერწყმა (რეკომენდირებულია)" else if (language == "zh") "合并追加（推荐）" else "Merge (Recommended)",
+                                    text = if (language == "de") "Zusammenführen (Empfohlen)" else if (language == "ka") "შერწყმა (რეკომენდირებულია)" else if (language == "zh") "合并追加（推荐）" else if (language == "es") tr("es", "", "Merge (Recommended)") else "Merge (Recommended)",
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    text = if (language == "de") "Fügt neue Daten zu bestehenden hinzu." else if (language == "ka") "ამატებს ახალ ჩანაწერებს მიმდინარე ჩვევებთან ერთად." else if (language == "zh") "将新数据与现有习惯及打卡记录合并。" else "Adds new entries alongside current habits.",
+                                    text = if (language == "de") "Fügt neue Daten zu bestehenden hinzu." else if (language == "ka") "ამატებს ახალ ჩანაწერებს მიმდინარე ჩვევებთან ერთად." else if (language == "zh") "将新数据与现有习惯及打卡记录合并。" else if (language == "es") tr("es", "", "Adds new entries alongside current habits.") else "Adds new entries alongside current habits.",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -22328,13 +22328,13 @@ private fun CsvImportPreviewDialog(
                             Spacer(modifier = Modifier.width(8.dp))
                             Column {
                                 Text(
-                                    text = if (language == "de") "Bestehende ersetzen" else if (language == "ka") "შეცვალეთ არსებული" else if (language == "zh") "覆盖替换现有数据" else "Replace existing",
+                                    text = if (language == "de") "Bestehende ersetzen" else if (language == "ka") "შეცვალეთ არსებული" else if (language == "zh") "覆盖替换现有数据" else if (language == "es") tr("es", "", "Replace existing") else "Replace existing",
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = ErrorRed
                                 )
                                 Text(
-                                    text = if (language == "de") "Löscht aktuelle Gewohnheiten und überschreibt diese." else if (language == "ka") "ასუფთავებს არსებულ მონაცემებს და ანაცვლებს იმპორტით." else if (language == "zh") "清除当前所有数据并完全替换为导入的数据。" else "Clears existing data and replaces with import.",
+                                    text = if (language == "de") "Löscht aktuelle Gewohnheiten und überschreibt diese." else if (language == "ka") "ასუფთავებს არსებულ მონაცემებს და ანაცვლებს იმპორტით." else if (language == "zh") "清除当前所有数据并完全替换为导入的数据。" else if (language == "es") tr("es", "", "Clears existing data and replaces with import.") else "Clears existing data and replaces with import.",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -22353,7 +22353,7 @@ private fun CsvImportPreviewDialog(
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp)
                         ) {
-                            Text(if (language == "de") "Abbrechen" else if (language == "ka") "გაუქმება" else if (language == "zh") "取消" else "Cancel")
+                            Text(if (language == "de") "Abbrechen" else if (language == "ka") "გაუქმება" else if (language == "zh") "取消" else if (language == "es") tr("es", "", "Cancel") else "Cancel")
                         }
 
                         if (preview.errorMessage == null && preview.habits.isNotEmpty()) {
@@ -22368,7 +22368,7 @@ private fun CsvImportPreviewDialog(
                             ) {
                                 Icon(Icons.Default.UploadFile, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text(if (language == "de") "Importieren" else if (language == "ka") "იმპორტი" else if (language == "zh") "导入" else "Import")
+                                Text(if (language == "de") "Importieren" else if (language == "ka") "იმპორტი" else if (language == "zh") "导入" else if (language == "es") tr("es", "", "Import") else "Import")
                             }
                         }
                     }
