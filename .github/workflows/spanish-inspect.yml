@@ -1,0 +1,38 @@
+name: Spanish translation inspection
+
+on:
+  push:
+    branches: [ spanish-translation ]
+
+permissions:
+  contents: write
+
+jobs:
+  inspect:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: spanish-translation
+      - name: Locate language implementation
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('app/src/main/java/com/example/MainActivity.kt')
+          lines = p.read_text(encoding='utf-8').splitlines()
+          needles = ['lang', 'language', 'sprache', 'english', 'deutsch', 'georg', 'chinese', '中文', 'ქართული']
+          hits = []
+          for i, line in enumerate(lines):
+              low = line.lower()
+              if any(n in low for n in needles):
+                  a=max(0,i-3); b=min(len(lines),i+4)
+                  hits.append(f'--- lines {a+1}-{b} ---\n' + '\n'.join(f'{j+1}: {lines[j]}' for j in range(a,b)))
+          Path('LANGUAGE_REPORT.txt').write_text('\n\n'.join(hits), encoding='utf-8')
+      - name: Commit report
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add LANGUAGE_REPORT.txt
+          git commit -m "chore: inspect language implementation" || exit 0
+          git push
