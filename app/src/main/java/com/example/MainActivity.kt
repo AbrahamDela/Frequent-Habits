@@ -1035,7 +1035,7 @@ fun AudioSoundscapeDialog(
                         } else if (language == "zh") {
                             "你可以在此处导入自定义音频文件（MP3、WAV、M4A）并作为专注背景音进行管理。"
                         } else {
-                            "Import and manage custom audio files (MP3, WAV, M4A) for your focus soundscapes here."
+                            tr(language, "", "Import and manage custom audio files (MP3, WAV, M4A) for your focus soundscapes here.")
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = TextSecondary
@@ -4029,7 +4029,7 @@ fun TodayScreen(
                             } else if (language == "zh") {
                                 "点击顶部的 '+' 随时添加新习惯。"
                             } else {
-                                "Tap '+' above to add a habit anytime."
+                                tr(language, "", "Tap '+' above to add a habit anytime.")
                             },
                             style = MaterialTheme.typography.bodyMedium,
                             color = TextSecondary,
@@ -4144,7 +4144,7 @@ fun TodayScreen(
                         } else if (language == "ka") {
                         "აირჩიეთ მოქმედება ამ ჩვევისთვის:"
                     } else {
-                        "Choose an action for this habit:"
+                        tr(language, "", "Choose an action for this habit:")
                     },
                         color = TextSecondary,
                         style = MaterialTheme.typography.bodyMedium,
@@ -5830,7 +5830,7 @@ fun HabitDetailScreen(
                             explanation = if (language == "de") {
                                 "Die gewichtete Stärke dieser Gewohnheit (0-100) basierend auf den letzten 30 Tagen. Neuere Einträge werden etwas stärker gewichtet, sodass sich dein Score schneller erholen kann. Ausstehende Aufgaben für den heutigen Tag reduzieren den Score nicht, solange sie unmarkiert bleiben."
                             } else {
-                                "The strength score of this habit (0-100) based on the last 30 days. Recent entries carry slightly more weight, allowing your score to recover faster. Pending tasks for today do not reduce your score as long as they remain unmarked."
+                                tr(language, "", "The strength score of this habit (0-100) based on the last 30 days. Recent entries carry slightly more weight, allowing your score to recover faster. Pending tasks for today do not reduce your score as long as they remain unmarked.")
                             },
                             onClick = { t, e -> activeExplanation = t to e }
                         )
@@ -5981,7 +5981,7 @@ fun HabitDetailScreen(
                     } else if (language == "zh") {
                         "截至今天，你连续成功完成该习惯的天数。"
                     } else {
-                        "The number of consecutive days you have completed this habit up to today."
+                        tr(language, "", "The number of consecutive days you have completed this habit up to today.")
                     }
                 }
                 val longestStreakExplanation = if (isWeeklyHabit) {
@@ -6002,7 +6002,7 @@ fun HabitDetailScreen(
                     } else if (language == "zh") {
                         "你连续完成该习惯的历史最高连续天数记录。"
                     } else {
-                        "Your highest historical record of consecutive days completing this habit."
+                        tr(language, "", "Your highest historical record of consecutive days completing this habit.")
                     }
                 }
 
@@ -7211,7 +7211,8 @@ fun TimeframeSelectorPills(
     val labels = customLabels ?: when (language) {
         "de" -> listOf("Diese Woche", "Diesen Monat", "Dieses Jahr", "Gesamt")
         "ka" -> listOf("ამ კვირაში", "ამ თვეში", "ამ წელს", "სულ")
-        else -> listOf("This Week", "This Month", "This Year", "Total")
+        "es" -> listOf("Esta semana", "Este mes", "Este año", "Total")
+            else -> listOf("This Week", "This Month", "This Year", "Total")
     }
 
     Row(
@@ -10137,7 +10138,7 @@ fun SettingsScreen(
                         text = if (language == "de") {
                             "Archivierte Gewohnheiten sind pausiert und werden nicht im Dashboard oder in Statistiken angezeigt. Du kannst sie jederzeit wieder aktivieren."
                         } else {
-                            "Archived habits are paused and do not appear in the dashboard or statistics. You can reactivate them at any time."
+                            tr(language, "", "Archived habits are paused and do not appear in the dashboard or statistics. You can reactivate them at any time.")
                         },
                         style = MaterialTheme.typography.bodyMedium,
                         color = TextSecondary,
@@ -10804,7 +10805,7 @@ fun SettingsScreen(
                                     text = tr(
                                         language,
                                         "Dein Name und Profilbild werden nur lokal auf deinem Gerät gespeichert.",
-                                        "Your name and profile picture are stored strictly locally on your device."
+                                        tr(language, "", "Your name and profile picture are stored strictly locally on your device.")
                                     ),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = TextSecondary
@@ -11586,7 +11587,7 @@ fun SettingsScreen(
                                     text = tr(
                                         language,
                                         "Importiere deine gesamte Historie (ZIP) direkt aus dem Loop Habit Tracker, oder lade einzelne CSV-Dateien (Loop, Bull, Custom) hoch.",
-                                        "Import your entire history (ZIP) directly from Loop Habit Tracker, or upload individual CSV files (Loop, Bull, Custom)."
+                                        tr(language, "", "Import your entire history (ZIP) directly from Loop Habit Tracker, or upload individual CSV files (Loop, Bull, Custom).")
                                     ),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = TextSecondary
@@ -11636,7 +11637,7 @@ fun SettingsScreen(
                                     text = tr(
                                         language,
                                         "Wähle einen Ordner aus. Die App erstellt dort täglich automatisch ein Backup der letzten 3 Tage. Du kannst auch jederzeit manuell sichern oder wiederherstellen.",
-                                        "Select a local folder. The app will automatically save daily JSON exports there (retaining only the 3 latest). You can also back up or restore manually."
+                                        tr(language, "", "Select a local folder. The app will automatically save daily JSON exports there (retaining only the 3 latest). You can also back up or restore manually.")
                                     ),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = TextSecondary
@@ -12687,7 +12688,7 @@ fun CreateHabitScreen(
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            val weekdays = if (language == "de") listOf("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So") else listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+                            val weekdays = if (language == "de") listOf("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So") else if (language == "es") listOf("Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom") else listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
                             weekdays.forEachIndexed { index, dayName ->
                                 val dayNum = index + 1
                                 val isSelected = specificDaysSet.contains(dayNum)
@@ -12822,7 +12823,7 @@ fun CreateHabitScreen(
                             explanation = if (language == "de") {
                                 "Richte dir Benachrichtigungen ein, um zur gewünschten Uhrzeit an deine Gewohnheit erinnert zu werden."
                             } else {
-                                "Set up notifications so you get reminded of your habit at your desired time."
+                                tr(language, "", "Set up notifications so you get reminded of your habit at your desired time.")
                             },
                             onClick = { t, e -> activeExplanation = t to e }
                         )
@@ -12960,7 +12961,7 @@ fun CreateHabitScreen(
                             explanation = if (language == "de") {
                                 "Setze dir persönliche Belohnungen für das Erreichen von Meilensteinen (z. B. 30 Tage Serie). Sobald du das Ziel erreichst, wird die Belohnung freigeschaltet!"
                             } else {
-                                "Set personal rewards for reaching milestones (e.g. 30-day streak). Once you reach the target, the reward unlocks!"
+                                tr(language, "", "Set personal rewards for reaching milestones (e.g. 30-day streak). Once you reach the target, the reward unlocks!")
                             },
                             onClick = { t, e -> activeExplanation = t to e }
                         )
@@ -14678,7 +14679,7 @@ fun ProfileScreen(
 
             // Visual filter tabs to toggle: Freigeschaltet, Alle Erfolge
             item {
-                val tabs = if (language == "de") listOf("Freigeschaltet", "Alle Erfolge") else if (language == "ka") listOf("განბლოკილი", "ყველა მიღწევა") else if (language == "zh") listOf("已解锁", "所有成就") else listOf("Unlocked", "All Achievements")
+                val tabs = if (language == "de") listOf("Freigeschaltet", "Alle Erfolge") else if (language == "ka") listOf("განბლოკილი", "ყველა მიღწევა") else if (language == "zh") listOf("已解锁", "所有成就") else if (language == "es") listOf("Desbloqueados", "Todos los logros") else listOf("Unlocked", "All Achievements")
                 AppSegmentedButton(
                     options = tabs,
                     selectedIndex = selectedTab,
@@ -17189,7 +17190,7 @@ private fun OnboardingStepTransition(language: String) {
             } else if (language == "zh") {
                 "助你每日蜕变与成长的实用工具。"
             } else {
-                "Tools built for your daily growth."
+                tr(language, "", "Tools built for your daily growth.")
             },
             style = MaterialTheme.typography.displaySmall.copy(fontSize = 36.sp, lineHeight = 44.sp),
             color = MaterialTheme.colorScheme.onBackground,
@@ -17207,7 +17208,7 @@ private fun OnboardingStepTransition(language: String) {
             } else if (language == "zh") {
                 "让我们携手培养优秀习惯，一步一步达成你的人生目标。"
             } else {
-                "Let's work together on your habits and reach your goals step by step."
+                tr(language, "", "Let's work together on your habits and reach your goals step by step.")
             },
             style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 26.sp),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -17349,7 +17350,7 @@ private fun OnboardingStepSmartInsights(language: String) {
             } else if (language == "ka") {
                 "ინტელექტუალური ყოველდღიური ანალიზი და კვირეული მიმოხილვა."
             } else {
-                "Intelligent daily analytics & weekly highlights tailored to your personal habit rhythm."
+                tr(language, "", "Intelligent daily analytics & weekly highlights tailored to your personal habit rhythm.")
             },
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -17457,7 +17458,7 @@ private fun OnboardingStepReviewTimeCapsule(language: String) {
             } else if (language == "ka") {
                 "ყოველთვიური და ყოველწლიური მიმოხილვა შენს დროის კაფსულასთან ერთად."
             } else {
-                "Celebrate your growth with Monthly & Yearly Reviews featuring personal Time Capsules for reflection."
+                tr(language, "", "Celebrate your growth with Monthly & Yearly Reviews featuring personal Time Capsules for reflection.")
             },
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -17584,7 +17585,7 @@ private fun OnboardingStepMilestoneRewards(language: String) {
             } else if (language == "ka") {
                 "დააწესე საკუთარი ჯილდოები მიღწეული შედეგებისთვის."
             } else {
-                "Set custom rewards for reaching streaks and milestones to stay consistently motivated."
+                tr(language, "", "Set custom rewards for reaching streaks and milestones to stay consistently motivated.")
             },
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -20794,7 +20795,7 @@ private fun OnboardingStep1(language: String) {
                     } else if (language == "zh") {
                         "点击卡片：打卡完成（开关型）或打开数值输入弹窗（计量型）。"
                     } else {
-                        "Tap card: Toggle completion (binary) or open exact value dialog (numeric)."
+                        tr(language, "", "Tap card: Toggle completion (binary) or open exact value dialog (numeric).")
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = TextPrimary
@@ -20808,7 +20809,7 @@ private fun OnboardingStep1(language: String) {
                     } else if (language == "ka") {
                         "მარჯვენა წრის ხატულა: სწრაფად ზრდის ციფრულ მნიშვნელობას +1-ით ერთი შეხებით."
                     } else {
-                        "Right circle icon: Quickly increments numeric value by +1 with one tap."
+                        tr(language, "", "Right circle icon: Quickly increments numeric value by +1 with one tap.")
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = TextPrimary
@@ -20824,7 +20825,7 @@ private fun OnboardingStep1(language: String) {
                     } else if (language == "zh") {
                         "长按卡片：呼出快捷菜单进行暂停、标记未达成、编辑与删除。"
                     } else {
-                        "Long Press: Context menu for Pause, Failed status, Edit & Delete."
+                        tr(language, "", "Long Press: Context menu for Pause, Failed status, Edit & Delete.")
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = TextPrimary
@@ -21098,7 +21099,7 @@ private fun OnboardingStep2(language: String) {
             } else if (language == "ka") {
                         "ჩამონტაჟებული ფოკუსირების ტაიმერი დამამშვიდებელი ფონის ხმებით უწყვეტი კონცენტრაციისთვის."
                     } else {
-                        "Built-in focus timer with soothing background sounds for uninterrupted concentration."
+                        tr(language, "", "Built-in focus timer with soothing background sounds for uninterrupted concentration.")
                     },
             style = MaterialTheme.typography.bodySmall,
             color = TextSecondary,
@@ -21957,7 +21958,7 @@ fun RewardsOverviewSheet(
                                                         contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
                                                     ) {
                                                         Text(
-                                                            text = if (language == "de") "Rückgängig" else "Undo",
+                                                            text = if (language == "de") "Rückgängig" else if (language == "es") "Deshacer" else "Undo",
                                                             style = MaterialTheme.typography.labelSmall,
                                                             color = TextSecondary
                                                         )
@@ -22096,7 +22097,7 @@ private fun CsvImportPreviewDialog(
                         border = BorderStroke(1.dp, PrimaryViolet.copy(alpha = 0.3f))
                     ) {
                         Text(
-                            text = "IMPORT ANALYSE",
+                            text = if (language == "es") "ANÁLISIS DE IMPORTACIÓN" else "IMPORT ANALYSE",
                             style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.2.sp),
                             color = PrimaryViolet,
                             fontWeight = FontWeight.Bold,

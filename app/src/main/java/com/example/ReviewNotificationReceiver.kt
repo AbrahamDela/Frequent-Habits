@@ -53,7 +53,7 @@ class ReviewNotificationReceiver : BroadcastReceiver() {
             )
 
             val language = prefs.getString("language", "en") ?: "en"
-            val title = if (language == "de") "Dein Jahres-Review ist bereit!" else if (language == "ka") "თქვენი წლიური მიმოხილვა მზად არის!" else if (language == "zh") "你的年度回顾已准备就绪！" else "Your Year in Review is Ready!"
+            val title = if (language == "de") "Dein Jahres-Review ist bereit!" else if (language == "ka") "თქვენი წლიური მიმოხილვა მზად არის!" else if (language == "zh") "你的年度回顾已准备就绪！" else if (language == "es") "¡Tu resumen anual está listo!" else "Your Year in Review is Ready!"
             val text = if (language == "de") "Schau nach, was dein vergangenes Ich dir in der Zeitkapsel hinterlassen hat." else if (language == "ka") "შეამოწმეთ რა დაგიტოვათ თქვენმა წარსულმა მე-მ დროის კაფსულაში." else if (language == "zh") "快来看看过去的你在时间胶囊中留下了什么。" else "Check out what your past self left you in the time capsule."
 
             val notification = NotificationCompat.Builder(context, channelId)
@@ -92,7 +92,7 @@ class ReviewNotificationReceiver : BroadcastReceiver() {
             )
 
             val language = prefs.getString("language", "en") ?: "en"
-            val title = if (language == "de") "Dein Monats-Review ist bereit!" else if (language == "ka") "თქვენი ყოველთვიური მიმოხილვა მზად არის!" else if (language == "zh") "你的月度回顾已准备就绪！" else "Your Monthly Review is Ready!"
+            val title = if (language == "de") "Dein Monats-Review ist bereit!" else if (language == "ka") "თქვენი ყოველთვიური მიმოხილვა მზად არის!" else if (language == "zh") "你的月度回顾已准备就绪！" else if (language == "es") "¡Tu resumen mensual está listo!" else "Your Monthly Review is Ready!"
             val text = if (language == "de") "Schau nach, was dein vergangenes Ich dir in der Zeitkapsel hinterlassen hat." else if (language == "ka") "შეამოწმეთ რა დაგიტოვათ თქვენმა წარსულმა მე-მ დროის კაფსულაში." else if (language == "zh") "快来看看过去的你在时间胶囊中留下了什么。" else "Check out what your past self left you in the time capsule."
 
             val notification = NotificationCompat.Builder(context, channelId)
