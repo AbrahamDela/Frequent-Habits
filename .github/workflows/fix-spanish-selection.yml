@@ -1,0 +1,101 @@
+name: Fix Spanish selection and build APK
+
+on:
+  push:
+    branches: [ spanish-translation ]
+    paths:
+      - '.github/workflows/fix-spanish-selection.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: spanish-translation
+
+      - name: Fix Spanish selector click mapping
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('app/src/main/java/com/example/MainActivity.kt')
+          s = p.read_text(encoding='utf-8')
+
+          old = '''                                        val newLang = when (index) {
+                                            0 -> "de"
+                                            1 -> "en"
+                                            2 -> "ka"
+                                            3 -> "zh"
+                                            else -> "de"
+                                        }'''
+          new = '''                                        val newLang = when (index) {
+                                            0 -> "de"
+                                            1 -> "en"
+                                            2 -> "es"
+                                            3 -> "ka"
+                                            4 -> "zh"
+                                            else -> "de"
+                                        }'''
+          assert old in s, 'Old language click mapping not found; refusing to build an unverified APK'
+          s = s.replace(old, new, 1)
+          p.write_text(s, encoding='utf-8')
+
+      - name: Verify Spanish selection works in source
+        shell: python
+        run: |
+          from pathlib import Path
+          s = Path('app/src/main/java/com/example/MainActivity.kt').read_text(encoding='utf-8')
+          assert 'options = listOf("Deutsch", "English", "Español", "ქართული", "简体中文")' in s
+          assert '"es" -> 2' in s
+          assert '2 -> "es"' in s
+          assert '3 -> "ka"' in s
+          assert '4 -> "zh"' in s
+          assert 'viewModel.setLanguage(newLang)' in s
+          assert '"es" to "Español 🇪🇸"' in s
+          print('Spanish selector verified: visible + selectable + persisted through setLanguage().')
+
+      - name: Commit selector fix
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add app/src/main/java/com/example/MainActivity.kt
+          git commit -m "fix: map Spanish selector to es" || true
+          git push
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.3.1'
+          validate-wrappers: false
+
+      - name: Create CI debug keystore
+        run: |
+          keytool -genkeypair -v \
+            -keystore debug.keystore \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+
+      - name: Compile Kotlin
+        run: gradle compileDebugKotlin --no-daemon --stacktrace
+
+      - name: Build corrected APK
+        run: gradle assembleDebug --no-daemon --stacktrace
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frequent-habits-spanish-selectable-apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
