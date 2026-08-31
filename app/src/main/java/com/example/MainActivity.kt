@@ -10855,8 +10855,9 @@ fun SettingsScreen(
                                         val newLang = when (index) {
                                             0 -> "de"
                                             1 -> "en"
-                                            2 -> "ka"
-                                            3 -> "zh"
+                                            2 -> "es"
+                                            3 -> "ka"
+                                            4 -> "zh"
                                             else -> "de"
                                         }
                                         viewModel.setLanguage(newLang)
