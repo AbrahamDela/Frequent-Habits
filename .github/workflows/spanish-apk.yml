@@ -16,6 +16,16 @@ jobs:
         with:
           ref: spanish-translation
 
+      - name: Verify Spanish language selector is present
+        shell: python
+        run: |
+          from pathlib import Path
+          s = Path('app/src/main/java/com/example/MainActivity.kt').read_text(encoding='utf-8')
+          assert 'options = listOf("Deutsch", "English", "Español", "ქართული", "简体中文")' in s, 'Spanish missing from Settings selector'
+          assert '"es" -> 2' in s, 'Spanish selector index missing'
+          assert '"es" to "Español 🇪🇸"' in s, 'Spanish missing from onboarding selector'
+          print('Verified: Spanish exists in both language selectors.')
+
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
