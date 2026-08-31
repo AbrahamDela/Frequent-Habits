@@ -1,5 +1,9 @@
 name: Patch Spanish selector
 on:
+  push:
+    branches: [ spanish-translation ]
+    paths:
+      - '.github/workflows/patch-spanish-selector.yml'
   workflow_dispatch:
 permissions:
   contents: write
@@ -16,7 +20,7 @@ jobs:
           p=Path('app/src/main/java/com/example/MainActivity.kt')
           s=p.read_text()
           marker='"en" to "English",'
-          assert marker in s
+          assert marker in s, 'English language selector entry not found'
           if '"es" to "Español",' not in s:
               s=s.replace(marker, marker+'\n                                            "es" to "Español",',1)
           p.write_text(s)
