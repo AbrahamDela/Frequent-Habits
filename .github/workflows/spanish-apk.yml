@@ -1,4 +1,4 @@
-name: Build Spanish APK (fixed)
+name: Build Spanish APK (validated)
 
 on:
   push:
@@ -38,8 +38,20 @@ jobs:
             -validity 10000 \
             -dname "CN=Android Debug,O=Android,C=US"
 
-      - name: Build debug APK with installed Gradle
-        run: gradle assembleDebug --stacktrace
+      - name: Clean project
+        run: gradle clean --no-daemon --stacktrace
+
+      - name: Compile Kotlin
+        run: gradle compileDebugKotlin --no-daemon --stacktrace
+
+      - name: Run unit tests
+        run: gradle testDebugUnitTest --no-daemon --stacktrace
+
+      - name: Run Android lint
+        run: gradle lintDebug --no-daemon --stacktrace
+
+      - name: Build debug APK
+        run: gradle assembleDebug --no-daemon --stacktrace
 
       - uses: actions/upload-artifact@v4
         with:
