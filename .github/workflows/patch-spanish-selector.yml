@@ -1,4 +1,4 @@
-name: Patch Spanish selector
+name: Patch Spanish selector and localization
 on:
   push:
     branches: [ spanish-translation ]
@@ -14,31 +14,92 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: spanish-translation
-      - shell: python
+
+      - name: Patch Spanish selectors and direct UI branches
+        shell: python
         run: |
           from pathlib import Path
           p=Path('app/src/main/java/com/example/MainActivity.kt')
           s=p.read_text(encoding='utf-8')
-          old='options = listOf("Deutsch", "English", "ქართული", "简体中文"),\n                                    selectedIndex = when (language) {\n                                        "de" -> 0\n                                        "en" -> 1\n                                        "ka" -> 2\n                                        "zh" -> 3'
-          new='options = listOf("Deutsch", "English", "Español", "ქართული", "简体中文"),\n                                    selectedIndex = when (language) {\n                                        "de" -> 0\n                                        "en" -> 1\n                                        "es" -> 2\n                                        "ka" -> 3\n                                        "zh" -> 4'
-          assert old in s, 'Primary language selector block not found'
-          s=s.replace(old,new,1)
-          old2='"en" to "English 🇬🇧",\n                "de" to "Deutsch 🇩🇪",\n                "ka" to "ქართული 🇬🇪",\n                "zh" to "简体中文 🇨🇳"'
-          new2='"en" to "English 🇬🇧",\n                "es" to "Español 🇪🇸",\n                "de" to "Deutsch 🇩🇪",\n                "ka" to "ქართული 🇬🇪",\n                "zh" to "简体中文 🇨🇳"'
-          assert old2 in s, 'Secondary language selector block not found'
-          s=s.replace(old2,new2,1)
+          if 'options = listOf("Deutsch", "English", "Español", "ქართული", "简体中文")' not in s:
+              s=s.replace('options = listOf("Deutsch", "English", "ქართული", "简体中文")','options = listOf("Deutsch", "English", "Español", "ქართული", "简体中文")',1)
+              s=s.replace('"en" -> 1\n                                        "ka" -> 2\n                                        "zh" -> 3','"en" -> 1\n                                        "es" -> 2\n                                        "ka" -> 3\n                                        "zh" -> 4',1)
+          if '"es" to "Español 🇪🇸"' not in s:
+              s=s.replace('"en" to "English 🇬🇧",','"en" to "English 🇬🇧",\n                "es" to "Español 🇪🇸",',1)
+          s=s.replace('else if (language == "zh") listOf("已解锁", "所有成就") else listOf("Unlocked", "All Achievements")','else if (language == "zh") listOf("已解锁", "所有成就") else if (language == "es") listOf("Desbloqueados", "Todos los logros") else listOf("Unlocked", "All Achievements")')
+          s=s.replace('val weekdays = if (language == "de") listOf("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So") else listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")','val weekdays = if (language == "de") listOf("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So") else if (language == "es") listOf("Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom") else listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")')
+          s=s.replace('else -> listOf("This Week", "This Month", "This Year", "Total")','"es" -> listOf("Esta semana", "Este mes", "Este año", "Total")\n            else -> listOf("This Week", "This Month", "This Year", "Total")')
+          s=s.replace('else -> listOf("Today", "Week", "Month", "Year")','"es" -> listOf("Hoy", "Semana", "Mes", "Año")\n            else -> listOf("Today", "Week", "Month", "Year")')
+          s=s.replace('else -> listOf("Weekly", "Monthly", "Yearly")','"es" -> listOf("Semanal", "Mensual", "Anual")\n            else -> listOf("Weekly", "Monthly", "Yearly")')
+          s=s.replace('text = if (language == "de") "Rückgängig" else "Undo"','text = if (language == "de") "Rückgängig" else if (language == "es") "Deshacer" else "Undo"')
+          s=s.replace('text = "IMPORT ANALYSE"','text = if (language == "es") "ANÁLISIS DE IMPORTACIÓN" else "IMPORT ANALYSE"')
+          visible=[
+            "Import and manage custom audio files (MP3, WAV, M4A) for your focus soundscapes here.",
+            "Tap '+' above to add a habit anytime.",
+            "Choose an action for this habit:",
+            "The strength score of this habit (0-100) based on the last 30 days. Recent entries carry slightly more weight, allowing your score to recover faster. Pending tasks for today do not reduce your score as long as they remain unmarked.",
+            "The number of consecutive days you have completed this habit up to today.",
+            "Your highest historical record of consecutive days completing this habit.",
+            "Archived habits are paused and do not appear in the dashboard or statistics. You can reactivate them at any time.",
+            "Your name and profile picture are stored strictly locally on your device.",
+            "Import your entire history (ZIP) directly from Loop Habit Tracker, or upload individual CSV files (Loop, Bull, Custom).",
+            "Select a local folder. The app will automatically save daily JSON exports there (retaining only the 3 latest). You can also back up or restore manually.",
+            "Set up notifications so you get reminded of your habit at your desired time.",
+            "Set personal rewards for reaching milestones (e.g. 30-day streak). Once you reach the target, the reward unlocks!",
+            "Tools built for your daily growth.",
+            "Let's work together on your habits and reach your goals step by step.",
+            "Intelligent daily analytics & weekly highlights tailored to your personal habit rhythm.",
+            "Celebrate your growth with Monthly & Yearly Reviews featuring personal Time Capsules for reflection.",
+            "Set custom rewards for reaching streaks and milestones to stay consistently motivated.",
+            "Tap card: Toggle completion (binary) or open exact value dialog (numeric).",
+            "Right circle icon: Quickly increments numeric value by +1 with one tap.",
+            "Long Press: Context menu for Pause, Failed status, Edit & Delete.",
+            "Built-in focus timer with soothing background sounds for uninterrupted concentration."
+          ]
+          for text in visible:
+              q='"'+text.replace('\\','\\\\').replace('"','\\"')+'"'
+              s=s.replace(q,'tr(language, "", '+q+')')
           p.write_text(s,encoding='utf-8')
-      - shell: python
+
+      - name: Expand Spanish translation dictionary
+        shell: python
         run: |
           from pathlib import Path
           p=Path('app/src/main/java/com/example/Translations.kt')
           s=p.read_text(encoding='utf-8')
-          s=s.replace('"Add" to "Añadir"','"Add" to "Agregar"')
-          s=s.replace('"Habit added!" to "¡Hábito añadido!"','"Habit added!" to "¡Hábito agregado!"')
+          marker='    "Language" to "Idioma", "Settings" to "Ajustes", "Statistics" to "Estadísticas", "Achievements" to "Logros", "Progress" to "Progreso", "Streak" to "Racha"\n)'
+          additions='''    "Language" to "Idioma", "Settings" to "Ajustes", "Statistics" to "Estadísticas", "Achievements" to "Logros", "Progress" to "Progreso", "Streak" to "Racha",\n    "Language & Region" to "Idioma y región", "App Theme" to "Tema de la app", "Switch between light and dark theme" to "Cambiar entre tema claro y oscuro",\n    "Dark" to "Oscuro", "Light" to "Claro", "Accent Color" to "Color de acento", "Customize the primary accent color of the app" to "Personaliza el color principal de la app",\n    "Info Cards & Tips" to "Tarjetas informativas y consejos", "Display explanatory cards and info icons" to "Mostrar tarjetas explicativas e iconos de información",\n    "Haptic Feedback" to "Respuesta háptica", "Short vibration pulse on task completion" to "Vibración breve al completar una tarea",\n    "Introduction & Onboarding" to "Introducción y bienvenida", "Restart the introduction to review all app tips." to "Reinicia la introducción para volver a ver todos los consejos.",\n    "Restart Introduction" to "Reiniciar introducción", "Focus Sounds & Soundscapes" to "Sonidos de enfoque y ambientes", "Manage Soundscapes" to "Administrar ambientes",\n    "Manage" to "Administrar", "No Sound" to "Sin sonido", "System Reminders" to "Recordatorios del sistema", "Receive reminders & review alerts" to "Recibir recordatorios y alertas de resúmenes",\n    "Weekly push notification with your most interesting insights & highlights" to "Notificación semanal con tus análisis y momentos destacados más interesantes",\n    "Monthly Review" to "Resumen mensual", "Analyze monthly statistics & highlights" to "Analizar estadísticas y destacados mensuales",\n    "Yearly Review" to "Resumen anual", "Grand Year in Review with badges & highlights" to "Gran resumen anual con insignias y momentos destacados",\n    "Archived Habits" to "Hábitos archivados", "Open Archive" to "Abrir archivo", "View & reactivate suspended habits" to "Ver y reactivar hábitos suspendidos",\n    "Import CSV / ZIP File" to "Importar archivo CSV / ZIP", "Backup & Restore" to "Copia de seguridad y restauración", "Selected Folder:" to "Carpeta seleccionada:",\n    "No folder selected" to "Ninguna carpeta seleccionada", "Select Folder" to "Seleccionar carpeta", "Danger Zone" to "Zona de peligro",\n    "This permanently deletes all habits and tracking history." to "Esto elimina permanentemente todos los hábitos y el historial de seguimiento.", "Wipe All Data" to "Eliminar todos los datos",\n    "Audio & Soundscapes" to "Audio y ambientes", "Data, Backup & Archive" to "Datos, copia de seguridad y archivo", "Support & About" to "Soporte y acerca de",\n    "Help make the app even better" to "Ayuda a mejorar aún más la app", "Email Contact" to "Contacto por correo", "Recommendation: Frequent Habits" to "Recomendación: Frequent Habits",\n    "Share with..." to "Compartir con...", "Share with a friend" to "Compartir con un amigo", "Support via Ko-fi" to "Apoyar mediante Ko-fi",\n    "Profile Picture" to "Foto de perfil", "Change Photo" to "Cambiar foto", "Remove" to "Eliminar", "Username & Account" to "Nombre de usuario y cuenta", "Enter your name..." to "Ingresa tu nombre...",\n    "Custom Unit" to "Unidad personalizada", "e.g. cups" to "p. ej., tazas", "Daily Target" to "Meta diaria", "Click Increment" to "Incremento por toque",\n    "Define Reward" to "Definir recompensa", "Reward Name (e.g. Cinema Night)" to "Nombre de la recompensa (p. ej., noche de cine)", "Details / Link (optional, e.g. https://...)" to "Detalles / enlace (opcional, p. ej., https://...)",\n    "Trophy" to "Trofeo", "Manual" to "Manual", "Condition:" to "Condición:", "Streak (Days)" to "Racha (días)", "Total (Times)" to "Total (veces)", "Target Value" to "Valor objetivo", "Habit Trophy:" to "Trofeo del hábito:",\n    "No Achievements Yet" to "Aún no hay logros", "Work on your habits to unlock your first milestone!" to "¡Trabaja en tus hábitos para desbloquear tu primer hito!",\n    "Tap on the badges in each habit card to see more details!" to "¡Toca las insignias de cada tarjeta de hábito para ver más detalles!",\n    "Import failed" to "Error al importar", "Error reading backup file" to "Error al leer el archivo de copia de seguridad",\n    "Import and manage custom audio files (MP3, WAV, M4A) for your focus soundscapes here." to "Importa y administra aquí archivos de audio personalizados (MP3, WAV, M4A) para tus ambientes de concentración.",\n    "Tap '+' above to add a habit anytime." to "Toca '+' arriba para agregar un hábito en cualquier momento.", "Choose an action for this habit:" to "Elige una acción para este hábito:",\n    "The strength score of this habit (0-100) based on the last 30 days. Recent entries carry slightly more weight, allowing your score to recover faster. Pending tasks for today do not reduce your score as long as they remain unmarked." to "La puntuación de fortaleza de este hábito (0-100) se basa en los últimos 30 días. Los registros recientes pesan un poco más, permitiendo que la puntuación se recupere más rápido. Las tareas pendientes de hoy no reducen la puntuación mientras sigan sin marcar.",\n    "The number of consecutive days you have completed this habit up to today." to "Número de días consecutivos en los que has completado este hábito hasta hoy.",\n    "Your highest historical record of consecutive days completing this habit." to "Tu récord histórico más alto de días consecutivos completando este hábito.",\n    "Archived habits are paused and do not appear in the dashboard or statistics. You can reactivate them at any time." to "Los hábitos archivados están en pausa y no aparecen en el panel ni en las estadísticas. Puedes reactivarlos en cualquier momento.",\n    "Your name and profile picture are stored strictly locally on your device." to "Tu nombre y foto de perfil se guardan únicamente de forma local en tu dispositivo.",\n    "Import your entire history (ZIP) directly from Loop Habit Tracker, or upload individual CSV files (Loop, Bull, Custom)." to "Importa todo tu historial (ZIP) directamente desde Loop Habit Tracker o carga archivos CSV individuales (Loop, Bull o personalizados).",\n    "Select a local folder. The app will automatically save daily JSON exports there (retaining only the 3 latest). You can also back up or restore manually." to "Selecciona una carpeta local. La app guardará automáticamente allí exportaciones JSON diarias, conservando solo las 3 más recientes. También puedes hacer copias de seguridad o restaurarlas manualmente.",\n    "Set up notifications so you get reminded of your habit at your desired time." to "Configura notificaciones para recibir recordatorios de tu hábito a la hora que elijas.",\n    "Set personal rewards for reaching milestones (e.g. 30-day streak). Once you reach the target, the reward unlocks!" to "Define recompensas personales por alcanzar hitos (p. ej., una racha de 30 días). ¡Al llegar a la meta, la recompensa se desbloquea!",\n    "Tools built for your daily growth." to "Herramientas creadas para tu crecimiento diario.", "Let's work together on your habits and reach your goals step by step." to "Trabajemos juntos en tus hábitos y alcancemos tus metas paso a paso.",\n    "Intelligent daily analytics & weekly highlights tailored to your personal habit rhythm." to "Análisis diarios inteligentes y destacados semanales adaptados a tu ritmo personal de hábitos.",\n    "Celebrate your growth with Monthly & Yearly Reviews featuring personal Time Capsules for reflection." to "Celebra tu progreso con resúmenes mensuales y anuales que incluyen cápsulas del tiempo personales para reflexionar.",\n    "Set custom rewards for reaching streaks and milestones to stay consistently motivated." to "Configura recompensas personalizadas al alcanzar rachas e hitos para mantener la motivación.",\n    "Tap card: Toggle completion (binary) or open exact value dialog (numeric)." to "Toca la tarjeta: cambia el estado de completado (binario) o abre el diálogo de valor exacto (numérico).",\n    "Right circle icon: Quickly increments numeric value by +1 with one tap." to "Icono circular derecho: incrementa rápidamente el valor numérico en +1 con un toque.",\n    "Long Press: Context menu for Pause, Failed status, Edit & Delete." to "Pulsación larga: menú contextual para pausar, marcar como fallido, editar o eliminar.",\n    "Built-in focus timer with soothing background sounds for uninterrupted concentration." to "Temporizador de concentración integrado con sonidos de fondo relajantes para mantener el enfoque sin interrupciones."\n)'''
+          if '"Language & Region" to "Idioma y región"' not in s:
+              assert marker in s, 'Spanish map closing marker not found'
+              s=s.replace(marker, additions, 1)
           p.write_text(s,encoding='utf-8')
+
+      - name: Patch Spanish review notifications
+        shell: python
+        run: |
+          from pathlib import Path
+          p=Path('app/src/main/java/com/example/ReviewNotificationReceiver.kt')
+          if p.exists():
+              s=p.read_text(encoding='utf-8')
+              s=s.replace('else if (language == "zh") "你的年度回顾已准备就绪！" else "Your Year in Review is Ready!"','else if (language == "zh") "你的年度回顾已准备就绪！" else if (language == "es") "¡Tu resumen anual está listo!" else "Your Year in Review is Ready!"')
+              s=s.replace('else if (language == "zh") "你的月度回顾已准备就绪！" else "Your Monthly Review is Ready!"','else if (language == "zh") "你的月度回顾已准备就绪！" else if (language == "es") "¡Tu resumen mensual está listo!" else "Your Monthly Review is Ready!"')
+              p.write_text(s,encoding='utf-8')
+
+      - name: Verify Spanish selector and core translations
+        shell: python
+        run: |
+          from pathlib import Path
+          main=Path('app/src/main/java/com/example/MainActivity.kt').read_text(encoding='utf-8')
+          tr=Path('app/src/main/java/com/example/Translations.kt').read_text(encoding='utf-8')
+          assert 'options = listOf("Deutsch", "English", "Español", "ქართული", "简体中文")' in main
+          assert '"es" to "Español 🇪🇸"' in main
+          assert '"es" -> 2' in main
+          for required in ['"Language & Region" to "Idioma y región"','"App Theme" to "Tema de la app"','"No Achievements Yet" to "Aún no hay logros"','"System Reminders" to "Recordatorios del sistema"']:
+              assert required in tr, required
+
       - run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add app/src/main/java/com/example/MainActivity.kt app/src/main/java/com/example/Translations.kt
-          git commit -m "fix: add Spanish to all language selectors" || true
+          git add app/src/main/java/com/example/MainActivity.kt app/src/main/java/com/example/Translations.kt app/src/main/java/com/example/ReviewNotificationReceiver.kt
+          git commit -m "feat: complete Spanish UI localization pass" || true
           git push
