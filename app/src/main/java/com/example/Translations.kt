@@ -34,7 +34,7 @@ private fun translateDynamicSpanish(en: String): String {
         "Habits" to "Hábitos", "Habit" to "Hábito", "Today" to "Hoy", "Yesterday" to "Ayer", "Tomorrow" to "Mañana",
         "Profile" to "Perfil", "Stats" to "Estadísticas", "Statistics" to "Estadísticas", "Settings" to "Ajustes",
         "Achievements" to "Logros", "Achievement" to "Logro", "Progress" to "Progreso", "Streak" to "Racha",
-        "Save" to "Guardar", "Cancel" to "Cancelar", "Delete" to "Eliminar", "Edit" to "Editar", "Add" to "Añadir",
+        "Save" to "Guardar", "Cancel" to "Cancelar", "Delete" to "Eliminar", "Edit" to "Editar", "Add" to "Agregar",
         "Done" to "Listo", "Next" to "Siguiente", "Back" to "Atrás", "Language" to "Idioma", "Appearance" to "Apariencia",
         "Notifications" to "Notificaciones", "Reminder" to "Recordatorio", "Reminders" to "Recordatorios", "Daily" to "Diario",
         "Weekly" to "Semanal", "Monthly" to "Mensual", "Yearly" to "Anual", "Calendar" to "Calendario", "History" to "Historial",
@@ -56,11 +56,11 @@ val SPANISH_TRANSLATIONS: Map<String,String> = mapOf(
     "Active Days" to "Días activos", "Top Habit" to "Mejor hábito", "Best Month" to "Mejor mes", "Best Streak" to "Mejor racha",
     "Profile & Account" to "Perfil y cuenta", "Appearance & Language" to "Apariencia e idioma", "Notifications & Reviews" to "Notificaciones y resúmenes",
     "Edit profile picture & name" to "Editar foto de perfil y nombre", "Haptic feedback & Archived habits" to "Vibración y hábitos archivados",
-    "Habit updated!" to "¡Hábito actualizado!", "Habit added!" to "¡Hábito añadido!", "Create a habit first to view statistics." to "Crea primero un hábito para ver las estadísticas.",
+    "Habit updated!" to "¡Hábito actualizado!", "Habit added!" to "¡Hábito agregado!", "Create a habit first to view statistics." to "Crea primero un hábito para ver las estadísticas.",
     "Focus Audio Soundscapes" to "Sonidos para concentrarse", "Select & manage sounds" to "Seleccionar y administrar sonidos", "Search sound..." to "Buscar sonido...",
     "No Sound (Mute)" to "Sin sonido (silencio)", "No matching audio files found." to "No se encontraron archivos de audio.",
     "Import new audio (.mp3, .wav, .m4a)" to "Importar audio nuevo (.mp3, .wav, .m4a)", "Done" to "Listo",
-    "Delete" to "Eliminar", "Edit" to "Editar", "Save" to "Guardar", "Cancel" to "Cancelar", "Add" to "Añadir", "Next" to "Siguiente", "Back" to "Atrás",
+    "Delete" to "Eliminar", "Edit" to "Editar", "Save" to "Guardar", "Cancel" to "Cancelar", "Add" to "Agregar", "Next" to "Siguiente", "Back" to "Atrás",
     "Language" to "Idioma", "Settings" to "Ajustes", "Statistics" to "Estadísticas", "Achievements" to "Logros", "Progress" to "Progreso", "Streak" to "Racha"
 )
 

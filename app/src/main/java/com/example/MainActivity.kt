@@ -10841,12 +10841,13 @@ fun SettingsScreen(
                                 }
                                 Spacer(modifier = Modifier.height(12.dp))
                                 AppSegmentedButton(
-                                    options = listOf("Deutsch", "English", "ქართული", "简体中文"),
+                                    options = listOf("Deutsch", "English", "Español", "ქართული", "简体中文"),
                                     selectedIndex = when (language) {
                                         "de" -> 0
                                         "en" -> 1
-                                        "ka" -> 2
-                                        "zh" -> 3
+                                        "es" -> 2
+                                        "ka" -> 3
+                                        "zh" -> 4
                                         else -> 0
                                     },
                                     onOptionSelected = { index ->
@@ -16924,6 +16925,7 @@ private fun OnboardingStepPersonalize(language: String, viewModel: HabitsViewMod
         ) {
             listOf(
                 "en" to "English 🇬🇧",
+                "es" to "Español 🇪🇸",
                 "de" to "Deutsch 🇩🇪",
                 "ka" to "ქართული 🇬🇪",
                 "zh" to "简体中文 🇨🇳"
