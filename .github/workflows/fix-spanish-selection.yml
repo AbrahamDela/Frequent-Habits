@@ -22,41 +22,62 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
+          import re
+
           p = Path('app/src/main/java/com/example/MainActivity.kt')
           s = p.read_text(encoding='utf-8')
 
-          old = '''                                        val newLang = when (index) {
-                                            0 -> "de"
-                                            1 -> "en"
-                                            2 -> "ka"
-                                            3 -> "zh"
-                                            else -> "de"
-                                        }'''
-          new = '''                                        val newLang = when (index) {
-                                            0 -> "de"
-                                            1 -> "en"
-                                            2 -> "es"
-                                            3 -> "ka"
-                                            4 -> "zh"
-                                            else -> "de"
-                                        }'''
-          assert old in s, 'Old language click mapping not found; refusing to build an unverified APK'
-          s = s.replace(old, new, 1)
+          pattern = re.compile(
+              r'(val newLang\s*=\s*when\s*\(index\)\s*\{)(.*?)(\n\s*\})',
+              re.S
+          )
+          matches = list(pattern.finditer(s))
+          assert matches, 'Language index mapping block not found'
+
+          target = None
+          for m in matches:
+              body = m.group(2)
+              if '0 -> "de"' in body and '1 -> "en"' in body and ('2 -> "ka"' in body or '2 -> "es"' in body):
+                  target = m
+                  break
+          assert target is not None, 'Settings language mapping block not found'
+
+          indent_match = re.search(r'\n(\s*)0\s*->\s*"de"', target.group(2))
+          assert indent_match, 'Could not detect mapping indentation'
+          indent = indent_match.group(1)
+          close_indent = re.search(r'\n(\s*)\}$', target.group(0)).group(1)
+
+          replacement = (
+              target.group(1) +
+              f'\n{indent}0 -> "de"' +
+              f'\n{indent}1 -> "en"' +
+              f'\n{indent}2 -> "es"' +
+              f'\n{indent}3 -> "ka"' +
+              f'\n{indent}4 -> "zh"' +
+              f'\n{indent}else -> "de"' +
+              f'\n{close_indent}}}'
+          )
+
+          s = s[:target.start()] + replacement + s[target.end():]
           p.write_text(s, encoding='utf-8')
 
       - name: Verify Spanish selection works in source
         shell: python
         run: |
           from pathlib import Path
+          import re
           s = Path('app/src/main/java/com/example/MainActivity.kt').read_text(encoding='utf-8')
           assert 'options = listOf("Deutsch", "English", "Español", "ქართული", "简体中文")' in s
-          assert '"es" -> 2' in s
-          assert '2 -> "es"' in s
-          assert '3 -> "ka"' in s
-          assert '4 -> "zh"' in s
+          assert re.search(r'"es"\s*->\s*2', s), 'Selected index for es missing'
+          block = re.search(r'val newLang\s*=\s*when\s*\(index\)\s*\{.*?\n\s*\}', s, re.S)
+          assert block, 'newLang mapping missing'
+          b = block.group(0)
+          assert re.search(r'2\s*->\s*"es"', b), 'Tap index 2 does not select es'
+          assert re.search(r'3\s*->\s*"ka"', b)
+          assert re.search(r'4\s*->\s*"zh"', b)
           assert 'viewModel.setLanguage(newLang)' in s
           assert '"es" to "Español 🇪🇸"' in s
-          print('Spanish selector verified: visible + selectable + persisted through setLanguage().')
+          print('Spanish selector verified: visible + index 2 maps to es + persisted via setLanguage().')
 
       - name: Commit selector fix
         run: |
