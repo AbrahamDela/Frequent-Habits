@@ -1,0 +1,28 @@
+name: Patch Spanish selector
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: spanish-translation
+      - shell: python
+        run: |
+          from pathlib import Path
+          p=Path('app/src/main/java/com/example/MainActivity.kt')
+          s=p.read_text()
+          marker='"en" to "English",'
+          assert marker in s
+          if '"es" to "Español",' not in s:
+              s=s.replace(marker, marker+'\n                                            "es" to "Español",',1)
+          p.write_text(s)
+      - run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add app/src/main/java/com/example/MainActivity.kt
+          git commit -m "fix: show Spanish in language selector" || true
+          git push
