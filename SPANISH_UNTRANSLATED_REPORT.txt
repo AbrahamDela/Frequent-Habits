@@ -84,7 +84,7 @@ app/src/main/java/com/example/HabitWidgetService.kt:214: "slate", "grey", "gray"
 app/src/main/java/com/example/Translations.kt:34: "Habits" to "Hábitos", "Habit" to "Hábito", "Today" to "Hoy", "Yesterday" to "Ayer", "Tomorrow" to "Mañana",
 app/src/main/java/com/example/Translations.kt:35: "Profile" to "Perfil", "Stats" to "Estadísticas", "Statistics" to "Estadísticas", "Settings" to "Ajustes",
 app/src/main/java/com/example/Translations.kt:36: "Achievements" to "Logros", "Achievement" to "Logro", "Progress" to "Progreso", "Streak" to "Racha",
-app/src/main/java/com/example/Translations.kt:37: "Save" to "Guardar", "Cancel" to "Cancelar", "Delete" to "Eliminar", "Edit" to "Editar", "Add" to "Añadir",
+app/src/main/java/com/example/Translations.kt:37: "Save" to "Guardar", "Cancel" to "Cancelar", "Delete" to "Eliminar", "Edit" to "Editar", "Add" to "Agregar",
 app/src/main/java/com/example/Translations.kt:38: "Done" to "Listo", "Next" to "Siguiente", "Back" to "Atrás", "Language" to "Idioma", "Appearance" to "Apariencia",
 app/src/main/java/com/example/Translations.kt:39: "Notifications" to "Notificaciones", "Reminder" to "Recordatorio", "Reminders" to "Recordatorios", "Daily" to "Diario",
 app/src/main/java/com/example/Translations.kt:40: "Weekly" to "Semanal", "Monthly" to "Mensual", "Yearly" to "Anual", "Calendar" to "Calendario", "History" to "Historial",
@@ -100,11 +100,11 @@ app/src/main/java/com/example/Translations.kt:55: "Days Longest Streak" to "Día
 app/src/main/java/com/example/Translations.kt:56: "Active Days" to "Días activos", "Top Habit" to "Mejor hábito", "Best Month" to "Mejor mes", "Best Streak" to "Mejor racha",
 app/src/main/java/com/example/Translations.kt:57: "Profile & Account" to "Perfil y cuenta", "Appearance & Language" to "Apariencia e idioma", "Notifications & Reviews" to "Notificaciones y resúmenes",
 app/src/main/java/com/example/Translations.kt:58: "Edit profile picture & name" to "Editar foto de perfil y nombre", "Haptic feedback & Archived habits" to "Vibración y hábitos archivados",
-app/src/main/java/com/example/Translations.kt:59: "Habit updated!" to "¡Hábito actualizado!", "Habit added!" to "¡Hábito añadido!", "Create a habit first to view statistics." to "Crea primero un hábito para ver las estadísticas.",
+app/src/main/java/com/example/Translations.kt:59: "Habit updated!" to "¡Hábito actualizado!", "Habit added!" to "¡Hábito agregado!", "Create a habit first to view statistics." to "Crea primero un hábito para ver las estadísticas.",
 app/src/main/java/com/example/Translations.kt:60: "Focus Audio Soundscapes" to "Sonidos para concentrarse", "Select & manage sounds" to "Seleccionar y administrar sonidos", "Search sound..." to "Buscar sonido...",
 app/src/main/java/com/example/Translations.kt:61: "No Sound (Mute)" to "Sin sonido (silencio)", "No matching audio files found." to "No se encontraron archivos de audio.",
 app/src/main/java/com/example/Translations.kt:62: "Import new audio (.mp3, .wav, .m4a)" to "Importar audio nuevo (.mp3, .wav, .m4a)", "Done" to "Listo",
-app/src/main/java/com/example/Translations.kt:63: "Delete" to "Eliminar", "Edit" to "Editar", "Save" to "Guardar", "Cancel" to "Cancelar", "Add" to "Añadir", "Next" to "Siguiente", "Back" to "Atrás",
+app/src/main/java/com/example/Translations.kt:63: "Delete" to "Eliminar", "Edit" to "Editar", "Save" to "Guardar", "Cancel" to "Cancelar", "Add" to "Agregar", "Next" to "Siguiente", "Back" to "Atrás",
 app/src/main/java/com/example/Translations.kt:64: "Language" to "Idioma", "Settings" to "Ajustes", "Statistics" to "Estadísticas", "Achievements" to "Logros", "Progress" to "Progreso", "Streak" to "Racha"
 app/src/main/java/com/example/Translations.kt:69: str = str.replace("Habit updated!", "ჩვევა განახლდა!")
 app/src/main/java/com/example/Translations.kt:70: str = str.replace("Habit added!", "ჩვევა დაემატა!")
@@ -934,424 +934,424 @@ app/src/main/java/com/example/MainActivity.kt:10796: placeholderText = tr(langua
 app/src/main/java/com/example/MainActivity.kt:10807: "Your name and profile picture are stored strictly locally on your device."
 app/src/main/java/com/example/MainActivity.kt:10817: "appearance" -> {
 app/src/main/java/com/example/MainActivity.kt:10836: text = tr(language, "Sprache & Region", "Language & Region"),
-app/src/main/java/com/example/MainActivity.kt:10844: options = listOf("Deutsch", "English", "ქართული", "简体中文"),
-app/src/main/java/com/example/MainActivity.kt:10885: text = tr(language, "Erscheinungsbild", "App Theme"),
-app/src/main/java/com/example/MainActivity.kt:10893: text = tr(language, "Wechsle zwischen hellem und dunklem Design", "Switch between light and dark theme"),
-app/src/main/java/com/example/MainActivity.kt:10900: tr(language, "Dunkel", "Dark") to Icons.Default.DarkMode,
-app/src/main/java/com/example/MainActivity.kt:10901: tr(language, "Hell", "Light") to Icons.Default.LightMode
-app/src/main/java/com/example/MainActivity.kt:10928: text = tr(language, "Akzentfarbe", "Accent Color"),
-app/src/main/java/com/example/MainActivity.kt:10936: text = tr(language, "Passe die Primärfarbe der App an dein Design an", "Customize the primary accent color of the app"),
-app/src/main/java/com/example/MainActivity.kt:10971: contentDescription = "Info Cards",
-app/src/main/java/com/example/MainActivity.kt:10978: text = tr(language, "Infokarten & Hinweise", "Info Cards & Tips"),
-app/src/main/java/com/example/MainActivity.kt:10985: text = tr(language, "Blendet Erklärungen und Info-Buttons ein", "Display explanatory cards and info icons"),
-app/src/main/java/com/example/MainActivity.kt:11027: contentDescription = "Vibration",
-app/src/main/java/com/example/MainActivity.kt:11034: text = tr(language, "Vibration beim Abhaken", "Haptic Feedback"),
-app/src/main/java/com/example/MainActivity.kt:11041: text = tr(language, "Haptischer Impuls beim Erledigen von Aufgaben", "Short vibration pulse on task completion"),
-app/src/main/java/com/example/MainActivity.kt:11079: text = tr(language, "Einführung & Onboarding", "Introduction & Onboarding"),
-app/src/main/java/com/example/MainActivity.kt:11087: text = tr(language, "Starte die Einführung erneut, um alle App-Tipps zu sehen.", "Restart the introduction to review all app tips."),
-app/src/main/java/com/example/MainActivity.kt:11106: text = tr(language, "Einführung neu starten", "Restart Introduction"),
-app/src/main/java/com/example/MainActivity.kt:11116: "audio" -> {
-app/src/main/java/com/example/MainActivity.kt:11134: text = tr(language, "Fokus-Sounds & Hintergründe", "Focus Sounds & Soundscapes"),
-app/src/main/java/com/example/MainActivity.kt:11154: text = tr(language, "Klangwelten verwalten", "Manage Soundscapes"),
-app/src/main/java/com/example/MainActivity.kt:11162: val currentName = selectedAudioFile?.nameWithoutExtension ?: "Kein Sound"
-app/src/main/java/com/example/MainActivity.kt:11170: val currentName = selectedAudioFile?.nameWithoutExtension ?: "No Sound"
-app/src/main/java/com/example/MainActivity.kt:11191: Text(tr(language, "Verwalten", "Manage"), fontWeight = FontWeight.Bold)
-app/src/main/java/com/example/MainActivity.kt:11208: "notifications" -> {
-app/src/main/java/com/example/MainActivity.kt:11231: contentDescription = "Notifications",
-app/src/main/java/com/example/MainActivity.kt:11238: text = tr(language, "Benachrichtigungen", "System Reminders"),
-app/src/main/java/com/example/MainActivity.kt:11245: text = tr(language, "Erinnerungen & Rückblick-Alarme erhalten", "Receive reminders & review alerts"),
-app/src/main/java/com/example/MainActivity.kt:11297: contentDescription = "Insights",
-app/src/main/java/com/example/MainActivity.kt:11311: text = tr(language, "Wöchentlicher Push mit deinen spannendsten Insights & Highlights", "Weekly push notification with your most interesting insights & highlights"),
-app/src/main/java/com/example/MainActivity.kt:11363: contentDescription = "Monthly",
-app/src/main/java/com/example/MainActivity.kt:11370: text = tr(language, "Monatsrückblick", "Monthly Review"),
-app/src/main/java/com/example/MainActivity.kt:11377: text = tr(language, "Monatliche Statistiken & Highlights", "Analyze monthly statistics & highlights"),
-app/src/main/java/com/example/MainActivity.kt:11419: contentDescription = "Yearly",
-app/src/main/java/com/example/MainActivity.kt:11426: text = tr(language, "Jahresrückblick", "Yearly Review"),
-app/src/main/java/com/example/MainActivity.kt:11433: text = tr(language, "Großer Jahresrückblick mit Abzeichen & Highlights", "Grand Year in Review with badges & highlights"),
-app/src/main/java/com/example/MainActivity.kt:11455: "data" -> {
-app/src/main/java/com/example/MainActivity.kt:11487: text = tr(language, "Archivierte Gewohnheiten", "Archived Habits"),
-app/src/main/java/com/example/MainActivity.kt:11510: contentDescription = "Archive",
-app/src/main/java/com/example/MainActivity.kt:11517: text = tr(language, "Archiv öffnen", "Open Archive"),
-app/src/main/java/com/example/MainActivity.kt:11523: text = tr(language, "Inaktive Gewohnheiten ansehen & reaktivieren", "View & reactivate suspended habits"),
-app/src/main/java/com/example/MainActivity.kt:11564: text = tr(language, "Loop Habit Tracker Import", "Loop Habit Tracker Import"),
-app/src/main/java/com/example/MainActivity.kt:11575: text = "ZIP / CSV",
-app/src/main/java/com/example/MainActivity.kt:11587: "Importiere deine gesamte Historie (ZIP) direkt aus dem Loop Habit Tracker, oder lade einzelne CSV-Dateien (Loop, Bull, Custom) hoch.",
-app/src/main/java/com/example/MainActivity.kt:11588: "Import your entire history (ZIP) directly from Loop Habit Tracker, or upload individual CSV files (Loop, Bull, Custom)."
-app/src/main/java/com/example/MainActivity.kt:11597: onClick = { csvPickerLauncher.launch(arrayOf("*/*", "text/*", "text/csv", "text/comma-separated-values", "application/zip", "application/x-zip-compressed")) },
-app/src/main/java/com/example/MainActivity.kt:11602: Icon(Icons.Default.UploadFile, contentDescription = "Import", modifier = Modifier.size(18.dp))
-app/src/main/java/com/example/MainActivity.kt:11604: Text(tr(language, "CSV / ZIP Datei importieren", "Import CSV / ZIP File"))
-app/src/main/java/com/example/MainActivity.kt:11627: text = tr(language, "Backup & Wiederherstellung", "Backup & Restore"),
-app/src/main/java/com/example/MainActivity.kt:11638: "Select a local folder. The app will automatically save daily JSON exports there (retaining only the 3 latest). You can also back up or restore manually."
-app/src/main/java/com/example/MainActivity.kt:11647: text = tr(language, "Ausgewählter Ordner:", "Selected Folder:"),
-app/src/main/java/com/example/MainActivity.kt:11662: tr(language, "Kein Ordner ausgewählt", "No folder selected")
-app/src/main/java/com/example/MainActivity.kt:11681: Icon(Icons.Default.Folder, contentDescription = "Folder", modifier = Modifier.size(18.dp))
-app/src/main/java/com/example/MainActivity.kt:11683: Text(tr(language, "Ordner auswählen", "Select Folder"))
-app/src/main/java/com/example/MainActivity.kt:11699: Icon(Icons.Default.Backup, contentDescription = "Backup", modifier = Modifier.size(18.dp))
-app/src/main/java/com/example/MainActivity.kt:11701: Text(tr(language, "Sichern", "Backup"))
-app/src/main/java/com/example/MainActivity.kt:11705: onClick = { fileLauncher.launch(arrayOf("application/json", "*/*")) },
-app/src/main/java/com/example/MainActivity.kt:11710: Icon(Icons.Default.Restore, contentDescription = "Restore", modifier = Modifier.size(18.dp))
-app/src/main/java/com/example/MainActivity.kt:11712: Text(tr(language, "Einspielen", "Restore"))
-app/src/main/java/com/example/MainActivity.kt:11747: text = tr(language, "Gefahrenbereich", "Danger Zone"),
-app/src/main/java/com/example/MainActivity.kt:11755: text = tr(language, "Hiermit werden alle Gewohnheiten unwiderruflich gelöscht.", "This permanently deletes all habits and tracking history."),
-app/src/main/java/com/example/MainActivity.kt:11766: Icon(Icons.Default.DeleteForever, contentDescription = "Wipe", modifier = Modifier.size(18.dp))
-app/src/main/java/com/example/MainActivity.kt:11768: Text(tr(language, "Alles löschen", "Wipe All Data"))
-app/src/main/java/com/example/MainActivity.kt:11813: "profile" -> tr(language, "Profil & Konto", "Profile & Account")
-app/src/main/java/com/example/MainActivity.kt:11814: "appearance" -> tr(language, "Erscheinungsbild & Sprache", "Appearance & Language")
-app/src/main/java/com/example/MainActivity.kt:11815: "notifications" -> tr(language, "Benachrichtigungen", "Notifications")
-app/src/main/java/com/example/MainActivity.kt:11816: "audio" -> tr(language, "Töne & Entspannung", "Audio & Soundscapes")
-app/src/main/java/com/example/MainActivity.kt:11817: "data" -> tr(language, "Daten, Sicherung & Archiv", "Data, Backup & Archive")
-app/src/main/java/com/example/MainActivity.kt:11818: "about" -> tr(language, "Support & Über die App", "Support & About")
-app/src/main/java/com/example/MainActivity.kt:11819: else -> tr(language, "Einstellungen", "Settings")
-app/src/main/java/com/example/MainActivity.kt:11946: var frequency by remember(editingHabit?.id) { mutableStateOf(editingHabit?.frequency ?: "DAILY") }
-app/src/main/java/com/example/MainActivity.kt:12019: "de" -> "d. MMMM yyyy"
-app/src/main/java/com/example/MainActivity.kt:12020: "ka" -> "d MMMM yyyy"
-app/src/main/java/com/example/MainActivity.kt:12021: else -> "MMMM d, yyyy"
-app/src/main/java/com/example/MainActivity.kt:12222: onOptionSelected = { index -> type = if (index == 1) "NUMBER" else "BINARY" },
-app/src/main/java/com/example/MainActivity.kt:12227: if (type == "NUMBER") {
-app/src/main/java/com/example/MainActivity.kt:12240: listOf("Minuten", "Liter", "ml", "km", "Stunden", "Mal", "Anderes...")
-app/src/main/java/com/example/MainActivity.kt:12242: listOf("Minutes", "Liters", "ml", "km", "Hours", "Times", "Custom...")
-app/src/main/java/com/example/MainActivity.kt:12261: if (standardUnit != "Anderes..." && standardUnit != "Custom...") {
-app/src/main/java/com/example/MainActivity.kt:12280: if (standardUnit.lowercase() in listOf("minuten", "minutes")) {
-app/src/main/java/com/example/MainActivity.kt:12310: if (standardUnit != "Anderes..." && standardUnit != "Custom...") {
-app/src/main/java/com/example/MainActivity.kt:12346: if (selectedChip == "Anderes..." || selectedChip == "Custom...") {
-app/src/main/java/com/example/MainActivity.kt:12352: text = tr(language, "Eigene Einheit", "Custom Unit"),
-app/src/main/java/com/example/MainActivity.kt:12362: placeholderText = tr(language, "z. B. Tassen", "e.g. cups"),
-app/src/main/java/com/example/MainActivity.kt:12373: text = tr(language, "Tagesziel", "Daily Target"),
-app/src/main/java/com/example/MainActivity.kt:12393: text = tr(language, "Erhöhung / Klick", "Click Increment"),
-app/src/main/java/com/example/MainActivity.kt:12448: var selectedCategoryId by remember { mutableStateOf("all") }
-app/src/main/java/com/example/MainActivity.kt:12487: if (selectedCategoryId == "all") {
-app/src/main/java/com/example/MainActivity.kt:12649: if (key == "SPECIFIC" && specificDaysSet.isEmpty()) {
-app/src/main/java/com/example/MainActivity.kt:12684: if (frequency == "SPECIFIC") {
-app/src/main/java/com/example/MainActivity.kt:12689: val weekdays = if (language == "de") listOf("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So") else listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
-app/src/main/java/com/example/MainActivity.kt:12752: contentDescription = "Calendar",
-app/src/main/java/com/example/MainActivity.kt:12767: contentDescription = "Toggle DatePicker",
-app/src/main/java/com/example/MainActivity.kt:12824: "Set up notifications so you get reminded of your habit at your desired time."
-app/src/main/java/com/example/MainActivity.kt:12861: contentDescription = "Time Icon",
-app/src/main/java/com/example/MainActivity.kt:12882: contentDescription = "Delete Reminder",
-app/src/main/java/com/example/MainActivity.kt:12915: contentDescription = "Add Reminder Icon",
-app/src/main/java/com/example/MainActivity.kt:12962: "Set personal rewards for reaching milestones (e.g. 30-day streak). Once you reach the target, the reward unlocks!"
-app/src/main/java/com/example/MainActivity.kt:13023: contentDescription = "Delete Reward",
-app/src/main/java/com/example/MainActivity.kt:13048: contentDescription = "Add Reward Icon",
-app/src/main/java/com/example/MainActivity.kt:13107: "SPECIFIC" -> specificDaysSet.sorted().joinToString(",")
-app/src/main/java/com/example/MainActivity.kt:13258: StandardTrophyOption("COMP_10", "COMPLETIONS", "COMP_10", "10 Abschlüsse", "10 Completions", "Insgesamt 10 Gewohnheits-Abschlüsse erreichen", "Achieve 10 total completions", "10 დასრულება", "მიაღწიეთ 10 დასრულებას", "10 次完成", "累计达成 10 次习惯完成"),
-app/src/main/java/com/example/MainActivity.kt:13259: StandardTrophyOption("COMP_50", "COMPLETIONS", "COMP_50", "50 Abschlüsse", "50 Completions", "Insgesamt 50 Gewohnheits-Abschlüsse erreichen", "Achieve 50 total completions", "50 დასრულება", "მიაღწიეთ 50 დასრულებას", "50 次完成", "累计达成 50 次习惯完成"),
-app/src/main/java/com/example/MainActivity.kt:13260: StandardTrophyOption("COMP_200", "COMPLETIONS", "COMP_200", "200 Abschlüsse", "200 Completions", "Insgesamt 200 Gewohnheits-Abschlüsse erreichen", "Achieve 200 total completions", "200 დასრულება", "მიაღწიეთ 200 დასრულებას", "200 次完成", "累计达成 200 次习惯完成"),
-app/src/main/java/com/example/MainActivity.kt:13261: StandardTrophyOption("COMP_500", "COMPLETIONS", "COMP_500", "500 Abschlüsse", "500 Completions", "Insgesamt 500 Gewohnheits-Abschlüsse erreichen", "Achieve 500 total completions", "500 დასრულება", "მიაღწიეთ 500 დასრულებას", "500 次完成", "累计达成 500 次习惯完成"),
-app/src/main/java/com/example/MainActivity.kt:13262: StandardTrophyOption("COMP_1000", "COMPLETIONS", "COMP_1000", "1000 Abschlüsse", "1000 Completions", "Insgesamt 1000 Gewohnheits-Abschlüsse erreichen", "Achieve 1000 total completions", "1000 დასრულება", "მიაღწიეთ 1000 დასრულებას", "1000 次完成", "累计达成 1000 次习惯完成"),
-app/src/main/java/com/example/MainActivity.kt:13263: StandardTrophyOption("WOOD", "STREAK", "WOOD", "7 Tage Serie (Holz)", "7-Day Streak (Wood)", "Eine 7-Tage-Serie erreichen", "Achieve a 7-day streak", "7-დღიანი სერია (ხე)", "მიაღწიეთ 7-დღიან სერიას", "7 天连续（木质）", "达成 7 天连续打卡"),
-app/src/main/java/com/example/MainActivity.kt:13264: StandardTrophyOption("BRONZE", "STREAK", "BRONZE", "14 Tage Serie (Bronze)", "14-Day Streak (Bronze)", "Eine 14-Tage-Serie erreichen", "Achieve a 14-day streak", "14-დღიანი სერია (ბრინჯაო)", "მიაღწიეთ 14-დღიან სერიას", "14 天连续（青铜）", "达成 14 天连续打卡"),
-app/src/main/java/com/example/MainActivity.kt:13265: StandardTrophyOption("SILVER", "STREAK", "SILVER", "30 Tage Serie (Silber)", "30-Day Streak (Silver)", "Eine 30-Tage-Serie erreichen", "Achieve a 30-day streak", "30-დღიანი სერია (ვერცხლი)", "მიაღწიეთ 30-დღიან სერიას", "30 天连续（白银）", "达成 30 天连续打卡"),
-app/src/main/java/com/example/MainActivity.kt:13266: StandardTrophyOption("GOLD", "STREAK", "GOLD", "100 Tage Serie (Gold)", "100-Day Streak (Gold)", "Eine 100-Tage-Serie erreichen", "Achieve a 100-day streak", "100-დღიანი სერია (ოქრო)", "მიაღწიეთ 100-დღიან სერიას", "100 天连续（黄金）", "达成 100 天连续打卡"),
-app/src/main/java/com/example/MainActivity.kt:13267: StandardTrophyOption("DIAMOND", "STREAK", "DIAMOND", "365 Tage Serie (Diamant)", "365-Day Streak (Diamond)", "Eine 365-Tage-Serie erreichen", "Achieve a 365-day streak", "365-დღიანი სერია (ბრილიანტი)", "მიაღწიეთ 365-დღიან სერიას", "365 天连续（钻石）", "达成 365 天连续打卡"),
-app/src/main/java/com/example/MainActivity.kt:13282: var conditionType by remember { mutableStateOf("STREAK") }
-app/src/main/java/com/example/MainActivity.kt:13285: var mode by remember { mutableStateOf("TROPHY") } // "TROPHY" or "CUSTOM"
-app/src/main/java/com/example/MainActivity.kt:13286: var selectedTrophyId by remember { mutableStateOf("WOOD") }
-app/src/main/java/com/example/MainActivity.kt:13295: text = tr(language, "Belohnung definieren", "Define Reward"),
-app/src/main/java/com/example/MainActivity.kt:13307: labelText = tr(language, "Name der Belohnung (z.B. Kino Abend)", "Reward Name (e.g. Cinema Night)"),
-app/src/main/java/com/example/MainActivity.kt:13315: labelText = tr(language, "Details / Link (optional, z.B. https://...)", "Details / Link (optional, e.g. https://...)"),
-app/src/main/java/com/example/MainActivity.kt:13316: placeholderText = "https://...",
-app/src/main/java/com/example/MainActivity.kt:13324: tr(language, "Trophäe", "Trophy"),
-app/src/main/java/com/example/MainActivity.kt:13325: tr(language, "Manuell", "Manual")
-app/src/main/java/com/example/MainActivity.kt:13327: selectedIndex = if (mode == "TROPHY") 0 else 1,
-app/src/main/java/com/example/MainActivity.kt:13328: onOptionSelected = { index -> mode = if (index == 0) "TROPHY" else "CUSTOM" },
-app/src/main/java/com/example/MainActivity.kt:13332: if (mode == "CUSTOM") {
-app/src/main/java/com/example/MainActivity.kt:13334: text = tr(language, "Bedingung:", "Condition:"),
-app/src/main/java/com/example/MainActivity.kt:13341: tr(language, "Streak (Tage)", "Streak (Days)"),
-app/src/main/java/com/example/MainActivity.kt:13342: tr(language, "Gesamt (Mal)", "Total (Times)")
-app/src/main/java/com/example/MainActivity.kt:13344: selectedIndex = if (conditionType == "STREAK") 0 else 1,
-app/src/main/java/com/example/MainActivity.kt:13345: onOptionSelected = { index -> conditionType = if (index == 0) "STREAK" else "COMPLETIONS" },
-app/src/main/java/com/example/MainActivity.kt:13352: labelText = tr(language, "Ziel-Wert", "Target Value"),
-app/src/main/java/com/example/MainActivity.kt:13359: text = tr(language, "Gewohnheitsspezifische Trophäe:", "Habit Trophy:"),
-app/src/main/java/com/example/MainActivity.kt:13371: STANDARD_TROPHIES.filter { it.type == "STREAK" }.forEach { trophy ->
-app/src/main/java/com/example/MainActivity.kt:13415: contentDescription = "Selected",
-app/src/main/java/com/example/MainActivity.kt:13431: if (mode == "CUSTOM" && conditionValueStr.isNotBlank()) {
-app/src/main/java/com/example/MainActivity.kt:13440: } else if (mode == "TROPHY") {
-app/src/main/java/com/example/MainActivity.kt:13610: listOf("", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
-app/src/main/java/com/example/MainActivity.kt:13653: Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Prev Month", tint = MaterialTheme.colorScheme.onSurface)
-app/src/main/java/com/example/MainActivity.kt:13673: Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next Month", tint = MaterialTheme.colorScheme.onSurface)
-app/src/main/java/com/example/MainActivity.kt:13742: "Fang heute an und danke dir selbst morgen.",
-app/src/main/java/com/example/MainActivity.kt:13743: "Der beste Zeitpunkt zu starten ist genau jetzt.",
-app/src/main/java/com/example/MainActivity.kt:13746: "Ein neues Kapitel beginnt mit einer einzigen Entscheidung.",
-app/src/main/java/com/example/MainActivity.kt:13747: "Deine Zukunft wird durch deine heutigen Gewohnheiten geformt."
-app/src/main/java/com/example/MainActivity.kt:13751: "Every day is a new chance to grow beyond yourself.",
-app/src/main/java/com/example/MainActivity.kt:13752: "Start today and thank yourself tomorrow.",
-app/src/main/java/com/example/MainActivity.kt:13753: "The best time to start is right now.",
-app/src/main/java/com/example/MainActivity.kt:13754: "Small steps lead to big changes. Create your first habit!",
-app/src/main/java/com/example/MainActivity.kt:13755: "Don't dream your life, design your routines.",
-app/src/main/java/com/example/MainActivity.kt:13756: "A new chapter starts with a single decision.",
-app/src/main/java/com/example/MainActivity.kt:13757: "Your future is shaped by your habits today."
-app/src/main/java/com/example/MainActivity.kt:13768: "Der erste Schritt ist immer der schwerste. Du schaffst das!",
-app/src/main/java/com/example/MainActivity.kt:13772: "Die geheime Zutat des Erfolgs ist das Anfangen.",
-app/src/main/java/com/example/MainActivity.kt:13773: "Jeder Weg von tausend Meilen beginnt mit einem einzigen Schritt.",
-app/src/main/java/com/example/MainActivity.kt:13774: "Du musst nicht perfekt sein, du musst nur anfangen."
-app/src/main/java/com/example/MainActivity.kt:13778: "The first step is always the hardest. You can do this!",
-app/src/main/java/com/example/MainActivity.kt:13779: "A small step today is the beginning of a great journey.",
-app/src/main/java/com/example/MainActivity.kt:13780: "Don't hesitate - just check off that first tiny step for today.",
-app/src/main/java/com/example/MainActivity.kt:13781: "Motivation is what gets you started. Habit is what keeps you going.",
-app/src/main/java/com/example/MainActivity.kt:13782: "The secret of getting ahead is getting started.",
-app/src/main/java/com/example/MainActivity.kt:13783: "The journey of a thousand miles begins with a single step.",
-app/src/main/java/com/example/MainActivity.kt:13784: "You don't have to be perfect, you just have to start."
-app/src/main/java/com/example/MainActivity.kt:13792: "Du bist gestartet! Bleib dran, es lohnt sich.",
-app/src/main/java/com/example/MainActivity.kt:13795: "Kleine Erfolge summieren sich. Jeder Haken ist ein Sieg!",
-app/src/main/java/com/example/MainActivity.kt:13796: "Du bist auf dem Weg. Lass dich nicht aufhalten.",
-app/src/main/java/com/example/MainActivity.kt:13802: "You have started! Keep going, it's worth it.",
-app/src/main/java/com/example/MainActivity.kt:13803: "Every completed habit brings you closer to your goal.",
-app/src/main/java/com/example/MainActivity.kt:13804: "Consistency is the key to success. Keep it up!",
-app/src/main/java/com/example/MainActivity.kt:13805: "Small wins add up. Every checkmark is a victory!",
-app/src/main/java/com/example/MainActivity.kt:13806: "You are on your way. Don't let anything stop you.",
-app/src/main/java/com/example/MainActivity.kt:13808: "Your future self is already applauding."
-app/src/main/java/com/example/MainActivity.kt:13819: "Die Ziellinie ist in Sicht. Gib jetzt noch mal alles!",
-app/src/main/java/com/example/MainActivity.kt:13820: "Unglaubliche Disziplin heute! Mach den Tag perfekt.",
-app/src/main/java/com/example/MainActivity.kt:13826: "Great work! Just a little bit more.",
-app/src/main/java/com/example/MainActivity.kt:13827: "Do you feel the energy? You are doing outstandingly today!",
-app/src/main/java/com/example/MainActivity.kt:13828: "You are really pulling through today. Keep going for a perfect day!",
-app/src/main/java/com/example/MainActivity.kt:13829: "The finish line is in sight. Give it your all!",
-app/src/main/java/com/example/MainActivity.kt:13830: "Incredible discipline today! Make today perfect.",
-app/src/main/java/com/example/MainActivity.kt:13831: "You are almost there. Let's crown the day together!",
-app/src/main/java/com/example/MainActivity.kt:13832: "Your routine is growing stronger. Almost complete!"
-app/src/main/java/com/example/MainActivity.kt:13842: "Hervorragend! Du hast heute alles gegeben und gewonnen!",
-app/src/main/java/com/example/MainActivity.kt:13844: "Perfekter Tag! Deine Disziplin ist deine Superkraft.",
-app/src/main/java/com/example/MainActivity.kt:13846: "Meisterhaft! Du beweist dir selbst jeden Tag, was in dir steckt."
-app/src/main/java/com/example/MainActivity.kt:13852: "Outstanding! You gave it your all today and won!",
-app/src/main/java/com/example/MainActivity.kt:13854: "Perfect day! Your discipline is your superpower.",
-app/src/main/java/com/example/MainActivity.kt:13855: "Everything checked! Enjoy your well-deserved evening.",
-app/src/main/java/com/example/MainActivity.kt:13856: "Masterful! You prove to yourself every day what you are capable of."
-app/src/main/java/com/example/MainActivity.kt:13875: val type: String, // "STREAK", "COMPLETIONS", "PERFECT_DAYS"
-app/src/main/java/com/example/MainActivity.kt:13876: val tier: String, // e.g. "WOOD", "COMP_10", "PERF_7" etc.
-app/src/main/java/com/example/MainActivity.kt:13939: val tiers = listOf("WOOD", "BRONZE", "SILVER", "GOLD", "DIAMOND")
-app/src/main/java/com/example/MainActivity.kt:13940: val tierNamesDe = listOf("Holz-Serie", "Bronze-Serie", "Silber-Serie", "Gold-Serie", "Diamant-Serie")
-app/src/main/java/com/example/MainActivity.kt:13941: val tierNamesEn = listOf("Wood Streak", "Bronze Streak", "Silver Streak", "Gold Streak", "Diamond Streak")
-app/src/main/java/com/example/MainActivity.kt:14001: listOf("Holz-Serie", "Bronze-Serie", "Silber-Serie", "Gold-Serie", "Diamant-Serie")[nextTargetIndex]
-app/src/main/java/com/example/MainActivity.kt:14007: listOf("Wood Streak", "Bronze Streak", "Silver Streak", "Gold Streak", "Diamond Streak")[nextTargetIndex]
-app/src/main/java/com/example/MainActivity.kt:14121: type = "STREAK",
-app/src/main/java/com/example/MainActivity.kt:14137: contentDescription = "Locked",
-app/src/main/java/com/example/MainActivity.kt:14160: type: String, // "COMPLETIONS" or "PERFECT_DAYS"
-app/src/main/java/com/example/MainActivity.kt:14510: contentDescription = "Share Profile",
-app/src/main/java/com/example/MainActivity.kt:14539: contentDescription = "Settings",
-app/src/main/java/com/example/MainActivity.kt:14566: .clickable { onSettingsClick("profile") },
-app/src/main/java/com/example/MainActivity.kt:14578: contentDescription = "Profile Picture",
-app/src/main/java/com/example/MainActivity.kt:14593: contentDescription = "Avatar Placeholder",
-app/src/main/java/com/example/MainActivity.kt:14607: .clickable { onSettingsClick("profile") }
-app/src/main/java/com/example/MainActivity.kt:14680: val tabs = if (language == "de") listOf("Freigeschaltet", "Alle Erfolge") else if (language == "ka") listOf("განბლოკილი", "ყველა მიღწევა") else if (language == "zh") listOf("已解锁", "所有成就") else listOf("Unlocked", "All Achievements")
-app/src/main/java/com/example/MainActivity.kt:14717: "Noch keine Erfolge"
-app/src/main/java/com/example/MainActivity.kt:14721: "No Achievements Yet"
-app/src/main/java/com/example/MainActivity.kt:14730: "Arbeite an deinen Gewohnheiten, um deinen ersten Meilenstein freizuschalten!"
-app/src/main/java/com/example/MainActivity.kt:14734: "Work on your habits to unlock your first milestone!"
-app/src/main/java/com/example/MainActivity.kt:14755: "Tippe auf die Abzeichen der einzelnen Gewohnheits-Karten, um Details zu sehen!"
-app/src/main/java/com/example/MainActivity.kt:14771: "Tap on the badges in each habit card to see more details!"
-app/src/main/java/com/example/MainActivity.kt:14931: contentDescription = "Profile Picture",
-app/src/main/java/com/example/MainActivity.kt:14946: contentDescription = "Avatar Placeholder",
-app/src/main/java/com/example/MainActivity.kt:14961: contentDescription = "Change picture",
-app/src/main/java/com/example/MainActivity.kt:15041: val totalDays = calendarRows.flatten().filterNotNull().filter { it.status != "INACTIVE" }
-app/src/main/java/com/example/MainActivity.kt:15042: val successCount = totalDays.count { it.status == "SUCCESS" }
-app/src/main/java/com/example/MainActivity.kt:15043: val failedCount = totalDays.count { it.status == "FAILED" }
-app/src/main/java/com/example/MainActivity.kt:15044: val pendingCount = totalDays.count { it.status == "PENDING" }
-app/src/main/java/com/example/MainActivity.kt:15050: if (habit.type == "NUMBER" || habit.type == "NUMERICAL") {
-app/src/main/java/com/example/MainActivity.kt:15067: contentDescription = "Verlauf",
-app/src/main/java/com/example/MainActivity.kt:15112: contentDescription = "Prev",
-app/src/main/java/com/example/MainActivity.kt:15130: contentDescription = "Next",
-app/src/main/java/com/example/MainActivity.kt:15148: "WEEK" -> 16.dp
-app/src/main/java/com/example/MainActivity.kt:15149: "MONTH" -> 4.dp
-app/src/main/java/com/example/MainActivity.kt:15289: contentDescription = "Help Info",
-app/src/main/java/com/example/MainActivity.kt:15850: contentDescription = "Reward",
-app/src/main/java/com/example/MainActivity.kt:15916: type: String, // "STREAK", "COMPLETIONS", "PERFECT_DAYS"
-app/src/main/java/com/example/MainActivity.kt:15917: tier: String, // e.g. "WOOD", "BRONZE", "SILVER", "GOLD", "COMP_10", "PERF_7" etc.
-app/src/main/java/com/example/MainActivity.kt:15925: "COMPLETIONS" -> {
-app/src/main/java/com/example/MainActivity.kt:15949: "WOOD" -> Color(0xFF8B5A2B) // Rich wood brown
-app/src/main/java/com/example/MainActivity.kt:15950: "BRONZE" -> Color(0xFFCD7F32) // Warm bronze copper
-app/src/main/java/com/example/MainActivity.kt:15951: "SILVER" -> Color(0xFFC0C0C0) // Metallic light silver
-app/src/main/java/com/example/MainActivity.kt:15952: "GOLD" -> Color(0xFFFFD700) // Shiny Gold
-app/src/main/java/com/example/MainActivity.kt:15953: "PLATINUM" -> Color(0xFFE5E4E2) // Ice Platinum
-app/src/main/java/com/example/MainActivity.kt:15954: "DIAMOND" -> Color(0xFF00E5FF) // Diamond Cyan
-app/src/main/java/com/example/MainActivity.kt:15955: "RUBY" -> Color(0xFFFF1744) // Ruby Red
-app/src/main/java/com/example/MainActivity.kt:15956: "MASTER" -> Color(0xFFD500F9) // Master Purple
-app/src/main/java/com/example/MainActivity.kt:15957: "LEGEND" -> Color(0xFFFF9100) // Legend Orange
-app/src/main/java/com/example/MainActivity.kt:15958: "UNREAL" -> Color(0xFF76FF03) // Unreal Green
-app/src/main/java/com/example/MainActivity.kt:15963: "WOOD" -> Color(0xFF5C3A21) // Dark wood bark
-app/src/main/java/com/example/MainActivity.kt:15964: "BRONZE" -> Color(0xFF8C501C) // Deep bronze
-app/src/main/java/com/example/MainActivity.kt:15965: "SILVER" -> Color(0xFF8A9A86) // Darker grey silver
-app/src/main/java/com/example/MainActivity.kt:15966: "GOLD" -> Color(0xFFB59000) // Deep yellow gold
-app/src/main/java/com/example/MainActivity.kt:15967: "PLATINUM" -> Color(0xFF9E9E9E)
-app/src/main/java/com/example/MainActivity.kt:15968: "DIAMOND" -> Color(0xFF00ACC1)
-app/src/main/java/com/example/MainActivity.kt:15969: "RUBY" -> Color(0xFFB71C1C)
-app/src/main/java/com/example/MainActivity.kt:15970: "MASTER" -> Color(0xFF4A148C)
-app/src/main/java/com/example/MainActivity.kt:15971: "LEGEND" -> Color(0xFFE65100)
-app/src/main/java/com/example/MainActivity.kt:15972: "UNREAL" -> Color(0xFF33691E)
-app/src/main/java/com/example/MainActivity.kt:16019: "WOOD" -> Color(0xFFFFA726)
-app/src/main/java/com/example/MainActivity.kt:16020: "BRONZE" -> Color(0xFFFFD180)
-app/src/main/java/com/example/MainActivity.kt:16021: "SILVER" -> Color(0xFFE0F7FA)
-app/src/main/java/com/example/MainActivity.kt:16022: "GOLD" -> Color(0xFFFFF9C4)
-app/src/main/java/com/example/MainActivity.kt:16023: "PLATINUM" -> Color(0xFFE0F2F1)
-app/src/main/java/com/example/MainActivity.kt:16024: "DIAMOND" -> Color(0xFFE0F7FA)
-app/src/main/java/com/example/MainActivity.kt:16025: "RUBY" -> Color(0xFFFFEBEE)
-app/src/main/java/com/example/MainActivity.kt:16026: "MASTER" -> Color(0xFFF3E5F5)
-app/src/main/java/com/example/MainActivity.kt:16027: "LEGEND" -> Color(0xFFFFF3E0)
-app/src/main/java/com/example/MainActivity.kt:16028: "UNREAL" -> Color(0xFFF1F8E9)
-app/src/main/java/com/example/MainActivity.kt:16050: "WOOD" -> {
-app/src/main/java/com/example/MainActivity.kt:16064: "BRONZE" -> {
-app/src/main/java/com/example/MainActivity.kt:16071: "SILVER" -> {
-app/src/main/java/com/example/MainActivity.kt:16078: "GOLD" -> {
-app/src/main/java/com/example/MainActivity.kt:16085: "PLATINUM" -> {
-app/src/main/java/com/example/MainActivity.kt:16092: "DIAMOND" -> {
-app/src/main/java/com/example/MainActivity.kt:16099: "RUBY" -> {
-app/src/main/java/com/example/MainActivity.kt:16106: "MASTER" -> {
-app/src/main/java/com/example/MainActivity.kt:16113: "LEGEND" -> {
-app/src/main/java/com/example/MainActivity.kt:16120: "UNREAL" -> {
-app/src/main/java/com/example/MainActivity.kt:16510: "sparkle" -> "Funkeln"
-app/src/main/java/com/example/MainActivity.kt:16511: "moon" -> "Mond"
-app/src/main/java/com/example/MainActivity.kt:16512: "sun" -> "Sonne"
-app/src/main/java/com/example/MainActivity.kt:16513: "water" -> "Wassertropfen"
-app/src/main/java/com/example/MainActivity.kt:16514: "heart" -> "Herz"
-app/src/main/java/com/example/MainActivity.kt:16515: "dumbbell" -> "Hantel"
-app/src/main/java/com/example/MainActivity.kt:16516: "book" -> "Buch"
-app/src/main/java/com/example/MainActivity.kt:16517: "coffee" -> "Kaffee"
-app/src/main/java/com/example/MainActivity.kt:16518: "run" -> "Laufen"
-app/src/main/java/com/example/MainActivity.kt:16519: "code" -> "Klammern"
-app/src/main/java/com/example/MainActivity.kt:16520: "music" -> "Musiknote"
-app/src/main/java/com/example/MainActivity.kt:16521: "phone" -> "Telefon"
-app/src/main/java/com/example/MainActivity.kt:16522: "meditation" -> "Lotusblüte"
-app/src/main/java/com/example/MainActivity.kt:16523: "clock" -> "Uhr"
-app/src/main/java/com/example/MainActivity.kt:16524: "food" -> "Apfel"
-app/src/main/java/com/example/MainActivity.kt:16525: "money" -> "Münze"
-app/src/main/java/com/example/MainActivity.kt:16526: "work" -> "Koffer"
-app/src/main/java/com/example/MainActivity.kt:16527: "clean" -> "Besen"
-app/src/main/java/com/example/MainActivity.kt:16532: "sparkle" -> "Sparkle"
-app/src/main/java/com/example/MainActivity.kt:16533: "moon" -> "Moon"
-app/src/main/java/com/example/MainActivity.kt:16534: "sun" -> "Sun"
-app/src/main/java/com/example/MainActivity.kt:16535: "water" -> "Water Drop"
-app/src/main/java/com/example/MainActivity.kt:16536: "heart" -> "Heart"
-app/src/main/java/com/example/MainActivity.kt:16537: "dumbbell" -> "Dumbbell"
-app/src/main/java/com/example/MainActivity.kt:16538: "book" -> "Book"
-app/src/main/java/com/example/MainActivity.kt:16539: "coffee" -> "Coffee"
-app/src/main/java/com/example/MainActivity.kt:16540: "run" -> "Running"
-app/src/main/java/com/example/MainActivity.kt:16541: "code" -> "Brackets"
-app/src/main/java/com/example/MainActivity.kt:16542: "music" -> "Music Note"
-app/src/main/java/com/example/MainActivity.kt:16543: "phone" -> "Phone"
-app/src/main/java/com/example/MainActivity.kt:16544: "meditation" -> "Lotus Flower"
-app/src/main/java/com/example/MainActivity.kt:16545: "clock" -> "Clock"
-app/src/main/java/com/example/MainActivity.kt:16546: "food" -> "Apple"
-app/src/main/java/com/example/MainActivity.kt:16547: "money" -> "Coin"
-app/src/main/java/com/example/MainActivity.kt:16548: "work" -> "Briefcase"
-app/src/main/java/com/example/MainActivity.kt:16549: "clean" -> "Broom"
-app/src/main/java/com/example/MainActivity.kt:16591: contentDescription = "Back",
-app/src/main/java/com/example/MainActivity.kt:16732: label = "dotWidth"
-app/src/main/java/com/example/MainActivity.kt:16737: label = "dotColor"
-app/src/main/java/com/example/MainActivity.kt:16817: contentDescription = "Frequent Habits Logo",
-app/src/main/java/com/example/MainActivity.kt:16844: text = "Frequent Habits, Permanent Results",
-app/src/main/java/com/example/MainActivity.kt:17190: "Tools built for your daily growth."
-app/src/main/java/com/example/MainActivity.kt:17208: "Let's work together on your habits and reach your goals step by step."
-app/src/main/java/com/example/MainActivity.kt:17293: text = "SMART INSIGHT",
-app/src/main/java/com/example/MainActivity.kt:17312: append("In den letzten 7 Tagen hast du ")
-app/src/main/java/com/example/MainActivity.kt:17318: append("In the last 7 days you achieved ")
-app/src/main/java/com/example/MainActivity.kt:17336: text = "Smart Insights",
-app/src/main/java/com/example/MainActivity.kt:17350: "Intelligent daily analytics & weekly highlights tailored to your personal habit rhythm."
-app/src/main/java/com/example/MainActivity.kt:17458: "Celebrate your growth with Monthly & Yearly Reviews featuring personal Time Capsules for reflection."
-app/src/main/java/com/example/MainActivity.kt:17542: type = "STREAK",
-app/src/main/java/com/example/MainActivity.kt:17543: tier = "GOLD",
-app/src/main/java/com/example/MainActivity.kt:17585: "Set custom rewards for reaching streaks and milestones to stay consistently motivated."
-app/src/main/java/com/example/MainActivity.kt:17595: // 7. "AND MUCH MORE" (Asymmetrisch verteilte kleine Felder)
-app/src/main/java/com/example/MainActivity.kt:17810: text = "created with ",
-app/src/main/java/com/example/MainActivity.kt:17824: text = "FrequNCy",
-app/src/main/java/com/example/MainActivity.kt:17879: "blue" -> HabitBlue
-app/src/main/java/com/example/MainActivity.kt:17880: "purple", "violet" -> HabitPurple
-app/src/main/java/com/example/MainActivity.kt:17881: "cyan" -> HabitCyan
-app/src/main/java/com/example/MainActivity.kt:17882: "green" -> HabitGreen
-app/src/main/java/com/example/MainActivity.kt:17883: "yellow" -> HabitYellow
-app/src/main/java/com/example/MainActivity.kt:17884: "orange" -> HabitOrange
-app/src/main/java/com/example/MainActivity.kt:17885: "red" -> HabitRed
-app/src/main/java/com/example/MainActivity.kt:17886: "pink" -> HabitPink
-app/src/main/java/com/example/MainActivity.kt:17887: "slate" -> HabitSlate
-app/src/main/java/com/example/MainActivity.kt:17888: "teal" -> HabitTeal
-app/src/main/java/com/example/MainActivity.kt:17889: "rose" -> HabitRose
-app/src/main/java/com/example/MainActivity.kt:17890: "indigo" -> HabitIndigo
-app/src/main/java/com/example/MainActivity.kt:17927: val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
-app/src/main/java/com/example/MainActivity.kt:18076: val startStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
-app/src/main/java/com/example/MainActivity.kt:18085: val startStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
-app/src/main/java/com/example/MainActivity.kt:18108: val validStartStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date(if (h.startDate > 946684800000L) h.startDate else h.createdAt))
-app/src/main/java/com/example/MainActivity.kt:18125: val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
-app/src/main/java/com/example/MainActivity.kt:18165: val startSdfStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date(validStartMillis))
-app/src/main/java/com/example/MainActivity.kt:18231: val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
-app/src/main/java/com/example/MainActivity.kt:18327: val startStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
-app/src/main/java/com/example/MainActivity.kt:18336: val startStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
-app/src/main/java/com/example/MainActivity.kt:18374: val sdfDay = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
-app/src/main/java/com/example/MainActivity.kt:18443: "Januar", "Februar", "März", "April", "Mai", "Juni",
-app/src/main/java/com/example/MainActivity.kt:18444: "Juli", "August", "September", "Oktober", "November", "Dezember"
-app/src/main/java/com/example/MainActivity.kt:18447: "January", "February", "March", "April", "May", "June",
-app/src/main/java/com/example/MainActivity.kt:18448: "July", "August", "September", "October", "November", "December"
-app/src/main/java/com/example/MainActivity.kt:18456: Calendar.MONDAY to "Montag",
-app/src/main/java/com/example/MainActivity.kt:18457: Calendar.TUESDAY to "Dienstag",
-app/src/main/java/com/example/MainActivity.kt:18458: Calendar.WEDNESDAY to "Mittwoch",
-app/src/main/java/com/example/MainActivity.kt:18459: Calendar.THURSDAY to "Donnerstag",
-app/src/main/java/com/example/MainActivity.kt:18460: Calendar.FRIDAY to "Freitag",
-app/src/main/java/com/example/MainActivity.kt:18461: Calendar.SATURDAY to "Samstag",
-app/src/main/java/com/example/MainActivity.kt:18462: Calendar.SUNDAY to "Sonntag"
-app/src/main/java/com/example/MainActivity.kt:18483: Calendar.MONDAY to "Monday",
-app/src/main/java/com/example/MainActivity.kt:18484: Calendar.TUESDAY to "Tuesday",
-app/src/main/java/com/example/MainActivity.kt:18485: Calendar.WEDNESDAY to "Wednesday",
-app/src/main/java/com/example/MainActivity.kt:18486: Calendar.THURSDAY to "Thursday",
-app/src/main/java/com/example/MainActivity.kt:18487: Calendar.FRIDAY to "Friday",
-app/src/main/java/com/example/MainActivity.kt:18488: Calendar.SATURDAY to "Saturday",
-app/src/main/java/com/example/MainActivity.kt:18489: Calendar.SUNDAY to "Sunday"
-app/src/main/java/com/example/MainActivity.kt:18492: "de" -> GermanDays[dayOfWeek] ?: "Montag"
-app/src/main/java/com/example/MainActivity.kt:18495: else -> EnglishDays[dayOfWeek] ?: "Monday"
-app/src/main/java/com/example/MainActivity.kt:18549: contentDescription = "Info",
-app/src/main/java/com/example/MainActivity.kt:18647: contentDescription = "Play",
-app/src/main/java/com/example/MainActivity.kt:18712: contentDescription = "Play",
-app/src/main/java/com/example/MainActivity.kt:18801: contentDescription = "Close",
-app/src/main/java/com/example/MainActivity.kt:18822: 5 -> TimeCapsuleSlide("YEARLY", year, 1, language, viewModel)
-app/src/main/java/com/example/MainActivity.kt:18866: contentDescription = if (isLastPage) "Finish" else "Next",
-app/src/main/java/com/example/MainActivity.kt:18894: contentDescription = "Trophy",
-app/src/main/java/com/example/MainActivity.kt:18975: contentDescription = "Completions",
-app/src/main/java/com/example/MainActivity.kt:19018: contentDescription = "Checkins",
-app/src/main/java/com/example/MainActivity.kt:19061: contentDescription = "Active Days",
-app/src/main/java/com/example/MainActivity.kt:19104: contentDescription = "Perfect Days",
-app/src/main/java/com/example/MainActivity.kt:19386: contentDescription = "Peak Month",
-app/src/main/java/com/example/MainActivity.kt:19434: contentDescription = "Peak Day",
-app/src/main/java/com/example/MainActivity.kt:19486: contentDescription = "Awesome",
-app/src/main/java/com/example/MainActivity.kt:19716: contentDescription = "Close",
-app/src/main/java/com/example/MainActivity.kt:19736: 4 -> TimeCapsuleSlide("MONTHLY", year, month, language, viewModel)
-app/src/main/java/com/example/MainActivity.kt:19780: contentDescription = if (isLastPage) "Finish" else "Next",
-app/src/main/java/com/example/MainActivity.kt:19808: contentDescription = "Calendar",
-app/src/main/java/com/example/MainActivity.kt:19889: contentDescription = "Completions",
-app/src/main/java/com/example/MainActivity.kt:19939: contentDescription = "Checkins",
-app/src/main/java/com/example/MainActivity.kt:19982: contentDescription = "Account Score",
-app/src/main/java/com/example/MainActivity.kt:20251: contentDescription = "Awesome",
-app/src/main/java/com/example/MainActivity.kt:20452: contentDescription = "Streak",
-app/src/main/java/com/example/MainActivity.kt:20461: text = "${reviewData.longestStreak} ${if (language == "de") { if (reviewData.longestStreak == 1) "Tag am Stück" else "Tage am Stück" } else if (language == "ka") { "დღიანი სერია" } else if (language == "zh") { "天连续" } else { if (reviewData.longestStreak == 1) "Day Streak" else "Days Streak" }}",
-app/src/main/java/com/example/MainActivity.kt:20711: color = "teal",
-app/src/main/java/com/example/MainActivity.kt:20712: type = "NUMBER",
-app/src/main/java/com/example/MainActivity.kt:20726: color = "purple",
-app/src/main/java/com/example/MainActivity.kt:20727: type = "BINARY"
-app/src/main/java/com/example/MainActivity.kt:20795: "Tap card: Toggle completion (binary) or open exact value dialog (numeric)."
-app/src/main/java/com/example/MainActivity.kt:20809: "Right circle icon: Quickly increments numeric value by +1 with one tap."
-app/src/main/java/com/example/MainActivity.kt:20825: "Long Press: Context menu for Pause, Failed status, Edit & Delete."
-app/src/main/java/com/example/MainActivity.kt:20924: contentDescription = "Reset",
-app/src/main/java/com/example/MainActivity.kt:20940: contentDescription = "Pause",
-app/src/main/java/com/example/MainActivity.kt:20956: contentDescription = "Finish",
-app/src/main/java/com/example/MainActivity.kt:21007: contentDescription = "Upload",
-app/src/main/java/com/example/MainActivity.kt:21099: "Built-in focus timer with soothing background sounds for uninterrupted concentration."
-app/src/main/java/com/example/MainActivity.kt:21271: type: String, // "MONTHLY" or "YEARLY"
-app/src/main/java/com/example/MainActivity.kt:21278: val currentPeriod = if (type == "MONTHLY") {
-app/src/main/java/com/example/MainActivity.kt:21284: val upcomingPeriod = if (type == "MONTHLY") {
-app/src/main/java/com/example/MainActivity.kt:21286: currentYearMonth.plusMonths(1).toString() // "yyyy-MM"
-app/src/main/java/com/example/MainActivity.kt:21349: val pastPeriodLabel = if (type == "MONTHLY") {
-app/src/main/java/com/example/MainActivity.kt:21357: val formatter = java.time.format.DateTimeFormatter.ofPattern("MMMM yyyy", loc)
-app/src/main/java/com/example/MainActivity.kt:21393: contentDescription = "Unsealed Mail",
-app/src/main/java/com/example/MainActivity.kt:21418: val sdf = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
-app/src/main/java/com/example/MainActivity.kt:21446: contentDescription = "Closed envelope",
-app/src/main/java/com/example/MainActivity.kt:21464: val futurePeriodLabel = if (type == "MONTHLY") {
-app/src/main/java/com/example/MainActivity.kt:21471: val formatter = java.time.format.DateTimeFormatter.ofPattern("MMMM yyyy", loc)
-app/src/main/java/com/example/MainActivity.kt:21537: contentDescription = "Lock",
-app/src/main/java/com/example/MainActivity.kt:21592: if (!url.startsWith("http://") && !url.startsWith("https://")) {
-app/src/main/java/com/example/MainActivity.kt:21660: "STREAK" -> (habitStat?.longestStreak ?: 0) to reward.conditionValue.coerceAtLeast(1)
-app/src/main/java/com/example/MainActivity.kt:21661: "COMPLETIONS" -> (habitStat?.totalCompletions ?: 0) to reward.conditionValue.coerceAtLeast(1)
-app/src/main/java/com/example/MainActivity.kt:21665: "WOOD" -> streak to 7
-app/src/main/java/com/example/MainActivity.kt:21666: "BRONZE" -> streak to 14
-app/src/main/java/com/example/MainActivity.kt:21667: "SILVER" -> streak to 30
-app/src/main/java/com/example/MainActivity.kt:21668: "GOLD" -> streak to 100
-app/src/main/java/com/example/MainActivity.kt:21669: "DIAMOND" -> streak to 365
-app/src/main/java/com/example/MainActivity.kt:21958: text = if (language == "de") "Rückgängig" else "Undo",
-app/src/main/java/com/example/MainActivity.kt:22097: text = "IMPORT ANALYSE",
+app/src/main/java/com/example/MainActivity.kt:10844: options = listOf("Deutsch", "English", "Español", "ქართული", "简体中文"),
+app/src/main/java/com/example/MainActivity.kt:10886: text = tr(language, "Erscheinungsbild", "App Theme"),
+app/src/main/java/com/example/MainActivity.kt:10894: text = tr(language, "Wechsle zwischen hellem und dunklem Design", "Switch between light and dark theme"),
+app/src/main/java/com/example/MainActivity.kt:10901: tr(language, "Dunkel", "Dark") to Icons.Default.DarkMode,
+app/src/main/java/com/example/MainActivity.kt:10902: tr(language, "Hell", "Light") to Icons.Default.LightMode
+app/src/main/java/com/example/MainActivity.kt:10929: text = tr(language, "Akzentfarbe", "Accent Color"),
+app/src/main/java/com/example/MainActivity.kt:10937: text = tr(language, "Passe die Primärfarbe der App an dein Design an", "Customize the primary accent color of the app"),
+app/src/main/java/com/example/MainActivity.kt:10972: contentDescription = "Info Cards",
+app/src/main/java/com/example/MainActivity.kt:10979: text = tr(language, "Infokarten & Hinweise", "Info Cards & Tips"),
+app/src/main/java/com/example/MainActivity.kt:10986: text = tr(language, "Blendet Erklärungen und Info-Buttons ein", "Display explanatory cards and info icons"),
+app/src/main/java/com/example/MainActivity.kt:11028: contentDescription = "Vibration",
+app/src/main/java/com/example/MainActivity.kt:11035: text = tr(language, "Vibration beim Abhaken", "Haptic Feedback"),
+app/src/main/java/com/example/MainActivity.kt:11042: text = tr(language, "Haptischer Impuls beim Erledigen von Aufgaben", "Short vibration pulse on task completion"),
+app/src/main/java/com/example/MainActivity.kt:11080: text = tr(language, "Einführung & Onboarding", "Introduction & Onboarding"),
+app/src/main/java/com/example/MainActivity.kt:11088: text = tr(language, "Starte die Einführung erneut, um alle App-Tipps zu sehen.", "Restart the introduction to review all app tips."),
+app/src/main/java/com/example/MainActivity.kt:11107: text = tr(language, "Einführung neu starten", "Restart Introduction"),
+app/src/main/java/com/example/MainActivity.kt:11117: "audio" -> {
+app/src/main/java/com/example/MainActivity.kt:11135: text = tr(language, "Fokus-Sounds & Hintergründe", "Focus Sounds & Soundscapes"),
+app/src/main/java/com/example/MainActivity.kt:11155: text = tr(language, "Klangwelten verwalten", "Manage Soundscapes"),
+app/src/main/java/com/example/MainActivity.kt:11163: val currentName = selectedAudioFile?.nameWithoutExtension ?: "Kein Sound"
+app/src/main/java/com/example/MainActivity.kt:11171: val currentName = selectedAudioFile?.nameWithoutExtension ?: "No Sound"
+app/src/main/java/com/example/MainActivity.kt:11192: Text(tr(language, "Verwalten", "Manage"), fontWeight = FontWeight.Bold)
+app/src/main/java/com/example/MainActivity.kt:11209: "notifications" -> {
+app/src/main/java/com/example/MainActivity.kt:11232: contentDescription = "Notifications",
+app/src/main/java/com/example/MainActivity.kt:11239: text = tr(language, "Benachrichtigungen", "System Reminders"),
+app/src/main/java/com/example/MainActivity.kt:11246: text = tr(language, "Erinnerungen & Rückblick-Alarme erhalten", "Receive reminders & review alerts"),
+app/src/main/java/com/example/MainActivity.kt:11298: contentDescription = "Insights",
+app/src/main/java/com/example/MainActivity.kt:11312: text = tr(language, "Wöchentlicher Push mit deinen spannendsten Insights & Highlights", "Weekly push notification with your most interesting insights & highlights"),
+app/src/main/java/com/example/MainActivity.kt:11364: contentDescription = "Monthly",
+app/src/main/java/com/example/MainActivity.kt:11371: text = tr(language, "Monatsrückblick", "Monthly Review"),
+app/src/main/java/com/example/MainActivity.kt:11378: text = tr(language, "Monatliche Statistiken & Highlights", "Analyze monthly statistics & highlights"),
+app/src/main/java/com/example/MainActivity.kt:11420: contentDescription = "Yearly",
+app/src/main/java/com/example/MainActivity.kt:11427: text = tr(language, "Jahresrückblick", "Yearly Review"),
+app/src/main/java/com/example/MainActivity.kt:11434: text = tr(language, "Großer Jahresrückblick mit Abzeichen & Highlights", "Grand Year in Review with badges & highlights"),
+app/src/main/java/com/example/MainActivity.kt:11456: "data" -> {
+app/src/main/java/com/example/MainActivity.kt:11488: text = tr(language, "Archivierte Gewohnheiten", "Archived Habits"),
+app/src/main/java/com/example/MainActivity.kt:11511: contentDescription = "Archive",
+app/src/main/java/com/example/MainActivity.kt:11518: text = tr(language, "Archiv öffnen", "Open Archive"),
+app/src/main/java/com/example/MainActivity.kt:11524: text = tr(language, "Inaktive Gewohnheiten ansehen & reaktivieren", "View & reactivate suspended habits"),
+app/src/main/java/com/example/MainActivity.kt:11565: text = tr(language, "Loop Habit Tracker Import", "Loop Habit Tracker Import"),
+app/src/main/java/com/example/MainActivity.kt:11576: text = "ZIP / CSV",
+app/src/main/java/com/example/MainActivity.kt:11588: "Importiere deine gesamte Historie (ZIP) direkt aus dem Loop Habit Tracker, oder lade einzelne CSV-Dateien (Loop, Bull, Custom) hoch.",
+app/src/main/java/com/example/MainActivity.kt:11589: "Import your entire history (ZIP) directly from Loop Habit Tracker, or upload individual CSV files (Loop, Bull, Custom)."
+app/src/main/java/com/example/MainActivity.kt:11598: onClick = { csvPickerLauncher.launch(arrayOf("*/*", "text/*", "text/csv", "text/comma-separated-values", "application/zip", "application/x-zip-compressed")) },
+app/src/main/java/com/example/MainActivity.kt:11603: Icon(Icons.Default.UploadFile, contentDescription = "Import", modifier = Modifier.size(18.dp))
+app/src/main/java/com/example/MainActivity.kt:11605: Text(tr(language, "CSV / ZIP Datei importieren", "Import CSV / ZIP File"))
+app/src/main/java/com/example/MainActivity.kt:11628: text = tr(language, "Backup & Wiederherstellung", "Backup & Restore"),
+app/src/main/java/com/example/MainActivity.kt:11639: "Select a local folder. The app will automatically save daily JSON exports there (retaining only the 3 latest). You can also back up or restore manually."
+app/src/main/java/com/example/MainActivity.kt:11648: text = tr(language, "Ausgewählter Ordner:", "Selected Folder:"),
+app/src/main/java/com/example/MainActivity.kt:11663: tr(language, "Kein Ordner ausgewählt", "No folder selected")
+app/src/main/java/com/example/MainActivity.kt:11682: Icon(Icons.Default.Folder, contentDescription = "Folder", modifier = Modifier.size(18.dp))
+app/src/main/java/com/example/MainActivity.kt:11684: Text(tr(language, "Ordner auswählen", "Select Folder"))
+app/src/main/java/com/example/MainActivity.kt:11700: Icon(Icons.Default.Backup, contentDescription = "Backup", modifier = Modifier.size(18.dp))
+app/src/main/java/com/example/MainActivity.kt:11702: Text(tr(language, "Sichern", "Backup"))
+app/src/main/java/com/example/MainActivity.kt:11706: onClick = { fileLauncher.launch(arrayOf("application/json", "*/*")) },
+app/src/main/java/com/example/MainActivity.kt:11711: Icon(Icons.Default.Restore, contentDescription = "Restore", modifier = Modifier.size(18.dp))
+app/src/main/java/com/example/MainActivity.kt:11713: Text(tr(language, "Einspielen", "Restore"))
+app/src/main/java/com/example/MainActivity.kt:11748: text = tr(language, "Gefahrenbereich", "Danger Zone"),
+app/src/main/java/com/example/MainActivity.kt:11756: text = tr(language, "Hiermit werden alle Gewohnheiten unwiderruflich gelöscht.", "This permanently deletes all habits and tracking history."),
+app/src/main/java/com/example/MainActivity.kt:11767: Icon(Icons.Default.DeleteForever, contentDescription = "Wipe", modifier = Modifier.size(18.dp))
+app/src/main/java/com/example/MainActivity.kt:11769: Text(tr(language, "Alles löschen", "Wipe All Data"))
+app/src/main/java/com/example/MainActivity.kt:11814: "profile" -> tr(language, "Profil & Konto", "Profile & Account")
+app/src/main/java/com/example/MainActivity.kt:11815: "appearance" -> tr(language, "Erscheinungsbild & Sprache", "Appearance & Language")
+app/src/main/java/com/example/MainActivity.kt:11816: "notifications" -> tr(language, "Benachrichtigungen", "Notifications")
+app/src/main/java/com/example/MainActivity.kt:11817: "audio" -> tr(language, "Töne & Entspannung", "Audio & Soundscapes")
+app/src/main/java/com/example/MainActivity.kt:11818: "data" -> tr(language, "Daten, Sicherung & Archiv", "Data, Backup & Archive")
+app/src/main/java/com/example/MainActivity.kt:11819: "about" -> tr(language, "Support & Über die App", "Support & About")
+app/src/main/java/com/example/MainActivity.kt:11820: else -> tr(language, "Einstellungen", "Settings")
+app/src/main/java/com/example/MainActivity.kt:11947: var frequency by remember(editingHabit?.id) { mutableStateOf(editingHabit?.frequency ?: "DAILY") }
+app/src/main/java/com/example/MainActivity.kt:12020: "de" -> "d. MMMM yyyy"
+app/src/main/java/com/example/MainActivity.kt:12021: "ka" -> "d MMMM yyyy"
+app/src/main/java/com/example/MainActivity.kt:12022: else -> "MMMM d, yyyy"
+app/src/main/java/com/example/MainActivity.kt:12223: onOptionSelected = { index -> type = if (index == 1) "NUMBER" else "BINARY" },
+app/src/main/java/com/example/MainActivity.kt:12228: if (type == "NUMBER") {
+app/src/main/java/com/example/MainActivity.kt:12241: listOf("Minuten", "Liter", "ml", "km", "Stunden", "Mal", "Anderes...")
+app/src/main/java/com/example/MainActivity.kt:12243: listOf("Minutes", "Liters", "ml", "km", "Hours", "Times", "Custom...")
+app/src/main/java/com/example/MainActivity.kt:12262: if (standardUnit != "Anderes..." && standardUnit != "Custom...") {
+app/src/main/java/com/example/MainActivity.kt:12281: if (standardUnit.lowercase() in listOf("minuten", "minutes")) {
+app/src/main/java/com/example/MainActivity.kt:12311: if (standardUnit != "Anderes..." && standardUnit != "Custom...") {
+app/src/main/java/com/example/MainActivity.kt:12347: if (selectedChip == "Anderes..." || selectedChip == "Custom...") {
+app/src/main/java/com/example/MainActivity.kt:12353: text = tr(language, "Eigene Einheit", "Custom Unit"),
+app/src/main/java/com/example/MainActivity.kt:12363: placeholderText = tr(language, "z. B. Tassen", "e.g. cups"),
+app/src/main/java/com/example/MainActivity.kt:12374: text = tr(language, "Tagesziel", "Daily Target"),
+app/src/main/java/com/example/MainActivity.kt:12394: text = tr(language, "Erhöhung / Klick", "Click Increment"),
+app/src/main/java/com/example/MainActivity.kt:12449: var selectedCategoryId by remember { mutableStateOf("all") }
+app/src/main/java/com/example/MainActivity.kt:12488: if (selectedCategoryId == "all") {
+app/src/main/java/com/example/MainActivity.kt:12650: if (key == "SPECIFIC" && specificDaysSet.isEmpty()) {
+app/src/main/java/com/example/MainActivity.kt:12685: if (frequency == "SPECIFIC") {
+app/src/main/java/com/example/MainActivity.kt:12690: val weekdays = if (language == "de") listOf("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So") else listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+app/src/main/java/com/example/MainActivity.kt:12753: contentDescription = "Calendar",
+app/src/main/java/com/example/MainActivity.kt:12768: contentDescription = "Toggle DatePicker",
+app/src/main/java/com/example/MainActivity.kt:12825: "Set up notifications so you get reminded of your habit at your desired time."
+app/src/main/java/com/example/MainActivity.kt:12862: contentDescription = "Time Icon",
+app/src/main/java/com/example/MainActivity.kt:12883: contentDescription = "Delete Reminder",
+app/src/main/java/com/example/MainActivity.kt:12916: contentDescription = "Add Reminder Icon",
+app/src/main/java/com/example/MainActivity.kt:12963: "Set personal rewards for reaching milestones (e.g. 30-day streak). Once you reach the target, the reward unlocks!"
+app/src/main/java/com/example/MainActivity.kt:13024: contentDescription = "Delete Reward",
+app/src/main/java/com/example/MainActivity.kt:13049: contentDescription = "Add Reward Icon",
+app/src/main/java/com/example/MainActivity.kt:13108: "SPECIFIC" -> specificDaysSet.sorted().joinToString(",")
+app/src/main/java/com/example/MainActivity.kt:13259: StandardTrophyOption("COMP_10", "COMPLETIONS", "COMP_10", "10 Abschlüsse", "10 Completions", "Insgesamt 10 Gewohnheits-Abschlüsse erreichen", "Achieve 10 total completions", "10 დასრულება", "მიაღწიეთ 10 დასრულებას", "10 次完成", "累计达成 10 次习惯完成"),
+app/src/main/java/com/example/MainActivity.kt:13260: StandardTrophyOption("COMP_50", "COMPLETIONS", "COMP_50", "50 Abschlüsse", "50 Completions", "Insgesamt 50 Gewohnheits-Abschlüsse erreichen", "Achieve 50 total completions", "50 დასრულება", "მიაღწიეთ 50 დასრულებას", "50 次完成", "累计达成 50 次习惯完成"),
+app/src/main/java/com/example/MainActivity.kt:13261: StandardTrophyOption("COMP_200", "COMPLETIONS", "COMP_200", "200 Abschlüsse", "200 Completions", "Insgesamt 200 Gewohnheits-Abschlüsse erreichen", "Achieve 200 total completions", "200 დასრულება", "მიაღწიეთ 200 დასრულებას", "200 次完成", "累计达成 200 次习惯完成"),
+app/src/main/java/com/example/MainActivity.kt:13262: StandardTrophyOption("COMP_500", "COMPLETIONS", "COMP_500", "500 Abschlüsse", "500 Completions", "Insgesamt 500 Gewohnheits-Abschlüsse erreichen", "Achieve 500 total completions", "500 დასრულება", "მიაღწიეთ 500 დასრულებას", "500 次完成", "累计达成 500 次习惯完成"),
+app/src/main/java/com/example/MainActivity.kt:13263: StandardTrophyOption("COMP_1000", "COMPLETIONS", "COMP_1000", "1000 Abschlüsse", "1000 Completions", "Insgesamt 1000 Gewohnheits-Abschlüsse erreichen", "Achieve 1000 total completions", "1000 დასრულება", "მიაღწიეთ 1000 დასრულებას", "1000 次完成", "累计达成 1000 次习惯完成"),
+app/src/main/java/com/example/MainActivity.kt:13264: StandardTrophyOption("WOOD", "STREAK", "WOOD", "7 Tage Serie (Holz)", "7-Day Streak (Wood)", "Eine 7-Tage-Serie erreichen", "Achieve a 7-day streak", "7-დღიანი სერია (ხე)", "მიაღწიეთ 7-დღიან სერიას", "7 天连续（木质）", "达成 7 天连续打卡"),
+app/src/main/java/com/example/MainActivity.kt:13265: StandardTrophyOption("BRONZE", "STREAK", "BRONZE", "14 Tage Serie (Bronze)", "14-Day Streak (Bronze)", "Eine 14-Tage-Serie erreichen", "Achieve a 14-day streak", "14-დღიანი სერია (ბრინჯაო)", "მიაღწიეთ 14-დღიან სერიას", "14 天连续（青铜）", "达成 14 天连续打卡"),
+app/src/main/java/com/example/MainActivity.kt:13266: StandardTrophyOption("SILVER", "STREAK", "SILVER", "30 Tage Serie (Silber)", "30-Day Streak (Silver)", "Eine 30-Tage-Serie erreichen", "Achieve a 30-day streak", "30-დღიანი სერია (ვერცხლი)", "მიაღწიეთ 30-დღიან სერიას", "30 天连续（白银）", "达成 30 天连续打卡"),
+app/src/main/java/com/example/MainActivity.kt:13267: StandardTrophyOption("GOLD", "STREAK", "GOLD", "100 Tage Serie (Gold)", "100-Day Streak (Gold)", "Eine 100-Tage-Serie erreichen", "Achieve a 100-day streak", "100-დღიანი სერია (ოქრო)", "მიაღწიეთ 100-დღიან სერიას", "100 天连续（黄金）", "达成 100 天连续打卡"),
+app/src/main/java/com/example/MainActivity.kt:13268: StandardTrophyOption("DIAMOND", "STREAK", "DIAMOND", "365 Tage Serie (Diamant)", "365-Day Streak (Diamond)", "Eine 365-Tage-Serie erreichen", "Achieve a 365-day streak", "365-დღიანი სერია (ბრილიანტი)", "მიაღწიეთ 365-დღიან სერიას", "365 天连续（钻石）", "达成 365 天连续打卡"),
+app/src/main/java/com/example/MainActivity.kt:13283: var conditionType by remember { mutableStateOf("STREAK") }
+app/src/main/java/com/example/MainActivity.kt:13286: var mode by remember { mutableStateOf("TROPHY") } // "TROPHY" or "CUSTOM"
+app/src/main/java/com/example/MainActivity.kt:13287: var selectedTrophyId by remember { mutableStateOf("WOOD") }
+app/src/main/java/com/example/MainActivity.kt:13296: text = tr(language, "Belohnung definieren", "Define Reward"),
+app/src/main/java/com/example/MainActivity.kt:13308: labelText = tr(language, "Name der Belohnung (z.B. Kino Abend)", "Reward Name (e.g. Cinema Night)"),
+app/src/main/java/com/example/MainActivity.kt:13316: labelText = tr(language, "Details / Link (optional, z.B. https://...)", "Details / Link (optional, e.g. https://...)"),
+app/src/main/java/com/example/MainActivity.kt:13317: placeholderText = "https://...",
+app/src/main/java/com/example/MainActivity.kt:13325: tr(language, "Trophäe", "Trophy"),
+app/src/main/java/com/example/MainActivity.kt:13326: tr(language, "Manuell", "Manual")
+app/src/main/java/com/example/MainActivity.kt:13328: selectedIndex = if (mode == "TROPHY") 0 else 1,
+app/src/main/java/com/example/MainActivity.kt:13329: onOptionSelected = { index -> mode = if (index == 0) "TROPHY" else "CUSTOM" },
+app/src/main/java/com/example/MainActivity.kt:13333: if (mode == "CUSTOM") {
+app/src/main/java/com/example/MainActivity.kt:13335: text = tr(language, "Bedingung:", "Condition:"),
+app/src/main/java/com/example/MainActivity.kt:13342: tr(language, "Streak (Tage)", "Streak (Days)"),
+app/src/main/java/com/example/MainActivity.kt:13343: tr(language, "Gesamt (Mal)", "Total (Times)")
+app/src/main/java/com/example/MainActivity.kt:13345: selectedIndex = if (conditionType == "STREAK") 0 else 1,
+app/src/main/java/com/example/MainActivity.kt:13346: onOptionSelected = { index -> conditionType = if (index == 0) "STREAK" else "COMPLETIONS" },
+app/src/main/java/com/example/MainActivity.kt:13353: labelText = tr(language, "Ziel-Wert", "Target Value"),
+app/src/main/java/com/example/MainActivity.kt:13360: text = tr(language, "Gewohnheitsspezifische Trophäe:", "Habit Trophy:"),
+app/src/main/java/com/example/MainActivity.kt:13372: STANDARD_TROPHIES.filter { it.type == "STREAK" }.forEach { trophy ->
+app/src/main/java/com/example/MainActivity.kt:13416: contentDescription = "Selected",
+app/src/main/java/com/example/MainActivity.kt:13432: if (mode == "CUSTOM" && conditionValueStr.isNotBlank()) {
+app/src/main/java/com/example/MainActivity.kt:13441: } else if (mode == "TROPHY") {
+app/src/main/java/com/example/MainActivity.kt:13611: listOf("", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+app/src/main/java/com/example/MainActivity.kt:13654: Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Prev Month", tint = MaterialTheme.colorScheme.onSurface)
+app/src/main/java/com/example/MainActivity.kt:13674: Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next Month", tint = MaterialTheme.colorScheme.onSurface)
+app/src/main/java/com/example/MainActivity.kt:13743: "Fang heute an und danke dir selbst morgen.",
+app/src/main/java/com/example/MainActivity.kt:13744: "Der beste Zeitpunkt zu starten ist genau jetzt.",
+app/src/main/java/com/example/MainActivity.kt:13747: "Ein neues Kapitel beginnt mit einer einzigen Entscheidung.",
+app/src/main/java/com/example/MainActivity.kt:13748: "Deine Zukunft wird durch deine heutigen Gewohnheiten geformt."
+app/src/main/java/com/example/MainActivity.kt:13752: "Every day is a new chance to grow beyond yourself.",
+app/src/main/java/com/example/MainActivity.kt:13753: "Start today and thank yourself tomorrow.",
+app/src/main/java/com/example/MainActivity.kt:13754: "The best time to start is right now.",
+app/src/main/java/com/example/MainActivity.kt:13755: "Small steps lead to big changes. Create your first habit!",
+app/src/main/java/com/example/MainActivity.kt:13756: "Don't dream your life, design your routines.",
+app/src/main/java/com/example/MainActivity.kt:13757: "A new chapter starts with a single decision.",
+app/src/main/java/com/example/MainActivity.kt:13758: "Your future is shaped by your habits today."
+app/src/main/java/com/example/MainActivity.kt:13769: "Der erste Schritt ist immer der schwerste. Du schaffst das!",
+app/src/main/java/com/example/MainActivity.kt:13773: "Die geheime Zutat des Erfolgs ist das Anfangen.",
+app/src/main/java/com/example/MainActivity.kt:13774: "Jeder Weg von tausend Meilen beginnt mit einem einzigen Schritt.",
+app/src/main/java/com/example/MainActivity.kt:13775: "Du musst nicht perfekt sein, du musst nur anfangen."
+app/src/main/java/com/example/MainActivity.kt:13779: "The first step is always the hardest. You can do this!",
+app/src/main/java/com/example/MainActivity.kt:13780: "A small step today is the beginning of a great journey.",
+app/src/main/java/com/example/MainActivity.kt:13781: "Don't hesitate - just check off that first tiny step for today.",
+app/src/main/java/com/example/MainActivity.kt:13782: "Motivation is what gets you started. Habit is what keeps you going.",
+app/src/main/java/com/example/MainActivity.kt:13783: "The secret of getting ahead is getting started.",
+app/src/main/java/com/example/MainActivity.kt:13784: "The journey of a thousand miles begins with a single step.",
+app/src/main/java/com/example/MainActivity.kt:13785: "You don't have to be perfect, you just have to start."
+app/src/main/java/com/example/MainActivity.kt:13793: "Du bist gestartet! Bleib dran, es lohnt sich.",
+app/src/main/java/com/example/MainActivity.kt:13796: "Kleine Erfolge summieren sich. Jeder Haken ist ein Sieg!",
+app/src/main/java/com/example/MainActivity.kt:13797: "Du bist auf dem Weg. Lass dich nicht aufhalten.",
+app/src/main/java/com/example/MainActivity.kt:13803: "You have started! Keep going, it's worth it.",
+app/src/main/java/com/example/MainActivity.kt:13804: "Every completed habit brings you closer to your goal.",
+app/src/main/java/com/example/MainActivity.kt:13805: "Consistency is the key to success. Keep it up!",
+app/src/main/java/com/example/MainActivity.kt:13806: "Small wins add up. Every checkmark is a victory!",
+app/src/main/java/com/example/MainActivity.kt:13807: "You are on your way. Don't let anything stop you.",
+app/src/main/java/com/example/MainActivity.kt:13809: "Your future self is already applauding."
+app/src/main/java/com/example/MainActivity.kt:13820: "Die Ziellinie ist in Sicht. Gib jetzt noch mal alles!",
+app/src/main/java/com/example/MainActivity.kt:13821: "Unglaubliche Disziplin heute! Mach den Tag perfekt.",
+app/src/main/java/com/example/MainActivity.kt:13827: "Great work! Just a little bit more.",
+app/src/main/java/com/example/MainActivity.kt:13828: "Do you feel the energy? You are doing outstandingly today!",
+app/src/main/java/com/example/MainActivity.kt:13829: "You are really pulling through today. Keep going for a perfect day!",
+app/src/main/java/com/example/MainActivity.kt:13830: "The finish line is in sight. Give it your all!",
+app/src/main/java/com/example/MainActivity.kt:13831: "Incredible discipline today! Make today perfect.",
+app/src/main/java/com/example/MainActivity.kt:13832: "You are almost there. Let's crown the day together!",
+app/src/main/java/com/example/MainActivity.kt:13833: "Your routine is growing stronger. Almost complete!"
+app/src/main/java/com/example/MainActivity.kt:13843: "Hervorragend! Du hast heute alles gegeben und gewonnen!",
+app/src/main/java/com/example/MainActivity.kt:13845: "Perfekter Tag! Deine Disziplin ist deine Superkraft.",
+app/src/main/java/com/example/MainActivity.kt:13847: "Meisterhaft! Du beweist dir selbst jeden Tag, was in dir steckt."
+app/src/main/java/com/example/MainActivity.kt:13853: "Outstanding! You gave it your all today and won!",
+app/src/main/java/com/example/MainActivity.kt:13855: "Perfect day! Your discipline is your superpower.",
+app/src/main/java/com/example/MainActivity.kt:13856: "Everything checked! Enjoy your well-deserved evening.",
+app/src/main/java/com/example/MainActivity.kt:13857: "Masterful! You prove to yourself every day what you are capable of."
+app/src/main/java/com/example/MainActivity.kt:13876: val type: String, // "STREAK", "COMPLETIONS", "PERFECT_DAYS"
+app/src/main/java/com/example/MainActivity.kt:13877: val tier: String, // e.g. "WOOD", "COMP_10", "PERF_7" etc.
+app/src/main/java/com/example/MainActivity.kt:13940: val tiers = listOf("WOOD", "BRONZE", "SILVER", "GOLD", "DIAMOND")
+app/src/main/java/com/example/MainActivity.kt:13941: val tierNamesDe = listOf("Holz-Serie", "Bronze-Serie", "Silber-Serie", "Gold-Serie", "Diamant-Serie")
+app/src/main/java/com/example/MainActivity.kt:13942: val tierNamesEn = listOf("Wood Streak", "Bronze Streak", "Silver Streak", "Gold Streak", "Diamond Streak")
+app/src/main/java/com/example/MainActivity.kt:14002: listOf("Holz-Serie", "Bronze-Serie", "Silber-Serie", "Gold-Serie", "Diamant-Serie")[nextTargetIndex]
+app/src/main/java/com/example/MainActivity.kt:14008: listOf("Wood Streak", "Bronze Streak", "Silver Streak", "Gold Streak", "Diamond Streak")[nextTargetIndex]
+app/src/main/java/com/example/MainActivity.kt:14122: type = "STREAK",
+app/src/main/java/com/example/MainActivity.kt:14138: contentDescription = "Locked",
+app/src/main/java/com/example/MainActivity.kt:14161: type: String, // "COMPLETIONS" or "PERFECT_DAYS"
+app/src/main/java/com/example/MainActivity.kt:14511: contentDescription = "Share Profile",
+app/src/main/java/com/example/MainActivity.kt:14540: contentDescription = "Settings",
+app/src/main/java/com/example/MainActivity.kt:14567: .clickable { onSettingsClick("profile") },
+app/src/main/java/com/example/MainActivity.kt:14579: contentDescription = "Profile Picture",
+app/src/main/java/com/example/MainActivity.kt:14594: contentDescription = "Avatar Placeholder",
+app/src/main/java/com/example/MainActivity.kt:14608: .clickable { onSettingsClick("profile") }
+app/src/main/java/com/example/MainActivity.kt:14681: val tabs = if (language == "de") listOf("Freigeschaltet", "Alle Erfolge") else if (language == "ka") listOf("განბლოკილი", "ყველა მიღწევა") else if (language == "zh") listOf("已解锁", "所有成就") else listOf("Unlocked", "All Achievements")
+app/src/main/java/com/example/MainActivity.kt:14718: "Noch keine Erfolge"
+app/src/main/java/com/example/MainActivity.kt:14722: "No Achievements Yet"
+app/src/main/java/com/example/MainActivity.kt:14731: "Arbeite an deinen Gewohnheiten, um deinen ersten Meilenstein freizuschalten!"
+app/src/main/java/com/example/MainActivity.kt:14735: "Work on your habits to unlock your first milestone!"
+app/src/main/java/com/example/MainActivity.kt:14756: "Tippe auf die Abzeichen der einzelnen Gewohnheits-Karten, um Details zu sehen!"
+app/src/main/java/com/example/MainActivity.kt:14772: "Tap on the badges in each habit card to see more details!"
+app/src/main/java/com/example/MainActivity.kt:14932: contentDescription = "Profile Picture",
+app/src/main/java/com/example/MainActivity.kt:14947: contentDescription = "Avatar Placeholder",
+app/src/main/java/com/example/MainActivity.kt:14962: contentDescription = "Change picture",
+app/src/main/java/com/example/MainActivity.kt:15042: val totalDays = calendarRows.flatten().filterNotNull().filter { it.status != "INACTIVE" }
+app/src/main/java/com/example/MainActivity.kt:15043: val successCount = totalDays.count { it.status == "SUCCESS" }
+app/src/main/java/com/example/MainActivity.kt:15044: val failedCount = totalDays.count { it.status == "FAILED" }
+app/src/main/java/com/example/MainActivity.kt:15045: val pendingCount = totalDays.count { it.status == "PENDING" }
+app/src/main/java/com/example/MainActivity.kt:15051: if (habit.type == "NUMBER" || habit.type == "NUMERICAL") {
+app/src/main/java/com/example/MainActivity.kt:15068: contentDescription = "Verlauf",
+app/src/main/java/com/example/MainActivity.kt:15113: contentDescription = "Prev",
+app/src/main/java/com/example/MainActivity.kt:15131: contentDescription = "Next",
+app/src/main/java/com/example/MainActivity.kt:15149: "WEEK" -> 16.dp
+app/src/main/java/com/example/MainActivity.kt:15150: "MONTH" -> 4.dp
+app/src/main/java/com/example/MainActivity.kt:15290: contentDescription = "Help Info",
+app/src/main/java/com/example/MainActivity.kt:15851: contentDescription = "Reward",
+app/src/main/java/com/example/MainActivity.kt:15917: type: String, // "STREAK", "COMPLETIONS", "PERFECT_DAYS"
+app/src/main/java/com/example/MainActivity.kt:15918: tier: String, // e.g. "WOOD", "BRONZE", "SILVER", "GOLD", "COMP_10", "PERF_7" etc.
+app/src/main/java/com/example/MainActivity.kt:15926: "COMPLETIONS" -> {
+app/src/main/java/com/example/MainActivity.kt:15950: "WOOD" -> Color(0xFF8B5A2B) // Rich wood brown
+app/src/main/java/com/example/MainActivity.kt:15951: "BRONZE" -> Color(0xFFCD7F32) // Warm bronze copper
+app/src/main/java/com/example/MainActivity.kt:15952: "SILVER" -> Color(0xFFC0C0C0) // Metallic light silver
+app/src/main/java/com/example/MainActivity.kt:15953: "GOLD" -> Color(0xFFFFD700) // Shiny Gold
+app/src/main/java/com/example/MainActivity.kt:15954: "PLATINUM" -> Color(0xFFE5E4E2) // Ice Platinum
+app/src/main/java/com/example/MainActivity.kt:15955: "DIAMOND" -> Color(0xFF00E5FF) // Diamond Cyan
+app/src/main/java/com/example/MainActivity.kt:15956: "RUBY" -> Color(0xFFFF1744) // Ruby Red
+app/src/main/java/com/example/MainActivity.kt:15957: "MASTER" -> Color(0xFFD500F9) // Master Purple
+app/src/main/java/com/example/MainActivity.kt:15958: "LEGEND" -> Color(0xFFFF9100) // Legend Orange
+app/src/main/java/com/example/MainActivity.kt:15959: "UNREAL" -> Color(0xFF76FF03) // Unreal Green
+app/src/main/java/com/example/MainActivity.kt:15964: "WOOD" -> Color(0xFF5C3A21) // Dark wood bark
+app/src/main/java/com/example/MainActivity.kt:15965: "BRONZE" -> Color(0xFF8C501C) // Deep bronze
+app/src/main/java/com/example/MainActivity.kt:15966: "SILVER" -> Color(0xFF8A9A86) // Darker grey silver
+app/src/main/java/com/example/MainActivity.kt:15967: "GOLD" -> Color(0xFFB59000) // Deep yellow gold
+app/src/main/java/com/example/MainActivity.kt:15968: "PLATINUM" -> Color(0xFF9E9E9E)
+app/src/main/java/com/example/MainActivity.kt:15969: "DIAMOND" -> Color(0xFF00ACC1)
+app/src/main/java/com/example/MainActivity.kt:15970: "RUBY" -> Color(0xFFB71C1C)
+app/src/main/java/com/example/MainActivity.kt:15971: "MASTER" -> Color(0xFF4A148C)
+app/src/main/java/com/example/MainActivity.kt:15972: "LEGEND" -> Color(0xFFE65100)
+app/src/main/java/com/example/MainActivity.kt:15973: "UNREAL" -> Color(0xFF33691E)
+app/src/main/java/com/example/MainActivity.kt:16020: "WOOD" -> Color(0xFFFFA726)
+app/src/main/java/com/example/MainActivity.kt:16021: "BRONZE" -> Color(0xFFFFD180)
+app/src/main/java/com/example/MainActivity.kt:16022: "SILVER" -> Color(0xFFE0F7FA)
+app/src/main/java/com/example/MainActivity.kt:16023: "GOLD" -> Color(0xFFFFF9C4)
+app/src/main/java/com/example/MainActivity.kt:16024: "PLATINUM" -> Color(0xFFE0F2F1)
+app/src/main/java/com/example/MainActivity.kt:16025: "DIAMOND" -> Color(0xFFE0F7FA)
+app/src/main/java/com/example/MainActivity.kt:16026: "RUBY" -> Color(0xFFFFEBEE)
+app/src/main/java/com/example/MainActivity.kt:16027: "MASTER" -> Color(0xFFF3E5F5)
+app/src/main/java/com/example/MainActivity.kt:16028: "LEGEND" -> Color(0xFFFFF3E0)
+app/src/main/java/com/example/MainActivity.kt:16029: "UNREAL" -> Color(0xFFF1F8E9)
+app/src/main/java/com/example/MainActivity.kt:16051: "WOOD" -> {
+app/src/main/java/com/example/MainActivity.kt:16065: "BRONZE" -> {
+app/src/main/java/com/example/MainActivity.kt:16072: "SILVER" -> {
+app/src/main/java/com/example/MainActivity.kt:16079: "GOLD" -> {
+app/src/main/java/com/example/MainActivity.kt:16086: "PLATINUM" -> {
+app/src/main/java/com/example/MainActivity.kt:16093: "DIAMOND" -> {
+app/src/main/java/com/example/MainActivity.kt:16100: "RUBY" -> {
+app/src/main/java/com/example/MainActivity.kt:16107: "MASTER" -> {
+app/src/main/java/com/example/MainActivity.kt:16114: "LEGEND" -> {
+app/src/main/java/com/example/MainActivity.kt:16121: "UNREAL" -> {
+app/src/main/java/com/example/MainActivity.kt:16511: "sparkle" -> "Funkeln"
+app/src/main/java/com/example/MainActivity.kt:16512: "moon" -> "Mond"
+app/src/main/java/com/example/MainActivity.kt:16513: "sun" -> "Sonne"
+app/src/main/java/com/example/MainActivity.kt:16514: "water" -> "Wassertropfen"
+app/src/main/java/com/example/MainActivity.kt:16515: "heart" -> "Herz"
+app/src/main/java/com/example/MainActivity.kt:16516: "dumbbell" -> "Hantel"
+app/src/main/java/com/example/MainActivity.kt:16517: "book" -> "Buch"
+app/src/main/java/com/example/MainActivity.kt:16518: "coffee" -> "Kaffee"
+app/src/main/java/com/example/MainActivity.kt:16519: "run" -> "Laufen"
+app/src/main/java/com/example/MainActivity.kt:16520: "code" -> "Klammern"
+app/src/main/java/com/example/MainActivity.kt:16521: "music" -> "Musiknote"
+app/src/main/java/com/example/MainActivity.kt:16522: "phone" -> "Telefon"
+app/src/main/java/com/example/MainActivity.kt:16523: "meditation" -> "Lotusblüte"
+app/src/main/java/com/example/MainActivity.kt:16524: "clock" -> "Uhr"
+app/src/main/java/com/example/MainActivity.kt:16525: "food" -> "Apfel"
+app/src/main/java/com/example/MainActivity.kt:16526: "money" -> "Münze"
+app/src/main/java/com/example/MainActivity.kt:16527: "work" -> "Koffer"
+app/src/main/java/com/example/MainActivity.kt:16528: "clean" -> "Besen"
+app/src/main/java/com/example/MainActivity.kt:16533: "sparkle" -> "Sparkle"
+app/src/main/java/com/example/MainActivity.kt:16534: "moon" -> "Moon"
+app/src/main/java/com/example/MainActivity.kt:16535: "sun" -> "Sun"
+app/src/main/java/com/example/MainActivity.kt:16536: "water" -> "Water Drop"
+app/src/main/java/com/example/MainActivity.kt:16537: "heart" -> "Heart"
+app/src/main/java/com/example/MainActivity.kt:16538: "dumbbell" -> "Dumbbell"
+app/src/main/java/com/example/MainActivity.kt:16539: "book" -> "Book"
+app/src/main/java/com/example/MainActivity.kt:16540: "coffee" -> "Coffee"
+app/src/main/java/com/example/MainActivity.kt:16541: "run" -> "Running"
+app/src/main/java/com/example/MainActivity.kt:16542: "code" -> "Brackets"
+app/src/main/java/com/example/MainActivity.kt:16543: "music" -> "Music Note"
+app/src/main/java/com/example/MainActivity.kt:16544: "phone" -> "Phone"
+app/src/main/java/com/example/MainActivity.kt:16545: "meditation" -> "Lotus Flower"
+app/src/main/java/com/example/MainActivity.kt:16546: "clock" -> "Clock"
+app/src/main/java/com/example/MainActivity.kt:16547: "food" -> "Apple"
+app/src/main/java/com/example/MainActivity.kt:16548: "money" -> "Coin"
+app/src/main/java/com/example/MainActivity.kt:16549: "work" -> "Briefcase"
+app/src/main/java/com/example/MainActivity.kt:16550: "clean" -> "Broom"
+app/src/main/java/com/example/MainActivity.kt:16592: contentDescription = "Back",
+app/src/main/java/com/example/MainActivity.kt:16733: label = "dotWidth"
+app/src/main/java/com/example/MainActivity.kt:16738: label = "dotColor"
+app/src/main/java/com/example/MainActivity.kt:16818: contentDescription = "Frequent Habits Logo",
+app/src/main/java/com/example/MainActivity.kt:16845: text = "Frequent Habits, Permanent Results",
+app/src/main/java/com/example/MainActivity.kt:17192: "Tools built for your daily growth."
+app/src/main/java/com/example/MainActivity.kt:17210: "Let's work together on your habits and reach your goals step by step."
+app/src/main/java/com/example/MainActivity.kt:17295: text = "SMART INSIGHT",
+app/src/main/java/com/example/MainActivity.kt:17314: append("In den letzten 7 Tagen hast du ")
+app/src/main/java/com/example/MainActivity.kt:17320: append("In the last 7 days you achieved ")
+app/src/main/java/com/example/MainActivity.kt:17338: text = "Smart Insights",
+app/src/main/java/com/example/MainActivity.kt:17352: "Intelligent daily analytics & weekly highlights tailored to your personal habit rhythm."
+app/src/main/java/com/example/MainActivity.kt:17460: "Celebrate your growth with Monthly & Yearly Reviews featuring personal Time Capsules for reflection."
+app/src/main/java/com/example/MainActivity.kt:17544: type = "STREAK",
+app/src/main/java/com/example/MainActivity.kt:17545: tier = "GOLD",
+app/src/main/java/com/example/MainActivity.kt:17587: "Set custom rewards for reaching streaks and milestones to stay consistently motivated."
+app/src/main/java/com/example/MainActivity.kt:17597: // 7. "AND MUCH MORE" (Asymmetrisch verteilte kleine Felder)
+app/src/main/java/com/example/MainActivity.kt:17812: text = "created with ",
+app/src/main/java/com/example/MainActivity.kt:17826: text = "FrequNCy",
+app/src/main/java/com/example/MainActivity.kt:17881: "blue" -> HabitBlue
+app/src/main/java/com/example/MainActivity.kt:17882: "purple", "violet" -> HabitPurple
+app/src/main/java/com/example/MainActivity.kt:17883: "cyan" -> HabitCyan
+app/src/main/java/com/example/MainActivity.kt:17884: "green" -> HabitGreen
+app/src/main/java/com/example/MainActivity.kt:17885: "yellow" -> HabitYellow
+app/src/main/java/com/example/MainActivity.kt:17886: "orange" -> HabitOrange
+app/src/main/java/com/example/MainActivity.kt:17887: "red" -> HabitRed
+app/src/main/java/com/example/MainActivity.kt:17888: "pink" -> HabitPink
+app/src/main/java/com/example/MainActivity.kt:17889: "slate" -> HabitSlate
+app/src/main/java/com/example/MainActivity.kt:17890: "teal" -> HabitTeal
+app/src/main/java/com/example/MainActivity.kt:17891: "rose" -> HabitRose
+app/src/main/java/com/example/MainActivity.kt:17892: "indigo" -> HabitIndigo
+app/src/main/java/com/example/MainActivity.kt:17929: val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+app/src/main/java/com/example/MainActivity.kt:18078: val startStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+app/src/main/java/com/example/MainActivity.kt:18087: val startStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+app/src/main/java/com/example/MainActivity.kt:18110: val validStartStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date(if (h.startDate > 946684800000L) h.startDate else h.createdAt))
+app/src/main/java/com/example/MainActivity.kt:18127: val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+app/src/main/java/com/example/MainActivity.kt:18167: val startSdfStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date(validStartMillis))
+app/src/main/java/com/example/MainActivity.kt:18233: val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+app/src/main/java/com/example/MainActivity.kt:18329: val startStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+app/src/main/java/com/example/MainActivity.kt:18338: val startStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+app/src/main/java/com/example/MainActivity.kt:18376: val sdfDay = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+app/src/main/java/com/example/MainActivity.kt:18445: "Januar", "Februar", "März", "April", "Mai", "Juni",
+app/src/main/java/com/example/MainActivity.kt:18446: "Juli", "August", "September", "Oktober", "November", "Dezember"
+app/src/main/java/com/example/MainActivity.kt:18449: "January", "February", "March", "April", "May", "June",
+app/src/main/java/com/example/MainActivity.kt:18450: "July", "August", "September", "October", "November", "December"
+app/src/main/java/com/example/MainActivity.kt:18458: Calendar.MONDAY to "Montag",
+app/src/main/java/com/example/MainActivity.kt:18459: Calendar.TUESDAY to "Dienstag",
+app/src/main/java/com/example/MainActivity.kt:18460: Calendar.WEDNESDAY to "Mittwoch",
+app/src/main/java/com/example/MainActivity.kt:18461: Calendar.THURSDAY to "Donnerstag",
+app/src/main/java/com/example/MainActivity.kt:18462: Calendar.FRIDAY to "Freitag",
+app/src/main/java/com/example/MainActivity.kt:18463: Calendar.SATURDAY to "Samstag",
+app/src/main/java/com/example/MainActivity.kt:18464: Calendar.SUNDAY to "Sonntag"
+app/src/main/java/com/example/MainActivity.kt:18485: Calendar.MONDAY to "Monday",
+app/src/main/java/com/example/MainActivity.kt:18486: Calendar.TUESDAY to "Tuesday",
+app/src/main/java/com/example/MainActivity.kt:18487: Calendar.WEDNESDAY to "Wednesday",
+app/src/main/java/com/example/MainActivity.kt:18488: Calendar.THURSDAY to "Thursday",
+app/src/main/java/com/example/MainActivity.kt:18489: Calendar.FRIDAY to "Friday",
+app/src/main/java/com/example/MainActivity.kt:18490: Calendar.SATURDAY to "Saturday",
+app/src/main/java/com/example/MainActivity.kt:18491: Calendar.SUNDAY to "Sunday"
+app/src/main/java/com/example/MainActivity.kt:18494: "de" -> GermanDays[dayOfWeek] ?: "Montag"
+app/src/main/java/com/example/MainActivity.kt:18497: else -> EnglishDays[dayOfWeek] ?: "Monday"
+app/src/main/java/com/example/MainActivity.kt:18551: contentDescription = "Info",
+app/src/main/java/com/example/MainActivity.kt:18649: contentDescription = "Play",
+app/src/main/java/com/example/MainActivity.kt:18714: contentDescription = "Play",
+app/src/main/java/com/example/MainActivity.kt:18803: contentDescription = "Close",
+app/src/main/java/com/example/MainActivity.kt:18824: 5 -> TimeCapsuleSlide("YEARLY", year, 1, language, viewModel)
+app/src/main/java/com/example/MainActivity.kt:18868: contentDescription = if (isLastPage) "Finish" else "Next",
+app/src/main/java/com/example/MainActivity.kt:18896: contentDescription = "Trophy",
+app/src/main/java/com/example/MainActivity.kt:18977: contentDescription = "Completions",
+app/src/main/java/com/example/MainActivity.kt:19020: contentDescription = "Checkins",
+app/src/main/java/com/example/MainActivity.kt:19063: contentDescription = "Active Days",
+app/src/main/java/com/example/MainActivity.kt:19106: contentDescription = "Perfect Days",
+app/src/main/java/com/example/MainActivity.kt:19388: contentDescription = "Peak Month",
+app/src/main/java/com/example/MainActivity.kt:19436: contentDescription = "Peak Day",
+app/src/main/java/com/example/MainActivity.kt:19488: contentDescription = "Awesome",
+app/src/main/java/com/example/MainActivity.kt:19718: contentDescription = "Close",
+app/src/main/java/com/example/MainActivity.kt:19738: 4 -> TimeCapsuleSlide("MONTHLY", year, month, language, viewModel)
+app/src/main/java/com/example/MainActivity.kt:19782: contentDescription = if (isLastPage) "Finish" else "Next",
+app/src/main/java/com/example/MainActivity.kt:19810: contentDescription = "Calendar",
+app/src/main/java/com/example/MainActivity.kt:19891: contentDescription = "Completions",
+app/src/main/java/com/example/MainActivity.kt:19941: contentDescription = "Checkins",
+app/src/main/java/com/example/MainActivity.kt:19984: contentDescription = "Account Score",
+app/src/main/java/com/example/MainActivity.kt:20253: contentDescription = "Awesome",
+app/src/main/java/com/example/MainActivity.kt:20454: contentDescription = "Streak",
+app/src/main/java/com/example/MainActivity.kt:20463: text = "${reviewData.longestStreak} ${if (language == "de") { if (reviewData.longestStreak == 1) "Tag am Stück" else "Tage am Stück" } else if (language == "ka") { "დღიანი სერია" } else if (language == "zh") { "天连续" } else { if (reviewData.longestStreak == 1) "Day Streak" else "Days Streak" }}",
+app/src/main/java/com/example/MainActivity.kt:20713: color = "teal",
+app/src/main/java/com/example/MainActivity.kt:20714: type = "NUMBER",
+app/src/main/java/com/example/MainActivity.kt:20728: color = "purple",
+app/src/main/java/com/example/MainActivity.kt:20729: type = "BINARY"
+app/src/main/java/com/example/MainActivity.kt:20797: "Tap card: Toggle completion (binary) or open exact value dialog (numeric)."
+app/src/main/java/com/example/MainActivity.kt:20811: "Right circle icon: Quickly increments numeric value by +1 with one tap."
+app/src/main/java/com/example/MainActivity.kt:20827: "Long Press: Context menu for Pause, Failed status, Edit & Delete."
+app/src/main/java/com/example/MainActivity.kt:20926: contentDescription = "Reset",
+app/src/main/java/com/example/MainActivity.kt:20942: contentDescription = "Pause",
+app/src/main/java/com/example/MainActivity.kt:20958: contentDescription = "Finish",
+app/src/main/java/com/example/MainActivity.kt:21009: contentDescription = "Upload",
+app/src/main/java/com/example/MainActivity.kt:21101: "Built-in focus timer with soothing background sounds for uninterrupted concentration."
+app/src/main/java/com/example/MainActivity.kt:21273: type: String, // "MONTHLY" or "YEARLY"
+app/src/main/java/com/example/MainActivity.kt:21280: val currentPeriod = if (type == "MONTHLY") {
+app/src/main/java/com/example/MainActivity.kt:21286: val upcomingPeriod = if (type == "MONTHLY") {
+app/src/main/java/com/example/MainActivity.kt:21288: currentYearMonth.plusMonths(1).toString() // "yyyy-MM"
+app/src/main/java/com/example/MainActivity.kt:21351: val pastPeriodLabel = if (type == "MONTHLY") {
+app/src/main/java/com/example/MainActivity.kt:21359: val formatter = java.time.format.DateTimeFormatter.ofPattern("MMMM yyyy", loc)
+app/src/main/java/com/example/MainActivity.kt:21395: contentDescription = "Unsealed Mail",
+app/src/main/java/com/example/MainActivity.kt:21420: val sdf = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
+app/src/main/java/com/example/MainActivity.kt:21448: contentDescription = "Closed envelope",
+app/src/main/java/com/example/MainActivity.kt:21466: val futurePeriodLabel = if (type == "MONTHLY") {
+app/src/main/java/com/example/MainActivity.kt:21473: val formatter = java.time.format.DateTimeFormatter.ofPattern("MMMM yyyy", loc)
+app/src/main/java/com/example/MainActivity.kt:21539: contentDescription = "Lock",
+app/src/main/java/com/example/MainActivity.kt:21594: if (!url.startsWith("http://") && !url.startsWith("https://")) {
+app/src/main/java/com/example/MainActivity.kt:21662: "STREAK" -> (habitStat?.longestStreak ?: 0) to reward.conditionValue.coerceAtLeast(1)
+app/src/main/java/com/example/MainActivity.kt:21663: "COMPLETIONS" -> (habitStat?.totalCompletions ?: 0) to reward.conditionValue.coerceAtLeast(1)
+app/src/main/java/com/example/MainActivity.kt:21667: "WOOD" -> streak to 7
+app/src/main/java/com/example/MainActivity.kt:21668: "BRONZE" -> streak to 14
+app/src/main/java/com/example/MainActivity.kt:21669: "SILVER" -> streak to 30
+app/src/main/java/com/example/MainActivity.kt:21670: "GOLD" -> streak to 100
+app/src/main/java/com/example/MainActivity.kt:21671: "DIAMOND" -> streak to 365
+app/src/main/java/com/example/MainActivity.kt:21960: text = if (language == "de") "Rückgängig" else "Undo",
+app/src/main/java/com/example/MainActivity.kt:22099: text = "IMPORT ANALYSE",
 app/src/main/java/com/example/ReviewNotificationReceiver.kt:16: val reviewType = intent.getStringExtra("OPEN_REVIEW_TYPE") ?: "MONTHLY"
 app/src/main/java/com/example/ReviewNotificationReceiver.kt:37: if (reviewType == "YEARLY") {
 app/src/main/java/com/example/ReviewNotificationReceiver.kt:44: putExtra("OPEN_REVIEW_TYPE", "YEARLY")
